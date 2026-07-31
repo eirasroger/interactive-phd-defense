@@ -1,6 +1,9 @@
 # Private project documentation
 /docs/
 
+# claude
+/.claude/
+
 
 # Logs
 logs
