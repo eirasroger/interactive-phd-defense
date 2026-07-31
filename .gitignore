@@ -1,8 +1,14 @@
 # Private project documentation
 /docs/
+/CLAUDE.md
 
 # claude
 /.claude/
+
+# Python virtual environment (Blender / asset pipeline tooling)
+.venv/
+__pycache__/
+*.pyc
 
 
 # Logs

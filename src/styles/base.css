@@ -1,0 +1,58 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+html {
+  background-color: var(--c-base);
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  letter-spacing: var(--ls-body);
+  color: var(--c-text);
+  background-color: var(--c-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+
+  /* A presentation never scrolls or rubber-bands. */
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 3px;
+}
+
+/* Pointer idles away during the talk; any movement brings it back. */
+body[data-pointer='idle'] {
+  cursor: none;
+}
+
+#stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+}

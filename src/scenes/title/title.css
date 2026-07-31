@@ -1,0 +1,35 @@
+.title-block {
+  display: grid;
+  gap: var(--s-6);
+  max-width: var(--measure-hero);
+}
+
+.title-institution {
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--c-circular);
+}
+
+/* Title size, not display size: the display step is reserved for short
+   impact statements and overflows at this character count. */
+.title-heading {
+  font-size: var(--t-title);
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  text-wrap: balance;
+}
+
+.title-author {
+  font-size: var(--t-heading);
+  font-weight: var(--fw-regular);
+  color: var(--c-text-muted);
+}
+
+.title-hint {
+  margin-top: var(--s-8);
+  font-size: var(--t-caption);
+  color: var(--c-text-faint);
+}

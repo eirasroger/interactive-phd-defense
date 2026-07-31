@@ -1,0 +1,45 @@
+.progress-indicator {
+  position: fixed;
+  inset-inline: var(--stage-inline);
+  inset-block-end: var(--s-6);
+  z-index: var(--z-chrome);
+
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+
+  pointer-events: none;
+  opacity: 0.7;
+  transition: opacity var(--d-quick) var(--e-standard);
+}
+
+body[data-pointer='idle'] .progress-indicator {
+  opacity: 0.25;
+}
+
+.progress-track {
+  position: relative;
+  flex: 1;
+  height: 1px;
+  background-color: var(--c-border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background-color: var(--c-circular);
+  transition: transform var(--d-slow) var(--e-camera);
+}
+
+.progress-position {
+  font-variant-numeric: tabular-nums;
+}

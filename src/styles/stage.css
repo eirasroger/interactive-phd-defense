@@ -1,0 +1,45 @@
+/*
+ * Scene layer choreography.
+ *
+ * Layers stack in one place and cross-dissolve, so the presentation reads as
+ * continuous movement rather than as pages being swapped.
+ */
+
+.scene-layer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  padding: var(--stage-block) var(--stage-inline);
+  /* A scene that outgrows the stage is a design error, never a scrollbar. */
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(1.015);
+  transition:
+    opacity var(--d-normal) var(--e-enter),
+    transform var(--d-slow) var(--e-enter);
+  will-change: opacity, transform;
+}
+
+.scene-layer.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.scene-layer.is-exiting {
+  opacity: 0;
+  transform: scale(0.99);
+  pointer-events: none;
+  transition:
+    opacity var(--d-quick) var(--e-exit),
+    transform var(--d-normal) var(--e-exit);
+}
+
+/* Backward navigation mirrors the depth cue so retreating feels like retreating. */
+.scene-layer[data-direction='backward'] {
+  transform: scale(0.99);
+}
+
+.scene-layer[data-direction='backward'].is-active {
+  transform: scale(1);
+}
