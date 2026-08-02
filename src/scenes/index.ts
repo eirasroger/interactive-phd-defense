@@ -1,5 +1,7 @@
 import type { SceneDefinition } from '@/engine/scene/types';
 import { AssemblyScene } from './demo/AssemblyScene';
+import { CorridorScene } from './demo/CorridorScene';
+import { STATION_IDS, stationPose } from './demo/corridor';
 import { FieldScene } from './demo/FieldScene';
 import { FlowScene } from './demo/FlowScene';
 import { OriginScene } from './demo/OriginScene';
@@ -45,4 +47,15 @@ export const scenes: readonly SceneDefinition[] = [
     pose: { position: [-4, 9, -74], target: [-4, 0, -96], fov: 46, arc: 4 },
     create: () => new FieldScene(),
   },
+  // One scene per station. The corridor is a single continuous space, so
+  // walking it is navigation between poses inside it rather than five
+  // separate scenes that each happen to look like a corridor.
+  ...STATION_IDS.map((id, index) => ({
+    id: id.toLowerCase(),
+    title: `Corridor · ${id}`,
+    chapter: 'The Corridor',
+    pose: stationPose(index),
+    assets: ['corridorBay'],
+    create: () => new CorridorScene(index),
+  })),
 ];

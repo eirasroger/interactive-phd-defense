@@ -10,4 +10,5 @@ export const DEMO_LAYOUT = {
   assembly: [0, 0, -34],
   flow: [0, 0, -64],
   field: [0, 0, -96],
+  corridor: [0, 0, -130],
 } as const;

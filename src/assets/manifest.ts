@@ -1,5 +1,6 @@
 import type { AssetEntry } from '@/engine/assets/AssetLoader';
 import assemblyUrl from './models/assembly.glb?url';
+import corridorBayUrl from './models/corridor-bay.glb?url';
 
 /**
  * Every loadable asset, addressed by a stable id.
@@ -10,4 +11,5 @@ import assemblyUrl from './models/assembly.glb?url';
  */
 export const manifest: readonly AssetEntry[] = [
   { id: 'assembly', url: assemblyUrl, kind: 'model' },
+  { id: 'corridorBay', url: corridorBayUrl, kind: 'model' },
 ];

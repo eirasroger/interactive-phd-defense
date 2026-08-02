@@ -42,4 +42,45 @@ export const demoCaptions: Record<string, CaptionContent> = {
     ],
     accent: 'emphasis',
   },
+  c1: {
+    eyebrow: 'Corridor · C1',
+    heading: 'Arriving at the corridor.',
+    body: [
+      'The geometry and the lighting both come from Blender: ribs and chamfers are modifier output, and every shadow you can see was baked in Cycles.',
+      'The web material is unlit. This corridor costs one texture and zero lights per frame.',
+    ],
+    accent: 'ai',
+  },
+  c2: {
+    eyebrow: 'Corridor · C2',
+    heading: 'Inside the first bay.',
+    body: [
+      'Bounce light off the walls, contact shadow under every rib, and blue spill from the accent strips — none of which a real-time light can produce.',
+    ],
+    accent: 'ai',
+  },
+  c3: {
+    eyebrow: 'Corridor · C3',
+    heading: 'One bay, instanced.',
+    body: [
+      'The same 1 350 polygons are drawn five times in a single draw call. Length is free; only the walk through it costs anything.',
+    ],
+    accent: 'ai',
+  },
+  c4: {
+    eyebrow: 'Corridor · C4',
+    heading: 'Camera poses follow the geometry.',
+    body: [
+      'Station positions and camera poses are generated from one set of constants, so moving a station moves the walk with it.',
+    ],
+    accent: 'emphasis',
+  },
+  c5: {
+    eyebrow: 'Corridor · C5',
+    heading: 'The far end.',
+    body: [
+      'Fog closes behind and ahead. The corridor is a place the talk moves through rather than a picture of one.',
+    ],
+    accent: 'emphasis',
+  },
 };

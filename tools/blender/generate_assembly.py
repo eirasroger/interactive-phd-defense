@@ -35,7 +35,19 @@ LAYERS = [
 
 
 def reset_scene() -> None:
-    bpy.ops.wm.read_factory_settings(use_empty=True)
+    """Empty the scene without resetting the application.
+
+    `read_factory_settings` would unregister every addon, which kills the
+    blender-mcp server when this script is run inside a live session. Purging
+    datablocks reaches the same starting point and works in both contexts.
+    """
+    for collection in (bpy.data.objects, bpy.data.meshes, bpy.data.materials):
+        for datablock in list(collection):
+            collection.remove(datablock, do_unlink=True)
+
+    # glTF bakes scene unit scale into exported geometry, so pin it rather than
+    # inheriting whatever the running Blender happens to be set to.
+    bpy.context.scene.unit_settings.scale_length = 1.0
 
 
 def make_material(name: str, colour: tuple[float, float, float], roughness: float, metallic: float):
