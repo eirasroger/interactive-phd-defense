@@ -74,6 +74,12 @@ export class Renderer {
     return this.width / Math.max(this.height, 1);
   }
 
+  /** Driven by the atmosphere, so exposure is part of a zone's look rather than a constant. */
+  setExposure(value: number): void {
+    if (this.renderer.toneMappingExposure === value) return;
+    this.renderer.toneMappingExposure = value;
+  }
+
   setQuality(quality: QualitySettings): void {
     this.quality = quality;
     this.renderer.shadowMap.enabled = quality.shadows;

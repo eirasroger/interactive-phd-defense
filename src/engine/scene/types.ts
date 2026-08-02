@@ -33,11 +33,24 @@ export interface SceneInstance {
   exit?(direction: NavDirection): void;
 }
 
+/**
+ * Whether the 3D world is the subject or the backdrop.
+ *
+ * `foreground` — the world carries the argument; the camera is in the content.
+ * `recessed` — the camera sits in open volume, fog closes and exposure drops,
+ * leaving a dim depth field behind a designed 2D composition. The renderer
+ * never stops and there is no cut to "a slide".
+ */
+export type RenderMode = 'foreground' | 'recessed';
+
 export interface SceneDefinition {
   /** Permanent URL slug. */
   readonly id: string;
   readonly title: string;
   readonly chapter: string;
+  /** Which built zone this scene is looking at. */
+  readonly zone: string;
+  readonly world: RenderMode;
   /** Where the camera comes to rest for this scene. */
   readonly pose: CameraPose;
   /** Asset ids that must be resolved before entering. */

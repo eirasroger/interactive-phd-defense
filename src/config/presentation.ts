@@ -27,12 +27,11 @@ export const TRANSITION = {
   jumpSeconds: 0.7,
 } as const;
 
-export const WORLD = {
-  backgroundColor: 0x0a0c10,
-  fogColor: 0x0a0c10,
-  fogNear: 18,
-  fogFar: 120,
-} as const;
+/*
+ * Background, fog and lighting are no longer global constants. They belong to
+ * whichever zone is mounted — see `world/zones.ts` — because a dusk exterior
+ * and a lit interior cannot share one set of values.
+ */
 
 /** Sustained FPS below this triggers an automatic quality step-down. */
 export const ADAPTIVE = {

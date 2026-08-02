@@ -23,6 +23,8 @@ export interface SceneState {
   readonly index: number;
   readonly total: number;
   readonly definition: SceneDefinition;
+  /** How the scene was reached. `jump` means direct navigation, so no easing. */
+  readonly direction: NavDirection;
 }
 
 export interface SceneDirectorDeps {
@@ -47,6 +49,7 @@ export class SceneDirector {
   private active: ActiveScene | null = null;
   private index = -1;
   private token = 0;
+  private direction: NavDirection = 'jump';
 
   constructor(
     private readonly scenes: readonly SceneDefinition[],
@@ -98,6 +101,7 @@ export class SceneDirector {
     this.teardown(direction);
     this.mount(definition, direction);
     this.index = clamped;
+    this.direction = direction;
 
     this.moveCamera(definition, direction);
     this.emit();
@@ -202,7 +206,12 @@ export class SceneDirector {
   private state(): SceneState | null {
     const definition = this.scenes[this.index];
     if (!definition) return null;
-    return { index: this.index, total: this.scenes.length, definition };
+    return {
+      index: this.index,
+      total: this.scenes.length,
+      definition,
+      direction: this.direction,
+    };
   }
 
   private emit(): void {

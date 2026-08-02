@@ -5,12 +5,16 @@ import { CameraRig } from '@/engine/camera/CameraRig';
 import { Clock } from '@/engine/Clock';
 import { PerformanceMonitor } from '@/engine/diagnostics/PerformanceMonitor';
 import { bindPointerIdle, bindPresenterInput, toggleFullscreen } from '@/engine/Input';
+import { AtmosphereDirector } from '@/engine/render/AtmosphereDirector';
 import { RenderPipeline } from '@/engine/render/RenderPipeline';
 import { Renderer } from '@/engine/render/Renderer';
 import { World } from '@/engine/render/World';
 import { Router } from '@/engine/Router';
 import { SceneDirector, type SceneState } from '@/engine/scene/SceneDirector';
 import type { SceneDefinition } from '@/engine/scene/types';
+import { ZoneDirector } from '@/engine/world/ZoneDirector';
+import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
+import { zoneFor } from '@/world/zones';
 
 export interface EngineOptions {
   readonly container: HTMLElement;
@@ -40,6 +44,9 @@ export class Engine {
   private readonly rig: CameraRig;
   private readonly cameraDirector: CameraDirector;
   private readonly pipeline: RenderPipeline;
+  private readonly atmosphere = new AtmosphereDirector();
+  private readonly zones: ZoneDirector;
+  private readonly zoneProgress: readonly number[];
   private readonly scenes: SceneDirector;
   private readonly performance: PerformanceMonitor;
   private readonly lifetime = new AbortController();
@@ -73,6 +80,15 @@ export class Engine {
       quality,
     );
 
+    this.zones = new ZoneDirector(
+      this.world,
+      this.renderer.renderer,
+      quality,
+      this.atmosphere,
+      this.assets,
+    );
+    this.zoneProgress = zoneProgressByIndex(options.scenes);
+
     this.performance = new PerformanceMonitor((scale) => {
       this.renderer.setPixelRatioScale(scale);
     });
@@ -89,7 +105,27 @@ export class Engine {
       onLoadingChange: options.onLoadingChange,
     });
 
-    this.scenes.subscribe(options.onState);
+    this.scenes.subscribe((state) => {
+      this.enterZone(state);
+      options.onState(state);
+    });
+  }
+
+  /**
+   * The built world follows the deck.
+   *
+   * Zone, render mode and world state are all read off the scene definition and
+   * its position in its zone's run, so a scene never sets up the world it stands
+   * in — which is what keeps a jump backwards during questions from leaving the
+   * building half specified or the light belonging to somewhere else.
+   */
+  private enterZone(state: SceneState): void {
+    this.zones.enter(
+      zoneFor(state.definition.zone),
+      state.definition.world,
+      this.zoneProgress[state.index] ?? 0,
+      state.direction !== 'jump',
+    );
   }
 
   start(): void {
@@ -117,6 +153,8 @@ export class Engine {
     this.lifetime.abort();
     this.clock.stop();
     this.router.stop();
+    this.atmosphere.kill();
+    this.zones.dispose();
     this.pipeline.dispose();
     this.world.dispose();
     this.assets.dispose();
@@ -129,6 +167,9 @@ export class Engine {
     if (this.contextLost) return;
 
     this.rig.apply();
+    this.world.applyAtmosphere(this.atmosphere.state);
+    this.renderer.setExposure(this.atmosphere.state.exposure);
+    this.zones.update(dt);
     this.performance.update(dt);
     this.pipeline.render();
 
