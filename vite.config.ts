@@ -6,6 +6,8 @@ export default defineConfig({
   // subpath and when opened directly from disk for an offline defense.
   base: './',
 
+  assetsInclude: ['**/*.glb'],
+
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

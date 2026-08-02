@@ -1,0 +1,166 @@
+import { quality } from '@/config/quality';
+import { AssetLoader, type AssetEntry } from '@/engine/assets/AssetLoader';
+import { CameraDirector } from '@/engine/camera/CameraDirector';
+import { CameraRig } from '@/engine/camera/CameraRig';
+import { Clock } from '@/engine/Clock';
+import { PerformanceMonitor } from '@/engine/diagnostics/PerformanceMonitor';
+import { bindPointerIdle, bindPresenterInput, toggleFullscreen } from '@/engine/Input';
+import { RenderPipeline } from '@/engine/render/RenderPipeline';
+import { Renderer } from '@/engine/render/Renderer';
+import { World } from '@/engine/render/World';
+import { Router } from '@/engine/Router';
+import { SceneDirector, type SceneState } from '@/engine/scene/SceneDirector';
+import type { SceneDefinition } from '@/engine/scene/types';
+
+export interface EngineOptions {
+  readonly container: HTMLElement;
+  readonly overlay: HTMLElement;
+  readonly scenes: readonly SceneDefinition[];
+  readonly manifest: readonly AssetEntry[];
+  readonly onState: (state: SceneState) => void;
+  readonly onLoadingChange: (loading: boolean, progress: number) => void;
+  readonly onDiagnostics: (fps: number, visible: boolean) => void;
+  readonly onContextLost: (lost: boolean) => void;
+}
+
+/**
+ * Top-level composition root.
+ *
+ * Everything the presentation needs is constructed and wired here; no other
+ * module reaches across subsystem boundaries. The frame loop is the single
+ * place where camera state, diagnostics and rendering are advanced, in that
+ * order, so what is drawn always reflects the pose computed this frame.
+ */
+export class Engine {
+  private readonly clock = new Clock();
+  private readonly router = new Router();
+  private readonly assets = new AssetLoader();
+  private readonly renderer: Renderer;
+  private readonly world: World;
+  private readonly rig: CameraRig;
+  private readonly cameraDirector: CameraDirector;
+  private readonly pipeline: RenderPipeline;
+  private readonly scenes: SceneDirector;
+  private readonly performance: PerformanceMonitor;
+  private readonly lifetime = new AbortController();
+
+  private diagnosticsVisible = false;
+  private contextLost = false;
+
+  constructor(private readonly options: EngineOptions) {
+    this.renderer = new Renderer(options.container, quality, {
+      onResize: (width, height) => {
+        this.rig.setAspect(width / Math.max(height, 1));
+        this.pipeline.setSize(width, height);
+      },
+      onContextLost: () => {
+        this.contextLost = true;
+        this.options.onContextLost(true);
+      },
+      onContextRestored: () => {
+        this.contextLost = false;
+        this.options.onContextLost(false);
+      },
+    });
+
+    this.world = new World(this.renderer.renderer, quality);
+    this.rig = new CameraRig(this.renderer.aspect);
+    this.cameraDirector = new CameraDirector(this.rig);
+    this.pipeline = new RenderPipeline(
+      this.renderer.renderer,
+      this.world.scene,
+      this.rig.camera,
+      quality,
+    );
+
+    this.performance = new PerformanceMonitor((scale) => {
+      this.renderer.setPixelRatioScale(scale);
+    });
+
+    this.assets.register(options.manifest);
+
+    this.scenes = new SceneDirector(options.scenes, {
+      overlay: options.overlay,
+      world: this.world,
+      camera: this.cameraDirector,
+      assets: this.assets,
+      clock: this.clock,
+      quality,
+      onLoadingChange: options.onLoadingChange,
+    });
+
+    this.scenes.subscribe(options.onState);
+  }
+
+  start(): void {
+    // Started here, not in the constructor, so the first resize reaches a
+    // fully wired camera rig and render pipeline.
+    this.renderer.start();
+
+    this.clock.add(this.frame);
+    this.clock.start();
+    this.bindInput();
+
+    this.router.start((id) => {
+      const found = id === null ? -1 : this.scenes.indexOf(id);
+      if (found === -1) {
+        const first = this.scenes.definitionAt(0);
+        if (first) this.router.replace(first.id);
+        void this.scenes.show(0);
+        return;
+      }
+      void this.scenes.show(found);
+    });
+  }
+
+  dispose(): void {
+    this.lifetime.abort();
+    this.clock.stop();
+    this.router.stop();
+    this.pipeline.dispose();
+    this.world.dispose();
+    this.assets.dispose();
+    this.renderer.dispose();
+  }
+
+  private readonly frame = (dt: number): void => {
+    // A lost context cannot be drawn to; skipping keeps the tab responsive
+    // until the browser hands the context back.
+    if (this.contextLost) return;
+
+    this.rig.apply();
+    this.performance.update(dt);
+    this.pipeline.render();
+
+    if (this.diagnosticsVisible) {
+      this.options.onDiagnostics(this.performance.fps, true);
+    }
+  };
+
+  private bindInput(): void {
+    const { signal } = this.lifetime;
+
+    bindPresenterInput(
+      {
+        next: () => this.navigate(this.scenes.currentIndex + 1),
+        previous: () => this.navigate(this.scenes.currentIndex - 1),
+        first: () => this.navigate(0),
+        last: () => this.navigate(this.scenes.count - 1),
+        toggleFullscreen: () => void toggleFullscreen(),
+        toggleDiagnostics: () => {
+          this.diagnosticsVisible = !this.diagnosticsVisible;
+          this.options.onDiagnostics(this.performance.fps, this.diagnosticsVisible);
+        },
+      },
+      signal,
+    );
+
+    bindPointerIdle(signal);
+  }
+
+  private navigate(target: number): void {
+    const clamped = Math.min(Math.max(target, 0), this.scenes.count - 1);
+    const definition = this.scenes.definitionAt(clamped);
+    if (definition) this.router.navigate(definition.id);
+  }
+}

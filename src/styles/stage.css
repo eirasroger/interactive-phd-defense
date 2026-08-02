@@ -1,9 +1,33 @@
 /*
- * Scene layer choreography.
+ * Stage composition.
  *
- * Layers stack in one place and cross-dissolve, so the presentation reads as
- * continuous movement rather than as pages being swapped.
+ * The canvas is a single continuous 3D world that persists across scenes;
+ * DOM layers composite on top of it and cross-dissolve. Because the world
+ * itself never resets, movement between scenes reads as travel through one
+ * space rather than as pages being swapped.
  */
+
+#canvas-layer,
+#overlay-layer {
+  position: absolute;
+  inset: 0;
+}
+
+#canvas-layer {
+  z-index: var(--z-stage);
+}
+
+.stage-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#overlay-layer {
+  z-index: var(--z-overlay);
+  /* Text must not swallow pointer events meant for the 3D world. */
+  pointer-events: none;
+}
 
 .scene-layer {
   position: absolute;
@@ -13,33 +37,53 @@
   padding: var(--stage-block) var(--stage-inline);
   /* A scene that outgrows the stage is a design error, never a scrollbar. */
   overflow: hidden;
+
   opacity: 0;
-  transform: scale(1.015);
-  transition:
-    opacity var(--d-normal) var(--e-enter),
-    transform var(--d-slow) var(--e-enter);
-  will-change: opacity, transform;
+  transition: opacity var(--d-normal) var(--e-enter);
+  will-change: opacity;
+}
+
+/*
+ * Legibility scrim.
+ *
+ * Text sits over a live 3D world whose brightness cannot be predicted from
+ * the scene it happens to be in front of. A gradient anchored to the text
+ * side guarantees contrast without dimming the whole composition, so the
+ * visuals stay vivid where nothing is being read.
+ */
+.scene-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--c-base) 92%, transparent) 0%,
+    color-mix(in srgb, var(--c-base) 74%, transparent) 34%,
+    transparent 68%
+  );
+}
+
+.scene-layer[data-align='center']::before {
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--c-base) 85%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+.scene-layer > * {
+  position: relative;
+  pointer-events: auto;
 }
 
 .scene-layer.is-active {
   opacity: 1;
-  transform: scale(1);
 }
 
 .scene-layer.is-exiting {
   opacity: 0;
-  transform: scale(0.99);
   pointer-events: none;
-  transition:
-    opacity var(--d-quick) var(--e-exit),
-    transform var(--d-normal) var(--e-exit);
-}
-
-/* Backward navigation mirrors the depth cue so retreating feels like retreating. */
-.scene-layer[data-direction='backward'] {
-  transform: scale(0.99);
-}
-
-.scene-layer[data-direction='backward'].is-active {
-  transform: scale(1);
+  transition: opacity var(--d-quick) var(--e-exit);
 }

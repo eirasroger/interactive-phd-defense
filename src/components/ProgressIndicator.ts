@@ -1,10 +1,10 @@
-import type { PresentationState } from '@/engine/Presentation';
+import type { SceneState } from '@/engine/scene/SceneDirector';
 import { el } from '@/utilities/dom';
 import './progress-indicator.css';
 
 export interface ProgressIndicator {
   readonly element: HTMLElement;
-  update(state: PresentationState): void;
+  update(state: SceneState): void;
 }
 
 /**
