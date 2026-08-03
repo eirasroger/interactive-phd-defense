@@ -5,12 +5,18 @@ import { TRANSITION } from '@/config/presentation';
 import type { Atmosphere } from '@/engine/render/atmosphere';
 import type { ZoneContext, ZoneDefinition, ZoneInstance } from '@/engine/world/types';
 import { createBakedPart, createBuilding, findParts, sharpen, type Building } from './building';
-import { createGround, type Ground } from './ground';
-import { createHorizon, type Horizon } from './horizon';
+import { createLake, type Lake } from './lake';
+import { createParkland, type Parkland } from './parkland';
 import { createPlanting, type Planting } from './planting';
 import { createRealm, type Realm } from './realm';
+import { createBankside, type Bankside } from './bankside';
+import { createBridge, type Bridge } from './bridge';
+import { createPlayground, type Playground } from './playground';
+import { createRiver, type River } from './river';
 import { BUILDING_HEIGHT, REVIEW } from './site';
 import { createSkyTexture } from './sky';
+import { createTerrain, type Terrain } from './terrain';
+import { createWoodland, type Woodland } from './woodland';
 
 /** Asset ids every Act I scene declares, so they resolve before the zone mounts. */
 export const EXTERIOR_ASSET = 'exteriorBuilding';
@@ -18,6 +24,7 @@ export const CONSTRUCTION_ASSET = 'exteriorConstruction';
 export const CANDIDATES_ASSET = 'facadeCandidates';
 export const SLOT_FILL_ASSET = 'facadeSlotFill';
 export const PLANTING_ASSET = 'exteriorPlanting';
+export const PARK_ASSET = 'parkAssets';
 
 export const EXTERIOR_ASSETS = [
   EXTERIOR_ASSET,
@@ -25,9 +32,16 @@ export const EXTERIOR_ASSETS = [
   CANDIDATES_ASSET,
   SLOT_FILL_ASSET,
   PLANTING_ASSET,
+  PARK_ASSET,
   'grassTexture',
-  'pavingTexture',
+  'meadowTexture',
   'soilTexture',
+  'clayTexture',
+  'graniteTexture',
+  'cobbleTexture',
+  'clayNormal',
+  'graniteNormal',
+  'cobbleNormal',
 ] as const;
 
 /**
@@ -44,32 +58,47 @@ export const EXTERIOR_ASSETS = [
  * the facade and the ground follows.
  */
 const EXTERIOR_ATMOSPHERE: Atmosphere = {
-  fogColor: 0xbdd0e0,
-  // The establishing poses sit 90 to 100 units out, so a 90-unit fog start put
-  // the building into haze in the very first shot and washed it toward the sky
-  // colour before it had been seen once. Fog should describe the far field, not
-  // the subject.
-  fogNear: 240,
-  fogFar: 900,
-  skyColor: 0x8fb4d8,
-  groundColor: 0x4a5a36,
-  // Pulled back as the key came up, so the extra light lands as modelling
-  // rather than as a flat lift. A dark building under a bright sky needs its
-  // contrast in the frames, balustrades and soffits, which is what ambient
-  // washes out first.
-  ambientIntensity: 0.55,
-  keyColor: 0xfff2e0,
-  keyIntensity: 5.6,
-  // Must match SUN_VECTOR in tools/blender/exterior_building.py — Blender
-  // (-50, -64, 44) maps to web (x, z, -y). The building's shading is baked from
-  // that sun, so the real-time shadow it casts on the ground has to agree with
-  // it or the two light the scene from different directions.
-  keyOffset: [-50, 44, 64],
-  environmentIntensity: 1,
+  // Pale, faintly warm horizon haze. Must stay close to the `v = 0.5` stop in
+  // `sky.ts`: distant ground fades to this and then gives way to the sky, and a
+  // step between the two draws a line across the far field.
+  fogColor: 0xcfe0ee,
+  // Sized to three things at once, which is why neither end is round. It has to
+  // start past the building so the subject is never hazed; it has to give the
+  // woodland belt between 96 m and 260 m a real depth gradient, or six ranks of
+  // billboards read as one cardboard wall; and it has to close *completely*
+  // before the ground plane ends at 450 m, or the edge of the world is visible
+  // as a band of unfogged green under the sky.
+  //
+  // The last of those was being missed. At 640 the far field only reached 79%
+  // opacity at the plane edge, which is exactly where an elevated pose looks.
+  fogNear: 160,
+  fogFar: 560,
+  skyColor: 0x9fc4ea,
+  groundColor: 0x6a7a4e,
+  // Lifted with the sun. A high sun leaves the north and east elevations taking
+  // nothing but sky, and at 0.55 they went to silhouette — which is the same
+  // failure the key was raised to fix, arriving from the other direction.
+  ambientIntensity: 0.9,
+  keyColor: 0xfff4e4,
+  keyIntensity: 6.2,
+  // A Nordic summer midday: roughly 48° elevation, from the west of the
+  // approach so the +Z entrance elevation is lit rather than in its own shade.
+  //
+  // Free to choose. The only Blender bake is `type='AO'`, which is
+  // sun-independent by construction, so nothing in the exported textures
+  // carries a light direction to disagree with. The comment that used to sit
+  // here claimed this had to match `SUN_VECTOR` in the Blender script; it never
+  // did, and believing it held the whole zone at a 28° sun for no reason.
+  keyOffset: [-50, 90, 64],
+  // Raised with the sun for the same reason as the ambient, but this one lands
+  // as *colour* rather than as lift: at midday the shaded faces of a building
+  // are lit almost entirely by a deep blue sky, and that blue in the shadows is
+  // most of what separates real daylight from a flat white key.
+  environmentIntensity: 1.35,
   // Every asset bakes to p99 ≈ 0.57 specified with 0% clipped, so there is
   // headroom to spend here rather than in the bake, where it would clip.
   backgroundIntensity: 1,
-  exposure: 1.18,
+  exposure: 1.1,
 };
 
 /** Seconds for a panel to cross the frame edge. */
@@ -87,15 +116,21 @@ const REVIEW_TRAVEL = 2.2;
 const REVIEW_HOLD = TRANSITION.cameraSeconds + 0.25;
 
 class Exterior implements ZoneInstance {
-  private readonly ground: Ground;
+  private readonly terrain: Terrain;
+  private readonly lake: Lake;
+  private readonly river: River;
+  private readonly bridge: Bridge;
+  private readonly playground: Playground;
+  private readonly woodland: Woodland;
   private readonly realm: Realm;
   private readonly planting: Planting;
+  private readonly bankside: Bankside;
+  private readonly parkland: Parkland;
   private readonly building: Building;
   private readonly construction: Building;
   private readonly slotFill: Building;
   private readonly candidates: readonly Building[];
   private readonly parts: readonly Building[];
-  private readonly horizon: Horizon = createHorizon();
   private readonly sky: Texture = createSkyTexture();
   private readonly environment: Texture;
   private presence = -1;
@@ -103,13 +138,44 @@ class Exterior implements ZoneInstance {
   constructor(private readonly context: ZoneContext) {
     const { assets, stage } = context;
 
-    this.ground = createGround(assets.texture('grassTexture'));
-    this.realm = createRealm({
-      paving: assets.texture('pavingTexture'),
+    this.terrain = createTerrain({
+      grass: assets.texture('grassTexture'),
       soil: assets.texture('soilTexture'),
     });
+    this.lake = createLake();
+    this.river = createRiver();
+    this.bridge = createBridge();
+    this.playground = createPlayground();
+    this.realm = createRealm({
+      clay: { map: assets.texture('clayTexture'), normal: assets.texture('clayNormal') },
+      granite: { map: assets.texture('graniteTexture'), normal: assets.texture('graniteNormal') },
+      cobble: { map: assets.texture('cobbleTexture'), normal: assets.texture('cobbleNormal') },
+    });
+
+    // Three modules read the planting asset's node hierarchy directly, and all
+    // three must run before `createPlanting` collapses it into instanced draws
+    // and the individual templates stop being addressable. The woodland
+    // photographs the trees onto billboards, the bankside clones species by
+    // name, and the parkland instances whole trees into the park — none of them
+    // ships an asset of its own.
+    const flora = assets.model(PLANTING_ASSET).scene;
+    this.woodland = createWoodland(context.renderer, flora);
+    this.bankside = createBankside(flora);
+    this.parkland = createParkland(flora, assets.model(PARK_ASSET).scene);
     this.planting = createPlanting(assets.model(PLANTING_ASSET));
-    stage.add(this.horizon.object, this.realm.object, this.planting.object);
+
+    stage.add(
+      this.terrain.object,
+      this.lake.object,
+      this.river.object,
+      this.bridge.object,
+      this.playground.object,
+      this.woodland.object,
+      this.realm.object,
+      this.planting.object,
+      this.bankside.object,
+      this.parkland.object,
+    );
 
     for (const id of [EXTERIOR_ASSET, CONSTRUCTION_ASSET, SLOT_FILL_ASSET, CANDIDATES_ASSET]) {
       sharpen(assets.model(id), context.quality.anisotropy);
@@ -121,7 +187,7 @@ class Exterior implements ZoneInstance {
     this.candidates = findParts(assets.model(CANDIDATES_ASSET), REVIEW.count).map(createBakedPart);
 
     this.parts = [this.building, this.construction, this.slotFill, ...this.candidates];
-    stage.add(this.ground.object, ...this.parts.map((part) => part.object));
+    stage.add(...this.parts.map((part) => part.object));
 
     // Act I is the building under construction with the bay still open. The
     // fill is Act IV's, and the options are parked off frame until the act
@@ -193,14 +259,28 @@ class Exterior implements ZoneInstance {
     this.setReview(onStage ? 1 : 0, animate);
   }
 
+  update(dt: number): void {
+    this.planting.update(dt);
+    this.parkland.update(dt);
+    this.woodland.update(dt);
+    this.lake.update(dt);
+    this.river.update(dt);
+  }
+
   dispose(): void {
     for (const candidate of this.candidates) gsap.killTweensOf(candidate.object.position);
     this.context.world.setBackground(null);
     this.context.world.setEnvironment(null);
-    this.ground.dispose();
-    this.horizon.dispose();
+    this.terrain.dispose();
+    this.lake.dispose();
+    this.river.dispose();
+    this.bridge.dispose();
+    this.playground.dispose();
+    this.woodland.dispose();
     this.realm.dispose();
     this.planting.dispose();
+    this.bankside.dispose();
+    this.parkland.dispose();
     for (const part of this.parts) part.dispose();
     this.environment.dispose();
     this.sky.dispose();

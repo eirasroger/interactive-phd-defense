@@ -1,29 +1,4 @@
-"""Generate one corridor bay with baked lighting.
-
-    blender --background --python tools/blender/corridor_bay.py
-
-Output: src/assets/models/corridor-bay.glb
-
-This is the asset that justifies Blender in this project. Two things here are
-not reproducible in Three.js at acceptable cost:
-
-1. **Modifier-driven detail.** Ribs, recessed panels and chamfers come from
-   array/bevel/solidify stacks. Describing the same geometry as BoxGeometry
-   would be hundreds of lines of arithmetic and impossible to tune.
-2. **Baked global illumination.** Cycles bakes bounce light, contact shadows
-   and the accent strips' colour spill into a single texture. Real-time lights
-   cannot produce any of those. The web material is unlit, so the entire
-   lighting solution costs one texture fetch and zero lights per frame.
-
-Built at the web world's scale (see src/scenes/demo/corridor.ts), so the GLB
-drops in without a scale factor.
-
-Axis convention, which is easy to get backwards: glTF y-up export maps Blender
-(x, y, z) to (x, z, -y). Blender **+Y therefore becomes -Z**, which is the
-direction the web world runs. The bay is built along +Y with its portal at the
-origin, so instancing it at a station position lays it out down the corridor
-rather than back toward the camera.
-"""
+"""Generate one corridor bay with baked lighting."""
 
 from __future__ import annotations
 
@@ -132,12 +107,7 @@ def build_portal() -> list:
 
 
 def add_accent_emitters() -> None:
-    """Emissive strips that exist only to be baked.
-
-    They are never joined into the exported mesh: their job is to throw
-    coloured bounce onto the walls, which is exactly the effect a real-time
-    renderer cannot afford.
-    """
+    """Emissive strips that exist only to be baked."""
     material = bpy.data.materials.new("emitter")
     material.use_nodes = True
     tree = material.node_tree

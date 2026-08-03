@@ -61,7 +61,19 @@ const scene = (
  * off the top edge.
  */
 export const act1Scenes: readonly SceneDefinition[] = [
-  scene('title', 'Title', 'foreground', pose([-32, 7, 96], [-24, 10, 14], 40), act1Captions.title),
+  // Provisional. The act is still cut to its old eleven-station order; the
+  // re-cut to the new walk (overview, lake, river, park, construction,
+  // scaffold, alternatives, park, avenue, approach, entrance) is outstanding.
+  // This one pose is moved because the old title stood where the lake now is.
+  //
+  // Framings verified in the browser and waiting for the re-cut:
+  //   overview          pose([64, 34, 148], [0, 6, 44], 46)
+  //   from the bridge   pose([0, 2.3, 86], [0, 5, 8], 52)   <- scene 9/10
+  //   over the stream   pose([2, 4.2, 103], [6, -1.4, 82], 52)
+  // The bridge pose is the one that carries the terminated vista: the entrance
+  // sits dead centre at the end of the straight avenue, which is what the brief
+  // for scene 9 asks for.
+  scene('title', 'Title', 'foreground', pose([64, 34, 148], [0, 6, 44], 46), act1Captions.title),
 
   scene(
     'footprint',

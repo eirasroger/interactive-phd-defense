@@ -1,12 +1,4 @@
-"""Act I exterior building.
-
-    blender --background --python tools/blender/exterior_building.py
-    blender --background --python tools/blender/exterior_building.py -- --bay
-    blender --background --python tools/blender/exterior_building.py -- --preview
-
-Output: src/assets/models/exterior-building.glb
-Notes:  docs/blender/exterior_building.md
-"""
+"""Act I exterior building."""
 
 from __future__ import annotations
 
@@ -34,50 +26,44 @@ RENDERS = WORK / "renders"
 ASSET_DIR = WORK / "assets"
 DETAIL_DIR = WORK / "detail"
 
-# Conifers, not the island trees. Those are gnarled Mediterranean olives with
-# sparse silver foliage: against a green lawn they read as dead, and the fault
-# was the species rather than the grading, the decimation or the resolution.
-# Pine and fir are what a northern European park is actually planted with, and
-# they are dense and evergreen, so there is no dry season to grade away.
-#
-# Weighted by repetition: fir is the dense conical mass that reads as planting
-# at a distance, pine is a bare trunk under a high crown — correct for a Scots
-# pine and thin on its own — and the small broadleaf breaks the rhythm.
-TREE_ASSETS = ("fir_tree_01", "fir_tree_01", "fir_tree_01", "pine_tree_01", "tree_small_02")
-HEDGE_ASSETS = ("shrub_02", "fir_sapling_medium", "pine_sapling_medium")
+# Conifers, not the island trees. `tree_small_02` was dropped: it ships no LOD2,
+# so the cheapest rung it has is 376k triangles for a 4.5 m tree — the worst
+# value in the library by an order of magnitude, and the park now instances
+# whatever is here rather than shipping trees of its own.
+TREE_ASSETS = ("fir_tree_01", "fir_tree_01", "fir_tree_01", "pine_tree_01")
+# `pine_sapling_medium` is not here, and its absence is worth 6.9 M triangles.
+# Its cheapest usable rung is 145k for an 11.5 m tree, and it was being planted
+# 76 times at 1.3–2.1 m as hedge — a third of the whole site's geometry spent on
+# waist-high shrubs, invisible because scaling to metres hides how big the
+# source is. `fir_sapling_medium` is the same plant at 6k.
+HEDGE_ASSETS = ("shrub_02", "fir_sapling_medium")
 GROUND_ASSETS = ("shrub_01", "shrub_03", "shrub_04", "fern_02", "celandine_01", "nettle_plant")
 GRASS_ASSETS = ("grass_medium_02", "grass_medium_01")
 
 ASSET_LOD = "LOD1"
 
-# Poly Haven ships trees at two resolutions and neither is a web budget: the
-# whole-tree mesh is half a million vertices, so eight of them are four million
-# before anything else is in the scene. The templates are decimated once, while
-# their mesh data is still single-user, so every instance shares the reduced
-# mesh and the GLB carries it once.
-# Empty on purpose: foliage is not decimated at all.
-#
-# A canopy is thousands of disconnected alpha-mapped quads, and DECIMATE works
-# by collapsing edges — on this topology that does not simplify a leaf, it
-# destroys it, turning quads into degenerate triangles that no longer carry
-# their card. At 0.22 the trees read as bare armatures and at 0.6 you could
-# still see straight through them, which is the tell: a real reduction would
-# have thinned the canopy evenly rather than punched holes in it.
-#
-# The LOD ladder is the right lever, and Poly Haven already provides it —
-# `ASSET_LOD` picks the rung. Decimating on top of a chosen LOD is asking a
-# general-purpose operator to redo work the asset author already did properly.
+# Trees drop a rung. The park instances these rather than shipping its own, so a
+# template is now paid for ~90 times instead of ~10.
+ASSET_LOD_BY_NAME = {"fir_tree_01": "LOD2", "pine_tree_01": "LOD2"}
+
+# Object-name fragments that mark a component of a plant rather than a whole one.
+PART_NAMES = (
+    "trunk", "twig", "needle", "branch", "leaves", "leaf",
+    "stem", "root", "frond", "blossom", "cone",
+)
+
+# Above this a template is flagged in the build log. Not enforced: a specimen
+# tree is legitimately expensive and a hedge plant is not, and only the call
+# site knows which this is.
+TEMPLATE_BUDGET = 60_000
+
+# Poly Haven ships trees at two resolutions and neither is a web budget: the whole-tree mesh is half a million vertices, so eight of them are four million before anything else is in the scene.
 LOD_RATIO: dict[str, float] = {}
 
 COLLECTION = "exterior"
 SCENE = "exterior_build"
 
-# Sized for the finished presentation, not for a fast turnaround. The occlusion
-# atlas is mostly interior faces on this geometry, so the visible elevation only
-# ever gets a fraction of it — 2048 left it coarse enough to read as blotching
-# rather than as shading. Samples are high for the same reason: a denoised
-# low-sample AO bake is smooth in the wrong way, and the blotches it leaves
-# survive every later fix.
+# Sized for the finished presentation, not for a fast turnaround.
 BAKE_SIZE = 4096
 CANDIDATE_BAKE = 2048
 BAKE_SAMPLES = 320
@@ -124,23 +110,9 @@ SLOT = {
     "board": 0.09,
 }
 
-# The options stand well west of the building on open promenade, square to a
-# camera that has turned its back on the elevation. Hung beside the vacant bay
-# they competed with it, and the shot had to carry the building, the slot and
-# four alternatives at once. Standing apart, they get the frame to themselves
-# and the building keeps only a corner of it.
-#
-# The band between PROMENADE_NEAR and BED_NEAR is planted with nothing by rule,
-# which is also the corridor the panels travel along to enter and leave.
+# The options stand well west of the building on open promenade, square to a camera that has turned its back on the elevation.
 REVIEW = {
-    # Far west, well clear of the building. An earlier row at -45 sat inside the
-    # frustum of every Act I pose that looks west across the park, so the panels
-    # kept clipping into the edge of slides they had no business being in — and
-    # the shot that framed them had to stand 43 m back to keep the building's
-    # corner, which left them small.
-    #
-    # Nothing here is shared with the building's own poses any more, so the
-    # review camera can come in to 30 m and the panels can fill the frame.
+    # Far west, well clear of the building.
     "centre": -95.0,
     "y": -27.0,
     "spacing": 5.6,
@@ -159,24 +131,10 @@ REVIEW_CLEAR = {
 
 CANDIDATE = {
     "width": BAY - 0.1,
-    # Two storeys, not one. A facade option is a whole bay, and at the standoff
-    # the row needs to fit four panels plus a caption column a single-storey
-    # sample reads as a card rather than as a piece of building.
-    #
-    # Height is the only lever left on how large they read. Keeping the
-    # building's corner in the frame sets a minimum standoff — the corner
-    # leaves frame below about 42 m — so the camera cannot come closer.
+    # Two storeys, not one.
     "height": 7.2,
     "thickness": 0.30,
-    # Deliberately not the building's 75 mm course and 225 mm unit. The review
-    # camera stands 43 m off, where a 75 mm course is two pixels and a 225 mm
-    # unit is six — at that size all four options were the same dark rectangle,
-    # which makes a scene about choosing between them pointless.
-    #
-    # These are the coarsest articulation each option can carry and still be
-    # the thing it claims to be. `build_candidates` already says the
-    # differences must live in profile rather than surface; this is what that
-    # costs once the distance is known.
+    # Deliberately not the building's 75 mm course and 225 mm unit.
     "course": 0.22,
     "unit": 0.50,
     "relief": 0.10,
@@ -408,13 +366,7 @@ def pier_bay(parts: Parts, target, index: int, level: int) -> None:
 
 
 def slot_bay(parts: Parts, target, index: int, level: int) -> None:
-    """One bay of brick cladding never placed.
-
-    Cladding hangs off the frame, so a missing bay does not leave a hole through
-    the building — it leaves the backing wall visible with its fixings exposed.
-    The structure is complete and waiting, which is the early-design condition
-    made physical.
-    """
+    """One bay of brick cladding never placed."""
     base = level_base(level)
     x = bay_x(index)
     face = FRONT_Y + CORE_INSET
@@ -784,15 +736,13 @@ def split_lod(name: str) -> tuple[str, str]:
 _VARIANTS: dict[str, list] = {}
 
 
-def asset_variants(name: str) -> list:
-    """One placeable object per plant variant.
+def is_part(name: str) -> bool:
+    """Whether this object is a component of a plant rather than a whole one."""
+    return any(hint in name for hint in PART_NAMES)
 
-    A Poly Haven plant blend carries every LOD of every variant plus the loose
-    leaf and branch parts its geometry nodes scatter. Placing the lot stacks
-    four resolutions of the same plant on top of each other and strews the
-    source parts at the origin, so the file is filtered down to a single
-    resolution of each whole plant.
-    """
+
+def asset_variants(name: str) -> list:
+    """One placeable object per plant variant."""
     if name in _VARIANTS:
         return _VARIANTS[name]
 
@@ -803,17 +753,38 @@ def asset_variants(name: str) -> list:
         base, lod = split_lod(obj.name)
         groups.setdefault(base, {})[lod] = obj
 
+    wanted = ASSET_LOD_BY_NAME.get(name, ASSET_LOD)
     picked = []
     for lods in groups.values():
-        for key in (ASSET_LOD, "LOD0", ""):
+        for key in (wanted, ASSET_LOD, "LOD0", ""):
             if key in lods:
                 picked.append(lods[key])
                 break
 
-    whole = [obj for obj in picked if split_lod(obj.name)[0] == name]
+    # A whole tree is one that is not a component of one. The previous test was
+    # `split_lod(obj.name)[0] == name`, which never matched: Poly Haven's
+    # variants are `fir_tree_01_a_LOD1`, whose base is `fir_tree_01_a` and not
+    # `fir_tree_01`. So every asset fell through to the height fallback below,
+    # which happily admitted `fir_tree_01_trunk_c` — a 13 m bare trunk with no
+    # foliage on it at all. Those were planted on the site as trees and
+    # photographed onto the woodland belt's billboards as species, which is
+    # where the dead-looking sticks in the park came from.
+    whole = [obj for obj in picked if not is_part(obj.name)]
     if not whole and picked:
         tallest = max(obj.dimensions.z for obj in picked)
         whole = [obj for obj in picked if obj.dimensions.z > tallest * 0.5]
+        print(f"[exterior] {name}: no assembled variant; falling back to "
+              f"{[o.name for o in whole]}", file=sys.stderr)
+
+    # Reported, because a template's cost is otherwise invisible at the call
+    # site: `place_asset` scales to a height in metres, so a 257k-triangle
+    # 11.5 m pine and a 6k fir look identical written as "1.6 m of hedge". One
+    # of those was planted 76 times before anybody counted.
+    for obj in whole:
+        faces = len(obj.data.polygons)
+        flag = "  <-- heavy" if faces > TEMPLATE_BUDGET else ""
+        print(f"[exterior] template {obj.name}: {faces / 1000:.0f}k tris, "
+              f"{obj.dimensions.z:.1f} m{flag}")
 
     ratio = LOD_RATIO.get(name)
     if ratio:
@@ -825,13 +796,7 @@ def asset_variants(name: str) -> list:
 
 
 def reduce_mesh(obj, ratio: float) -> None:
-    """Decimate a template in place, before anything instances it.
-
-    A modifier cannot be applied to multi-user mesh data, so this has to happen
-    while the template is the only user. The object is linked to the scene
-    collection only long enough for the operator to have a context, and the
-    reduced mesh is then shared by every copy.
-    """
+    """Decimate a template in place, before anything instances it."""
     root = bpy.context.scene.collection
     root.objects.link(obj)
     modifier = obj.modifiers.new(name="lod", type="DECIMATE")
@@ -846,14 +811,7 @@ def have_assets() -> bool:
 
 
 def blocks_review(name: str, x: float, y: float) -> bool:
-    """Whether a plant would stand in the review row's sightline.
-
-    The panels get one scene and they have to carry it alone, so the wedge
-    between the camera and the row stays clear of anything with a canopy. A
-    tree planted here is not a small defect: it stands directly in front of an
-    option the audience is being asked to choose between. Ground cover is
-    exempt — it is below the panels and is what keeps the foreground alive.
-    """
+    """Whether a plant would stand in the review row's sightline."""
     if name in GRASS_ASSETS or name in GROUND_ASSETS:
         return False
     return (REVIEW_CLEAR["x"][0] <= x <= REVIEW_CLEAR["x"][1]
@@ -862,17 +820,7 @@ def blocks_review(name: str, x: float, y: float) -> bool:
 
 def place_asset(site: Parts, target, name: str, location, rotation: float,
                 metres: float, rng) -> None:
-    """Place one plant at a height in metres, not at a multiple of its own size.
-
-    Scale used to be a blind factor, which silently encodes an assumption about
-    every asset's native height. Swapping the island trees for conifers proved
-    the cost: a factor tuned for a 4 m olive produced 30 m pines that buried the
-    building, and nothing in the pipeline could have reported it.
-
-    Normalising against the template's measured height means an asset can be
-    swapped for any other and the site still reads at the size it was designed
-    at.
-    """
+    """Place one plant at a height in metres, not at a multiple of its own size."""
     if blocks_review(name, location[0], location[1]):
         print(f"[exterior] skipped {name} at {location[0]:.1f},{location[1]:.1f}: review sightline")
         return
@@ -1015,13 +963,7 @@ FLORA_TEXTURE = 1024
 # nearly constant, and it was 14 textures for no visible difference.
 FLORA_KEEP = ("Base Color", "Alpha", "Normal")
 
-# Poly Haven's plants are photographed in whatever season they were scanned in,
-# and several of them are late-summer dry. Against a green lawn under a blue sky
-# they read as dead rather than as planting, which is the single loudest thing
-# wrong with the site.
-#
-# Matched by material name, and only leaves and ground cover. Branch, trunk and
-# bark materials are left alone — pushing those green turns a tree into a prop.
+# Poly Haven's plants are photographed in whatever season they were scanned in, and several of them are late-summer dry.
 FOLIAGE_SUMMER = (0.086, 0.176, 0.055)
 FOLIAGE_TINT = 0.45
 FOLIAGE_NAMES = (
@@ -1039,16 +981,7 @@ def is_foliage(name: str) -> bool:
 
 
 def simplify_flora(objects) -> None:
-    """Trim planting materials, and grade the foliage to summer.
-
-    Normal and roughness are kept now. Dropping them was a payload decision made
-    when the whole exterior was baked and drawn unlit, so nothing on screen
-    responded to light anyway; with real-time lighting they are what stops a
-    canopy reading as a flat cut-out.
-
-    The tint is the important half. Several of these assets were scanned dry,
-    and a dry canopy against a green lawn reads as a dead tree.
-    """
+    """Trim planting materials, and grade the foliage to summer."""
     seen: set[str] = set()
     images: set[str] = set()
     tinted = 0
@@ -1073,12 +1006,7 @@ def simplify_flora(objects) -> None:
                     continue
                 images.add(image.name)
 
-                # Colour space is the discriminator, not graph position. A first
-                # version matched only images linked straight into Base Color
-                # and graded nothing at all: these materials route colour
-                # through a mix node, so the image is never the node the socket
-                # sees. Alpha, normal and roughness are all `Non-Color`, which
-                # is exactly the set that must not be tinted.
+                # Colour space is the discriminator, not graph position.
                 if foliage and image.colorspace_settings.name != 'Non-Color':
                     apply_tint(image, FOLIAGE_SUMMER, FOLIAGE_TINT, relevel=True)
                     image.pack()
@@ -1115,12 +1043,7 @@ def scaffold_extent() -> tuple[float, float, int, float]:
 
 
 def build_scaffold(parts: Parts, target) -> None:
-    """Tube-and-fitting scaffold over the slot bay and its neighbours.
-
-    Its value is the lattice it makes against the sky and the shadow it lays on
-    itself, so the members carry real depth rather than being decals. It is a
-    separate asset because Act IV shows the same building without it.
-    """
+    """Tube-and-fitting scaffold over the slot bay and its neighbours."""
     start, end, bays, pitch = scaffold_extent()
     lift = SCAFFOLD["lift"]
     tube = SCAFFOLD["tube"]
@@ -1260,12 +1183,7 @@ def candidate_place(index: int) -> float:
 
 
 def candidate_frame(parts: Parts, target, name: str, x: float) -> tuple[float, float]:
-    """A thin carrier edge so each option reads as a discrete panel.
-
-    The panels are the width of the bay module they would fill and stand on the
-    ground as site mock-ups do, so nothing about them can be mistaken for built
-    work — they are the decision, not the building.
-    """
+    """A thin carrier edge so each option reads as a discrete panel."""
     width = CANDIDATE["width"]
     height = CANDIDATE["height"]
     thickness = CANDIDATE["thickness"]
@@ -1352,13 +1270,7 @@ def candidate_screen(parts: Parts, target, name: str, x: float) -> None:
 
 
 def candidate_demountable(parts: Parts, target, name: str, x: float) -> None:
-    """Panelised and unbonded: the option that can be taken back off.
-
-    The joint grid is what distinguishes it, so it is a wide open reveal on a
-    two-by-three grid rather than a hairline on a two-by-two. At the review
-    distance a 45 mm joint carries no shadow and this panel was indistinguish-
-    able from the plain one — which made the choice between them meaningless.
-    """
+    """Panelised and unbonded: the option that can be taken back off."""
     base, _ = candidate_frame(parts, target, name, x)
     width, height = CANDIDATE["width"], CANDIDATE["height"]
     gap = 0.18
@@ -1407,16 +1319,7 @@ CANDIDATE_BUILDERS = (
 
 
 def build_candidates(target) -> list[Parts]:
-    """Four full-size mock-up panels standing in a row on open promenade.
-
-    Real projects erect sample panels on site for approval, so this needs no
-    floating-object convention. The differences are in profile rather than in
-    surface, because texture vanishes on a projector at thirty metres and
-    silhouette does not.
-
-    They rest here; the runtime slides them in and out past the frame edge, so
-    nothing is ever seen appearing or disappearing on the spot.
-    """
+    """Four full-size mock-up panels standing in a row on open promenade."""
     panels = []
     for index, (label, builder) in enumerate(CANDIDATE_BUILDERS):
         parts = Parts()
@@ -1497,12 +1400,7 @@ def principled(name: str, base_color, roughness: float, metallic: float = 0.0):
 
 
 def detail_texture(key: str, slot: str, tint: float) -> Path:
-    """A web-sized, palette-graded copy of one Poly Haven map.
-
-    Written to disk rather than mutated in memory because the glTF exporter
-    copies file-backed images straight through: edits made only to
-    `image.pixels` would never reach the GLB, and nothing would say so.
-    """
+    """A web-sized, palette-graded copy of one Poly Haven map."""
     asset, _, _ = DETAIL[key]
     source = next((ASSET_DIR / asset).glob(f"{slot}.*"), None)
     if source is None:
@@ -1538,18 +1436,7 @@ def detail_image(key: str, slot: str, tint: float, colour: bool):
 
 
 def detail_material(key: str):
-    """Surface detail as a tiling map on a real UV set, not as a baked atlas.
-
-    The whole building used to resolve to one 2048 atlas — roughly forty texels
-    per metre once the never-seen back and roof had taken their share, against
-    the fifty-five per metre the entrance pose asks for. Detail that lives in a
-    fixed-size atlas is sharp at exactly one distance; detail that tiles is
-    sharp at all of them, and costs less because four assets share one map.
-
-    Tiling is in metres. `project_detail_uv()` writes world coordinates divided
-    by this tile straight into the UV set, so no mapping node is involved and
-    the exporter has nothing to reinterpret.
-    """
+    """Surface detail as a tiling map on a real UV set, not as a baked atlas."""
     asset, tile, tint = DETAIL[key]
     base_color, roughness, metallic = PALETTE[key]
     material = principled(key, base_color, roughness, metallic)
@@ -1655,15 +1542,7 @@ def emissive_material(name: str, color, strength: float):
 
 
 def glazing_material(name: str, strength: float):
-    """Near-mirror, because glass reads by what it reflects.
-
-    At 0.28 this rendered as black holes in the elevation. A dielectric
-    reflects about 4% head-on, so a rough glass blurs the sky down to the
-    average of a dim gradient and there is nothing left to see; the reflection
-    only becomes visible when it is sharp enough to carry the sky's own
-    brightness, and when Fresnel lifts it at the grazing angles the act's poses
-    actually view the facade from.
-    """
+    """Near-mirror, because glass reads by what it reflects."""
     material = principled(name, (0.032, 0.045, 0.062, 1.0), 0.06)
     bsdf = material.node_tree.nodes["Principled BSDF"]
     bsdf.inputs["Emission Color"].default_value = (*INTERIOR_COLOR, 1.0)
@@ -1951,15 +1830,7 @@ DETAIL_AXES = ((1, 2), (0, 2), (0, 1))
 
 
 def project_detail_uv(obj) -> None:
-    """World coordinates, in metres, divided by each material's tile.
-
-    A box projection rather than an unwrap: tiling detail wants continuity
-    across the whole elevation, and seams between islands are exactly what an
-    unwrap creates. Written straight into the UV set instead of through a
-    mapping node, because glTF carries UVs and would have to reinterpret a node
-    graph — and Blender's exporter reinterprets what it cannot express by
-    silently dropping it.
-    """
+    """World coordinates, in metres, divided by each material's tile."""
     mesh = obj.data
     layer = mesh.uv_layers.get(DETAIL_UV) or mesh.uv_layers.new(name=DETAIL_UV)
     tiles = [
@@ -1996,12 +1867,7 @@ def unwrap_occlusion(obj) -> None:
 
 
 def gltf_settings_tree():
-    """The one node group Blender's glTF exporter reads occlusion out of.
-
-    glTF has no lightmap, and its occlusion channel is the only baked-lighting
-    slot the format carries. The exporter finds it by this exact group name, so
-    it is built here rather than assumed to exist.
-    """
+    """The one node group Blender's glTF exporter reads occlusion out of."""
     tree = bpy.data.node_groups.get(GLTF_SETTINGS)
     if tree:
         return tree
@@ -2070,21 +1936,7 @@ def bake_image(name: str, size: int = BAKE_SIZE):
 
 
 def report_levels(name: str, image) -> None:
-    """What an occlusion bake is worth checking for.
-
-    The old numbers — max, p99, percent clipped — were the right ones for a
-    combined bake, where the risk was blowing out. Occlusion cannot blow out;
-    its failure is coming back dark, because a large share of a joined mesh's
-    faces are interior and fully occluded, and a bake that is dark everywhere
-    looks exactly like one that is dark for a reason.
-
-    **Read it as a trend, not as a measurement of the facade.** These are texel
-    counts over the whole atlas, and this mesh is built from overlapping boxes,
-    so a large closed share is expected — most faces are interior and genuinely
-    see nothing. Watch for it moving between runs, not for its absolute value.
-    Masking on alpha does not separate the two: the bake writes alpha 1 across
-    the atlas, so every texel counts as covered.
-    """
+    """What an occlusion bake is worth checking for."""
     import numpy
 
     pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
@@ -2097,14 +1949,7 @@ def report_levels(name: str, image) -> None:
 
 
 def isolate_materials(obj) -> None:
-    """Give this asset private copies of every material it uses.
-
-    `principled()` returns one datablock per name, so every asset in the scene
-    shares `brick`, `steel` and the rest. Wiring one asset's occlusion map into
-    a shared material wires it into every asset baked afterwards, and the tell
-    is subtle enough to survive a review — two assets reporting identical bake
-    levels. See `learnings.md` §7c.
-    """
+    """Give this asset private copies of every material it uses."""
     for slot in obj.material_slots:
         if slot.material:
             slot.material = slot.material.copy()
@@ -2149,13 +1994,7 @@ def export(objects, destination: Path = OUTPUT, occluded: bool = True) -> None:
 
 
 def verify_export(destination: Path) -> None:
-    """Assert the exporter kept the occlusion map and its own UV set.
-
-    Blender's glTF exporter drops what it cannot express rather than failing,
-    so an occlusion map wired through the wrong node group, or a second UV set
-    no material references, disappears in silence and the browser gets a
-    building with no baked shading at all. See `learnings.md` §2.
-    """
+    """Assert the exporter kept the occlusion map and its own UV set."""
     data = destination.read_bytes()
     length = int.from_bytes(data[12:16], "little")
     document = json.loads(data[20:20 + length])
@@ -2171,19 +2010,7 @@ def verify_export(destination: Path) -> None:
 
 
 def bake_surface(obj, name: str, size: int = BAKE_SIZE):
-    """Bake what real-time light cannot reach, and only that.
-
-    The bake used to hold the whole appearance — albedo, sun, shadow, bounce —
-    and the browser drew it unlit. That made every surface a flat photograph:
-    the glazing, the brass screens and the metal cheeks never caught the light,
-    and those three are most of what gives the reference facade its character.
-
-    What is baked now is occlusion alone: the soffit under the oversail, the
-    window reveals, the undersides of the balcony boxes, the contact line where
-    the building meets the ground. Sun, shadow and reflection are real-time, so
-    they answer the camera. Occlusion is view-independent, which is precisely
-    why it is the part worth freezing into a map.
-    """
+    """Bake what real-time light cannot reach, and only that."""
     project_detail_uv(obj)
     unwrap_occlusion(obj)
     isolate_materials(obj)
@@ -2199,13 +2026,7 @@ def bake_surface(obj, name: str, size: int = BAKE_SIZE):
 
 
 def build_asset() -> None:
-    """Bake the construction state first, then strike it and bake the building.
-
-    Act IV shows this building finished. Anything standing in the scene when the
-    building bakes has its shadow burned into the brick permanently, so the
-    scaffold is baked while the building is present — it needs the building's
-    shadow — and then removed before the building bakes itself.
-    """
+    """Bake the construction state first, then strike it and bake the building."""
     target = collection()
     parts = build_geometry(target)
     site = build_site(target)
@@ -2259,28 +2080,15 @@ def requested_views() -> list[str]:
     return views
 
 
-WEB_TEXTURES = {
-    "grass": ("leafy_grass", "Diffuse", "grass"),
-    "paving": ("square_concrete_pavers", "Diffuse", "paving"),
-    "soil": ("park_dirt", "Diffuse", None),
-}
-WEB_TEXTURE_SIZE = 1024
+# The zone's ground and paving maps are written by `tools/web_textures.py`.
+# They used to be written here, which meant resizing six JPEGs required
+# launching Blender and building an entire apartment block first — and none of
+# the step ever needed `bpy`.
 LUMA = (0.2126, 0.7152, 0.0722)
 
 
 def apply_tint(image, color, amount: float = 1.0, relevel: bool = False) -> None:
-    """Take luminance from the texture and hue from the palette.
-
-    The same correction `tint_node()` makes in the render, done once here
-    instead. `leafy_grass` is a dry leafy floor and `square_concrete_pavers` is
-    warm; untinted, the browser gets a parched khaki lawn and terracotta paving
-    under a building whose levels were graded against the palette.
-
-    `relevel` additionally rescales the texture so its mean luminance lands on
-    the palette entry's. Without it a photographic map is a second, silent
-    source of truth for how dark a surface is, and every level tuned against
-    `PALETTE` has to be redone the day the texture is swapped.
-    """
+    """Take luminance from the texture and hue from the palette."""
     import numpy
 
     pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
@@ -2305,35 +2113,6 @@ def apply_tint(image, color, amount: float = 1.0, relevel: bool = False) -> None
     image.pixels.foreach_set(rgba.reshape(-1))
 
 
-def write_web_textures() -> None:
-    """Web-sized copies of the ground textures.
-
-    The site's paving is rebuilt in Three.js rather than exported: it is six
-    boxes, and its materials tile in world metres off a procedural node that
-    glTF cannot carry. Shipping the maps and repeating them in the browser is
-    both smaller and more controllable than baking a 600 m promenade.
-    """
-    TEXTURES_OUT.mkdir(parents=True, exist_ok=True)
-    settings = bpy.context.scene.render.image_settings
-    settings.file_format = 'JPEG'
-    settings.quality = 85
-
-    for name, (asset, slot, palette) in WEB_TEXTURES.items():
-        source = next((ASSET_DIR / asset).glob(f"{slot}.*"), None)
-        if source is None:
-            print(f"[exterior] missing texture for {name}", file=sys.stderr)
-            continue
-
-        image = bpy.data.images.load(str(source), check_existing=False)
-        image.scale(WEB_TEXTURE_SIZE, WEB_TEXTURE_SIZE)
-        if palette:
-            apply_tint(image, PALETTE[palette][0])
-        path = TEXTURES_OUT / f"{name}.jpg"
-        image.save_render(str(path), scene=bpy.context.scene)
-        bpy.data.images.remove(image)
-        print(f"[exterior] texture {path.name}: {path.stat().st_size / 1024:.0f} KB")
-
-
 def export_planting(site: Parts) -> None:
     flora = site.get("flora", [])
     if not flora:
@@ -2347,10 +2126,6 @@ def export_planting(site: Parts) -> None:
 
 
 def main() -> None:
-    if "--textures" in sys.argv:
-        write_web_textures()
-        return
-
     if "--planting" in sys.argv:
         target = collection()
         site = build_site(target)

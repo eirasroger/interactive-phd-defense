@@ -1,8 +1,12 @@
 import { FrontSide, Mesh, type MeshStandardMaterial, type Object3D } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { collapseToInstances } from './instancing';
+import { applyVariance } from './variance';
+import { applyWind, type Wind } from './wind';
 
 export interface Planting {
   readonly object: Object3D;
+  update(dt: number): void;
   dispose(): void;
 }
 
@@ -18,20 +22,25 @@ export interface Planting {
  * Their contribution to the building is already paid for. They stood in the
  * Blender scene while it baked, so the leaf shadow falling across the brick is
  * in the building's texture even though the leaves casting it are lit here.
+ *
+ * Three things happen on the way in, in an order that matters. The scattered
+ * nodes are collapsed into instanced draws, which is what makes density
+ * affordable at all; each instance is tinted, which stops a species reading as
+ * one plant reprinted; and the wind is patched onto the materials, which is
+ * what makes the site read as alive. The tint and the wind both need the
+ * instances to exist first, so nothing here reorders.
  */
 export function createPlanting(gltf: GLTF): Planting {
-  const object = gltf.scene;
-  const materials = new Set<MeshStandardMaterial>();
+  const instanced = collapseToInstances(gltf.scene);
 
-  object.traverse((child) => {
-    const mesh = child as Mesh;
-    if (!mesh.isMesh) return;
-
+  for (const mesh of instanced.meshes) {
     mesh.castShadow = true;
-    mesh.receiveShadow = false;
+    // Planting used to receive nothing, which lit every plant identically
+    // whatever stood over it. A shrub under a canopy is in shade, and without
+    // that it reads as pasted onto the ground rather than growing out of it.
+    mesh.receiveShadow = true;
 
     for (const material of materialsOf(mesh)) {
-      materials.add(material);
       // Leaves are single-sided cards in the source asset. Lit from one face
       // only, half of every canopy goes black as the camera moves around it.
       material.side = FrontSide;
@@ -41,14 +50,22 @@ export function createPlanting(gltf: GLTF): Planting {
       material.depthWrite = true;
       material.needsUpdate = true;
     }
-  });
+  }
+
+  applyVariance(instanced.meshes);
+  const wind: Wind = applyWind(instanced.meshes);
 
   return {
-    object,
-    // Geometry, materials and textures all belong to the asset cache and are
-    // shared with every later visit, so nothing is disposed here.
+    object: instanced.object,
+    update(dt: number) {
+      wind.update(dt);
+    },
+    // Source geometry, materials and textures belong to the asset cache and are
+    // handed out again on every later visit, so none of them are disposed here.
+    // The instance buffers and the depth materials are this object's own.
     dispose() {
-      materials.clear();
+      wind.dispose();
+      instanced.dispose();
     },
   };
 }

@@ -1,16 +1,4 @@
-"""Generate the demo construction assembly GLB.
-
-Run through Blender's own interpreter so the bpy version always matches the
-installed Blender:
-
-    blender --background --python tools/blender/generate_assembly.py
-
-Output: src/assets/models/assembly.glb
-
-The asset exists to validate the loading pipeline end to end (Draco decode,
-material handling, named-node addressing). Layers are named so the web scene
-can address and explode them individually.
-"""
+"""Generate the demo construction assembly GLB."""
 
 from __future__ import annotations
 
@@ -35,12 +23,7 @@ LAYERS = [
 
 
 def reset_scene() -> None:
-    """Empty the scene without resetting the application.
-
-    `read_factory_settings` would unregister every addon, which kills the
-    blender-mcp server when this script is run inside a live session. Purging
-    datablocks reaches the same starting point and works in both contexts.
-    """
+    """Empty the scene without resetting the application."""
     for collection in (bpy.data.objects, bpy.data.meshes, bpy.data.materials):
         for datablock in list(collection):
             collection.remove(datablock, do_unlink=True)

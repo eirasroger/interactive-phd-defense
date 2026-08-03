@@ -9,21 +9,40 @@ import { CanvasTexture, EquirectangularReflectionMapping, SRGBColorSpace, type T
  * texture drives image-based lighting, which is what makes the building's
  * shaded faces pick up sky colour rather than going flat black.
  *
- * It has to agree with the bake. `exterior_building.py` lights the building
- * under a physical daylight sky at a 28° sun; a dusk gradient here would put a
- * sunlit building under an evening sky, which reads instantly as wrong even
- * to someone who could not say why.
+ * **It does not have to agree with the Blender bake.** That was believed for a
+ * long time and it was wrong: the only thing `exterior_building.py` bakes is
+ * ambient occlusion, and AO is sun-independent by construction. Nothing in the
+ * exported textures carries a light direction, so the sun here can be moved
+ * freely and the relight costs a constant, not a re-bake.
+ *
+ * A Nordic summer midday, per `work/act1_photo_ideas/`: a genuinely deep blue
+ * zenith falling to a pale, slightly warm haze at the horizon. The saturation
+ * at the top matters more than it looks — it is what the water reflects and
+ * what the shaded faces of the building pick up through image-based lighting,
+ * so a washed-out sky produces a washed-out building even in full sun.
  */
 const STOPS: ReadonlyArray<readonly [number, string]> = [
-  [0.0, '#2f6ab0'],
-  [0.26, '#4a88c6'],
-  [0.42, '#7fadd8'],
-  [0.485, '#b9d2e5'],
-  // The horizon sits at exactly v = 0.5, which is eye level.
-  [0.5, '#d3e2ee'],
-  [0.512, '#8c9a7c'],
-  [0.62, '#5f6d4c'],
-  [1.0, '#47523a'],
+  [0.0, '#1f5fb4'],
+  [0.22, '#3d7cc8'],
+  [0.4, '#79aadb'],
+  [0.475, '#b6d3ea'],
+  // The horizon sits at exactly v = 0.5, which is eye level. This stop must
+  // stay close to the zone's fog colour: distant ground fades to fog and then
+  // gives way to sky, and any step between the two draws a hard line across
+  // the far field exactly where the eye is looking for one.
+  [0.5, '#d6e4f0'],
+  // Held at the fog colour for the first few degrees *below* the horizon, which
+  // is not cosmetic — it is load-bearing.
+  //
+  // The ground plane is 900 m across and the fog closes at 460 m, so every ray
+  // that leaves the camera shallowly downward and clears the plane's edge shows
+  // this texture instead of ground. From an elevated pose that is a band several
+  // degrees deep sitting directly above the treeline, and with a green stop here
+  // it rendered as a hard olive stripe across the sky. Anything past the fog
+  // distance is fog by definition, so that is what the first few degrees are.
+  [0.545, '#cfe0ee'],
+  [0.63, '#8d9a76'],
+  [1.0, '#55603f'],
 ];
 
 export function createSkyTexture(): Texture {

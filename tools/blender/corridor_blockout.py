@@ -1,16 +1,4 @@
-"""Spatial blockout of the corridor described in docs/narrative.md.
-
-    blender --background --python tools/blender/corridor_blockout.py
-
-This is a *study*, not a shipped asset. Its purpose is to check the spatial
-geography — station spacing, corridor proportion, camera height, how the
-recession reads — before those numbers are committed to Three.js camera poses.
-
-Blender's axes are Z-up, so the corridor runs along -Y here. glTF's y-up export
-maps that to the -Z the web world uses (see src/scenes/demo/layout.ts).
-
-Run with `--render <path>` to write a still instead of leaving the scene open.
-"""
+"""Spatial blockout of the corridor described in docs/narrative.md."""
 
 from __future__ import annotations
 
