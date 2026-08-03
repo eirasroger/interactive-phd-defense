@@ -10,19 +10,18 @@ import {
   type MeshStandardMaterial,
   type Object3D,
 } from 'three';
+import type { CanopyField } from './canopy';
 import {
   avenueAt,
   CROSSING,
-  offPaths,
-  pitch,
+  plantable,
   riverAt,
   riverSlope,
   riversideAt,
   SPAN,
-  wetness,
 } from './paths';
 import { AVENUE, LAND, PARK, REALM, RIVERSIDE, WOODLAND } from './site';
-import { heightAt } from './terrain';
+import { seatAt } from './terrain';
 import { findTrees, type TreeTemplate } from './trees';
 import { applyWind, type Wind } from './wind';
 
@@ -30,6 +29,11 @@ export interface Parkland {
   readonly object: Group;
   update(dt: number): void;
   dispose(): void;
+}
+
+export interface ParklandInputs {
+  /** Every tree planted here registers, so the ground can shade under it. */
+  readonly canopy: CanopyField;
 }
 
 /**
@@ -46,7 +50,11 @@ export interface Parkland {
  * a canopy overhangs a walk — which is what an avenue is for — while no trunk
  * ever stands in one.
  */
-export function createParkland(planting: Object3D, props: Object3D): Parkland {
+export function createParkland(
+  planting: Object3D,
+  props: Object3D,
+  { canopy }: ParklandInputs,
+): Parkland {
   const object = new Group();
   object.name = 'parkland';
 
@@ -90,7 +98,8 @@ export function createParkland(planting: Object3D, props: Object3D): Parkland {
    */
   const tree = (species: TreeTemplate, x: number, z: number, metres: number): boolean => {
     const unit = metres / species.height;
-    if (!plantable(x, z, species.radius * unit)) {
+    const crown = species.radius * unit;
+    if (!standable(x, z, crown)) {
       refused += 1;
       return false;
     }
@@ -101,9 +110,13 @@ export function createParkland(planting: Object3D, props: Object3D): Parkland {
     // wide by the same factor, so a row of one species is not one tree printed
     // eight times.
     scale.set(unit * (0.9 + random() * 0.22), unit, unit * (0.9 + random() * 0.22));
-    seat.set(x, heightAt(x, z) - 0.08, z);
+    // Seated on the lowest ground a trunk of this girth covers, not on the
+    // height under its origin. A tree is the one thing on the site whose base
+    // the camera comes close enough to check.
+    seat.set(x, seatAt(x, z, Math.min(crown * 0.22, 1.4)), z);
     matrix.compose(seat, spin, scale);
 
+    canopy.add(x, z, crown);
     species.parts.forEach((part, index) => emit(`${species.name}#${index}`, part, species.height));
     return true;
   };
@@ -113,7 +126,9 @@ export function createParkland(planting: Object3D, props: Object3D): Parkland {
     if (!template) return;
     spin.setFromAxisAngle(up, random() * Math.PI * 2);
     scale.setScalar(metres / template.height);
-    seat.set(x, heightAt(x, z) - 0.04, z);
+    // A bench has feet at its corners and a lamp post has a base plate, so both
+    // are seated on the lowest ground under their own footprint.
+    seat.set(x, seatAt(x, z, 0.7) + 0.02, z);
     matrix.compose(seat, spin, scale);
     emit(kind, template, template.height);
   };
@@ -187,20 +202,15 @@ type Pick = (metres: number) => TreeTemplate | undefined;
 /**
  * Whether a tree of this crown radius can stand here.
  *
- * The trunk clears every paved route by the crown's own radius, so the canopy
- * reaches over the walk and the tree never stands in it. Nothing is inside the
- * playground fence, and nothing is in the wedge the review row's camera looks
- * through — a tree there is not a small defect, it is planted in front of an
- * option the audience is being asked to choose between.
+ * The general question — paving, the building's plate, the playground, water —
+ * belongs to the path network and is asked there, so every scatter on the site
+ * gets the same answer. What is left here is the one rule that is the park's
+ * own: nothing in the wedge the review row's camera looks through. A tree there
+ * is not a small defect, it is planted in front of an option the audience is
+ * being asked to choose between.
  */
-function plantable(x: number, z: number, radius: number): boolean {
-  if (offPaths(x, z) < radius * 0.55) return false;
-  if (pitch(x, z) > 0.01) return false;
-  // Nothing grows in the water. Asked as "is there water here" rather than as
-  // "is the ground below the lake's level", which is the same question only on
-  // flat ground: the park now rolls to four metres below datum in places, so a
-  // test against an absolute water level refused most of the site.
-  if (wetness(x, z) > 0.12) return false;
+function standable(x: number, z: number, radius: number): boolean {
+  if (!plantable(x, z, radius * 0.55)) return false;
 
   const { clear } = WOODLAND;
   return !(x > clear.x[0] && x < clear.x[1] && z > clear.z[0] && z < clear.z[1]);

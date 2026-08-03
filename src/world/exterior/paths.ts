@@ -1,4 +1,13 @@
-import { AVENUE, BRIDGE, LAND, PLAYGROUND, REALM, REVIEW, RIVERSIDE } from './site';
+import {
+  AVENUE,
+  BRIDGE,
+  LAND,
+  PATH_EDGE_WIDTH,
+  PLAYGROUND,
+  REALM,
+  REVIEW,
+  RIVERSIDE,
+} from './site';
 
 /**
  * The centrelines the site is laid out from.
@@ -109,7 +118,7 @@ function walked(x: number, z: number): number {
   // ends on a step and the avenue reads as a shelf cut into the park.
   const along =
     smoothstep(AVENUE.from - 8, AVENUE.from + 4, z) *
-    (1 - smoothstep(CROSSING.z + 12, CROSSING.z + 26, z));
+    (1 - smoothstep(AVENUE_RUN.to - 14, AVENUE_RUN.to + 4, z));
   const onAvenue = Number.isFinite(avenue) ? (1 - smoothstep(0, 9, avenue)) * along : 0;
 
   const promenade = offPromenade(x, z);
@@ -202,6 +211,47 @@ export function riverSlope(x: number): number {
 export const CROSSING = { x: 0, z: riverAt(0) } as const;
 
 /**
+ * Where the avenue crosses the channel, and how long the span has to be.
+ *
+ * Derived, not typed, and getting this wrong is what left the bridge with no
+ * connection to the path either side. The deck is aligned with the *avenue*,
+ * so it meets the channel at whatever angle the meander makes there — and a
+ * span quoted across the channel is therefore too short by exactly the secant
+ * of that angle. At the 39° skew this crossing actually has, the 13 m span in
+ * use put both abutments 1.7 m *inside* the top of the bank: the deck landed on
+ * the slope, the paving stopped short of it on the level ground above, and the
+ * gap between them was the step the walk fell down.
+ *
+ * So the span is the bank-to-bank distance measured along the deck, plus a
+ * bearing at each end.
+ *
+ * It stands here rather than at the foot of the file because `offAvenue` needs
+ * it, and `offAvenue` is reached from `gradeAt` while the water profile below
+ * is being built. A `const` read before its own line is not a fallback, it is a
+ * `ReferenceError` — so the declaration order is load-bearing.
+ */
+export const SPAN =
+  2 * (LAND.river.halfWidth + LAND.river.swale) * Math.hypot(1, riverSlope(CROSSING.x)) +
+  2 * BRIDGE.bearing;
+
+/**
+ * The avenue's full extent, **both sides of the crossing**.
+ *
+ * `offAvenue` used to stop at `CROSSING.z`, which quietly meant that everything
+ * asking the path network where the paving is — the planting, the terrain's
+ * relief damping, the junction rules — could not see the far half of the walk
+ * or the bridge between them at all. `realm.ts` builds paving there, so the
+ * answer was simply wrong: plants stood on the far avenue and under the deck.
+ *
+ * One extent, exported, so the paving and the clearance cannot disagree about
+ * where the route runs.
+ */
+export const AVENUE_RUN = {
+  from: AVENUE.from - 3,
+  to: CROSSING.z + SPAN / 2 + 24,
+} as const;
+
+/**
  * Where the avenue's centre is, at a given distance out from the building.
  *
  * A half sine of amplitude `wander`, which is currently zero: the avenue is a
@@ -216,7 +266,7 @@ export function avenueAt(z: number): number {
 
 /** How far a point is from the avenue's paved edge, in metres. Zero when on it. */
 export function offAvenue(x: number, z: number): number {
-  if (z < AVENUE.from || z > CROSSING.z) return Infinity;
+  if (z < AVENUE_RUN.from || z > AVENUE_RUN.to) return Infinity;
   return Math.max(0, Math.abs(x - avenueAt(z)) - AVENUE.halfWidth);
 }
 
@@ -400,25 +450,47 @@ export function wetness(x: number, z: number): number {
   return Math.max(riverDepth(x, z), lakeDepth(x, z));
 }
 
+/** Freeboard reported where no water body governs. Larger than any real bank. */
+export const DRY = 99;
+
 /**
- * The water level that governs this point, whichever body is nearer.
+ * How far this point stands above the water that governs it, in metres.
  *
- * The two surfaces are not the same height — the stream leaves the lake and
- * runs downhill from it — so anything that keys off "how far above the water
- * am I" has to ask which water.
+ * Negative below the surface, `DRY` where there is no water to be above. The
+ * whole bankside read — gravel bed, silt line, damp tussock, then grass — is a
+ * function of this one number, which is why it is a number and not a set of
+ * colours: `terrain.ts` interpolates *this* across the ground and evaluates the
+ * bands per pixel, where interpolating the colours instead band-limits every
+ * transition to the 2.5 m grid and the silt line vanishes.
  *
- * Chosen by **proximity, not by depth**, and the distinction is not academic.
- * Asking `riverDepth > lakeDepth` answers correctly only where there is water:
- * standing on the bank both are zero, so the test fell through to the lake's
- * level — a metre above the stream's — and the shore band that `bareness` draws
- * from it appeared as a wide belt of bare soil along the top of the slope
- * rather than as a silt line at the water's edge.
+ * Which body governs is chosen by **proximity, not by depth**, and the
+ * distinction is not academic. Asking `riverDepth > lakeDepth` answers
+ * correctly only where there is water: standing on the bank both are zero, so
+ * the test fell through to the lake's level — a metre above the stream's — and
+ * the shore band drawn from it appeared as a wide belt of bare soil along the
+ * top of the slope rather than as a silt line at the water's edge.
+ *
+ * Reporting `DRY` away from both is the other half of the same fault. The lake
+ * sits at −1.15 and the park rolls to −4.6, so "height above the lake" is near
+ * zero in hollows three hundred metres inland, and a margin keyed on it drew
+ * beaches in the middle of the meadow.
  */
-export function waterLevel(x: number, z: number): number {
+export function freeboardAt(x: number, z: number, y: number): number {
   const { river, lake } = LAND;
-  const near =
-    riverReach(x) > 0 && riverAcross(x, z) < river.halfWidth + river.swale + river.plain;
-  return near ? riverSurface(x) : lake.surface;
+  const bankTop = river.halfWidth + river.swale;
+
+  // Faded out rather than switched off at a radius. A hard boundary draws its
+  // own edge: past the lake's apron the ground is free to roll below the lake's
+  // level again, so a test that simply stopped governing there put a ring of
+  // beach across the meadow at exactly `apron` metres out.
+  const stream =
+    riverReach(x) *
+    (1 - smoothstep(bankTop + river.plain * 0.55, bankTop + river.plain, riverAcross(x, z)));
+  const basin = 1 - smoothstep(lake.apron * 0.55, lake.apron, lakeReach(x, z));
+
+  if (stream <= 0 && basin <= 0) return DRY;
+  const level = stream >= basin ? riverSurface(x) : lake.surface;
+  return y - level + (1 - Math.max(stream, basin)) * DRY;
 }
 
 /**
@@ -465,23 +537,81 @@ export function offPaths(x: number, z: number): number {
 }
 
 /**
- * Where the avenue crosses the channel, and how long the span has to be.
+ * How far this point is from any ground the site has already spent, in metres.
  *
- * Derived, not typed, and getting this wrong is what left the bridge with no
- * connection to the path either side. The deck is aligned with the *avenue*,
- * so it meets the channel at whatever angle the meander makes there — and a
- * span quoted across the channel is therefore too short by exactly the secant
- * of that angle. At the 39° skew this crossing actually has, the 13 m span in
- * use put both abutments 1.7 m *inside* the top of the bank: the deck landed on
- * the slope, the paving stopped short of it on the level ground above, and the
- * gap between them was the step the walk fell down.
+ * Paving to its gutter edge, the granite plate the building stands on, and the
+ * playground inside its fence. All three are ground that was *given to
+ * something*, and a plant standing in any of them does not read as landscape —
+ * it reads as a fault, because the whole argument for the planting is that the
+ * public realm was designed.
  *
- * So the span is the bank-to-bank distance measured along the deck, plus a
- * bearing at each end.
+ * One question in one place, for the same reason `offPaths` is: it kept being
+ * asked differently by each scatter and the answers disagreed. The building's
+ * own ground was never asked about at all.
  */
-export const SPAN =
-  2 * (LAND.river.halfWidth + LAND.river.swale) * Math.hypot(1, riverSlope(CROSSING.x)) +
-  2 * BRIDGE.bearing;
+export function offBuilt(x: number, z: number): number {
+  return Math.min(
+    Math.max(0, offPaths(x, z) - PATH_EDGE_WIDTH),
+    offForecourt(x, z),
+    offPlayground(x, z),
+  );
+}
+
+/** The granite plate, and the building standing on it. */
+function offForecourt(x: number, z: number): number {
+  return Math.max(
+    Math.abs(x) - REALM.halfWidth,
+    LAND.core.far - z,
+    z - REALM.forecourtFar,
+    0,
+  );
+}
+
+/** The playground, out to its fence line. */
+function offPlayground(x: number, z: number): number {
+  const [cx, cz] = PLAYGROUND.centre;
+  const reach = Math.hypot(x - cx, (z - cz) / PLAYGROUND.oval);
+  return Math.max(0, reach - (PLAYGROUND.radius + 2.4));
+}
+
+/**
+ * The planting beds either side of the entrance path.
+ *
+ * The one place on the site where built ground is *for* plants, so it is an
+ * exception to `offBuilt` rather than a hole in it. Without it the beds — which
+ * `exterior-planting.glb` has carried since the first version of the site, and
+ * which the building's occlusion was baked against — are inside the forecourt
+ * plate and would be swept away with everything else standing on paving.
+ */
+export function inBeds(x: number, z: number): boolean {
+  return (
+    z > REALM.bedNear &&
+    z < REALM.forecourtFar &&
+    Math.abs(x) > REALM.pathHalfWidth &&
+    Math.abs(x) < REALM.halfWidth
+  );
+}
+
+/**
+ * Whether a plant may stand here, given how much clear ground it needs.
+ *
+ * `clearance` is in metres and is the caller's business, because the two kinds
+ * of planting want opposite things from the same edge. A tree stands back by a
+ * fraction of its crown radius, so the canopy overhangs the walk — which is
+ * what an avenue is — while the trunk never grows out of the paving. A verge
+ * shrub is planted hard against the gutter on purpose: that knee-high wall is
+ * most of what makes a path read as a route through planting rather than as a
+ * strip laid on a field. One rule with the distance as a parameter says both.
+ *
+ * Water is refused as "is there water here" rather than "is the ground below
+ * the lake's level". Those are the same question only on flat ground, and the
+ * park now rolls four metres below datum in places.
+ */
+export function plantable(x: number, z: number, clearance = 0): boolean {
+  if (wetness(x, z) > 0.12) return false;
+  if (inBeds(x, z)) return true;
+  return offBuilt(x, z) > clearance;
+}
 
 export function clamp01(value: number): number {
   return Math.min(Math.max(value, 0), 1);

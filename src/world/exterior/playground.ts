@@ -10,7 +10,7 @@ import {
   SphereGeometry,
 } from 'three';
 import { PLAYGROUND } from './site';
-import { heightAt } from './terrain';
+import { surfaceAt } from './terrain';
 
 export interface Playground {
   readonly object: Group;
@@ -42,7 +42,7 @@ export function createPlayground(): Playground {
   object.name = 'playground';
 
   const [cx, cz] = PLAYGROUND.centre;
-  const ground = heightAt(cx, cz);
+  const ground = surfaceAt(cx, cz);
   object.position.set(cx, ground, cz);
 
   const materials = {

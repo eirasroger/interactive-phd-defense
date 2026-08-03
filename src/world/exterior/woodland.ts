@@ -11,10 +11,11 @@ import {
   type Object3D,
   type WebGLRenderer,
 } from 'three';
+import type { CanopyField } from './canopy';
 import { renderImpostors, type Impostor } from './impostors';
 import { offAvenue, offPromenade, pitch } from './paths';
 import { LAND, WOODLAND } from './site';
-import { heightAt } from './terrain';
+import { surfaceAt } from './terrain';
 
 export interface Woodland {
   readonly object: Group;
@@ -22,8 +23,16 @@ export interface Woodland {
   dispose(): void;
 }
 
+export interface WoodlandInputs {
+  /** The belt registers here so the ground under it reads as woodland floor. */
+  readonly canopy: CanopyField;
+}
+
 /** Quads per card. Three at sixty degrees reads as a volume from any bearing. */
 const BLADES = 3;
+
+/** Crown radius as a fraction of height, for a conifer. Only the ground reads it. */
+const CROWN = 0.26;
 
 /**
  * The belt of woodland that closes the site.
@@ -47,7 +56,11 @@ const BLADES = 3;
  * between every station; three fixed quads never do, and at this distance the
  * silhouette is the entire read.
  */
-export function createWoodland(renderer: WebGLRenderer, source: Object3D): Woodland {
+export function createWoodland(
+  renderer: WebGLRenderer,
+  source: Object3D,
+  { canopy }: WoodlandInputs,
+): Woodland {
   const impostors = renderImpostors(renderer, source);
   const object = new Group();
   object.name = 'woodland';
@@ -59,6 +72,15 @@ export function createWoodland(renderer: WebGLRenderer, source: Object3D): Woodl
 
   const time = { value: 0 };
   const placements = scatter();
+
+  // The belt's floor is woodland floor, and it is the largest single area of
+  // ground in the frame from any pose that looks out of the site. Left as mown
+  // amenity green it is the loudest thing saying the trees are standing *on*
+  // the park rather than in a wood — the cards close the sky and the ground
+  // underneath them carries on being a lawn.
+  for (const placement of placements) {
+    canopy.add(placement.x, placement.z, placement.height * CROWN);
+  }
   const meshes: InstancedMesh[] = [];
   const materials: MeshBasicMaterial[] = [];
   const geometries: BufferGeometry[] = [];
@@ -154,7 +176,7 @@ function scatter(): Placement[] {
     if (!plantable(x, z)) return;
     placements.push({
       x,
-      y: heightAt(x, z),
+      y: surfaceAt(x, z),
       z,
       yaw: random() * Math.PI * 2,
       // Taller at the back, so the belt builds upward away from the viewer and
@@ -207,7 +229,7 @@ function scatter(): Placement[] {
  * audience is being asked to choose between.
  */
 function plantable(x: number, z: number): boolean {
-  if (heightAt(x, z) < LAND.lake.surface + 0.35) return false;
+  if (surfaceAt(x, z) < LAND.lake.surface + 0.35) return false;
 
   // Off the paving, and off it by enough that a canopy does not overhang the
   // route. Asked of the path network rather than of a bounding rectangle: the

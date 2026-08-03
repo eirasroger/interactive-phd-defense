@@ -1,4 +1,14 @@
-import { Box3, Group, InstancedMesh, Matrix4, Mesh, type BufferGeometry, type Material, type Object3D } from 'three';
+import {
+  Box3,
+  Group,
+  InstancedMesh,
+  Matrix4,
+  Mesh,
+  Vector3,
+  type BufferGeometry,
+  type Material,
+  type Object3D,
+} from 'three';
 
 export interface Instanced {
   readonly object: Group;
@@ -20,6 +30,22 @@ export interface Instanced {
 export interface PlantMetrics {
   readonly plantHeight: number;
 }
+
+/**
+ * Where one instance ends up, decided by the caller.
+ *
+ * The asset carries a *plan* — which plant, where in x and z, how big, which
+ * way round — and nothing it can say about the vertical is worth believing:
+ * `scatter_planting` places every one of them on a level Blender floor, and the
+ * ground they arrive on rolls nine metres. So the site gets to move each
+ * instance onto its own terrain and to refuse the ones that landed on paving,
+ * and this module stays a bucketing routine that knows nothing about either.
+ *
+ * Return `false` to drop the instance. `matrix` is in the root's space and is
+ * the caller's to rewrite; `bounds` is the whole plant's local box, which is
+ * what tells a 12 m fir from a grass tuft drawn with the same call.
+ */
+export type Seat = (matrix: Matrix4, bounds: Box3) => boolean;
 
 interface Bucket {
   readonly geometry: BufferGeometry;
@@ -59,13 +85,15 @@ const SAMPLES = 24;
  * exactly one path to handle rather than two. The trees are the smallest
  * buckets on the site and the most important things on it to move.
  */
-export function collapseToInstances(root: Object3D): Instanced {
+export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
   root.updateMatrixWorld(true);
   const toRoot = new Matrix4().copy(root.matrixWorld).invert();
 
   const buckets = new Map<string, Bucket>();
-  const heights = new Map<Object3D, number>();
+  const bounds = new Map<Object3D, Box3>();
+  const matrix = new Matrix4();
   let nodes = 0;
+  let refused = 0;
 
   root.traverse((child) => {
     const mesh = child as Mesh;
@@ -80,6 +108,13 @@ export function collapseToInstances(root: Object3D): Instanced {
     }
     nodes += 1;
 
+    const box = plantBounds(mesh, root, bounds);
+    matrix.multiplyMatrices(toRoot, mesh.matrixWorld);
+    if (seat && !seat(matrix, box)) {
+      refused += 1;
+      return;
+    }
+
     const key = `${mesh.material.uuid}|${fingerprint(mesh.geometry)}`;
     const bucket = buckets.get(key) ?? {
       geometry: mesh.geometry,
@@ -88,8 +123,8 @@ export function collapseToInstances(root: Object3D): Instanced {
       plantHeight: 0,
     };
 
-    bucket.matrices.push(new Matrix4().multiplyMatrices(toRoot, mesh.matrixWorld));
-    bucket.plantHeight = Math.max(bucket.plantHeight, plantHeight(mesh, heights));
+    bucket.matrices.push(matrix.clone());
+    bucket.plantHeight = Math.max(bucket.plantHeight, Math.max(box.max.y, 0.001));
     buckets.set(key, bucket);
   });
 
@@ -111,7 +146,13 @@ export function collapseToInstances(root: Object3D): Instanced {
     meshes.push(instanced);
   }
 
-  console.info(`[exterior] planting: ${nodes} nodes collapsed to ${meshes.length} instanced draws.`);
+  // The refusal count is reported rather than assumed. A clearance rule that is
+  // working and one that is quietly emptying the site look identical from any
+  // camera, and this is the only number that separates them.
+  console.info(
+    `[exterior] planting: ${nodes - refused} of ${nodes} nodes kept ` +
+      `(${refused} on built ground) in ${meshes.length} instanced draws.`,
+  );
 
   return {
     object,
@@ -126,19 +167,35 @@ export function collapseToInstances(root: Object3D): Instanced {
 }
 
 /**
- * The height of the whole plant this primitive belongs to, in local units.
+ * The whole plant this primitive belongs to, as a local-space box.
  *
  * `GLTFLoader` expands a multi-primitive mesh into a `Group` holding one child
  * per primitive, and those children carry no transform of their own — so the
  * union of their geometry bounding boxes, taken on the parent, is the plant
  * measured in exactly the space the vertex shader sees. Cached per node
  * because every instance of a template asks the same question.
+ *
+ * The box rather than the height alone, because both callers need the width
+ * too: the wind normalises sway against the plant's height, and the site needs
+ * a crown radius to decide what a placement has to clear and how far the ground
+ * under it is shaded.
+ *
+ * **The root is never the plant.** A single-primitive plant is exported as a
+ * bare `Mesh` hanging directly off the scene, so "take the parent" reaches the
+ * scene itself and measures the union of every geometry on the site — a plant
+ * three hundred metres tall and two hundred wide, cached and handed to every
+ * caller after it. That went unnoticed while the only consumer was the wind,
+ * which normalises by it and so only made the sway wrong; the moment a crown
+ * radius decided what a placement clears, it became a nine-hundred-metre
+ * grass tuft.
  */
-function plantHeight(mesh: Mesh, cache: Map<Object3D, number>): number {
-  const node = mesh.parent && !(mesh.parent as Mesh).isMesh ? mesh.parent : mesh;
+function plantBounds(mesh: Mesh, root: Object3D, cache: Map<Object3D, Box3>): Box3 {
+  const parent = mesh.parent;
+  const grouped = parent && parent !== root && !(parent as Mesh).isMesh;
+  const node = grouped ? parent : mesh;
 
   const cached = cache.get(node);
-  if (cached !== undefined) return cached;
+  if (cached) return cached;
 
   const bounds = new Box3();
   node.traverse((child) => {
@@ -148,9 +205,9 @@ function plantHeight(mesh: Mesh, cache: Map<Object3D, number>): number {
     if (part.geometry.boundingBox) bounds.union(part.geometry.boundingBox);
   });
 
-  const height = bounds.isEmpty() ? 1 : Math.max(bounds.max.y, 0.001);
-  cache.set(node, height);
-  return height;
+  if (bounds.isEmpty()) bounds.set(new Vector3(-0.5, 0, -0.5), new Vector3(0.5, 1, 0.5));
+  cache.set(node, bounds);
+  return bounds;
 }
 
 /**

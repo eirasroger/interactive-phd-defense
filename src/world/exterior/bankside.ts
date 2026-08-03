@@ -13,14 +13,28 @@ import {
   type BufferGeometry,
   type Object3D,
 } from 'three';
-import { offAvenue, offPromenade, riverAt, riverSlope, riversideAt } from './paths';
+import {
+  freeboardAt,
+  offAvenue,
+  offBuilt,
+  offPromenade,
+  riverAt,
+  riverSlope,
+  riversideAt,
+} from './paths';
 import { AVENUE, LAND, REALM } from './site';
-import { heightAt } from './terrain';
+import { seatAt, surfaceAt } from './terrain';
 
 export interface Bankside {
   readonly object: Group;
   dispose(): void;
 }
+
+/** How far clear of built ground a stem has to be, in metres. */
+const STEM = 0.05;
+
+/** How deep a plant's base may sit below the water surface it stands in. */
+const WADE = -0.3;
 
 /**
  * What grows where, as name prefixes into the planting asset.
@@ -84,7 +98,28 @@ export function createBankside(source: Object3D): Bankside {
    * species. Normalising through the bounding box is what lets a reed bed be
    * specified as "1.6 m tall" and actually be 1.6 m tall.
    */
+  let refused = 0;
+
   const plant = (group: keyof typeof SPECIES, x: number, z: number, metres: number): void => {
+    // Never on built ground. Measured at the stem rather than over the
+    // footprint, because a verge shrub is planted hard against the gutter on
+    // purpose and its foliage is meant to lean over it — refusing it by its own
+    // spread would delete precisely the row that gives the walk its edge.
+    if (offBuilt(x, z) <= STEM) {
+      refused += 1;
+      return;
+    }
+
+    const spread = Math.min(metres * 0.4, 0.9);
+    const y = seatAt(x, z, spread);
+    // Reeds stand in the shallows and that is the point; nothing stands out in
+    // open water. The line is drawn at ankle depth in the water's own terms
+    // rather than at an absolute level, because the stream falls along its run.
+    if (freeboardAt(x, z, y) < WADE) {
+      refused += 1;
+      return;
+    }
+
     const options = SPECIES[group];
     const key = options[Math.floor(random() * options.length)]!;
     const pool = templates.get(key);
@@ -99,7 +134,7 @@ export function createBankside(source: Object3D): Bankside {
     spin.setFromAxisAngle(up, random() * Math.PI * 2);
     const unit = (metres * (0.78 + random() * 0.5)) / template.height;
     scale.set(unit * (0.85 + random() * 0.35), unit, unit * (0.85 + random() * 0.35));
-    seat.set(x, heightAt(x, z) - 0.08, z);
+    seat.set(x, y, z);
     list.push(matrix.clone().compose(seat, spin, scale));
   };
 
@@ -127,7 +162,8 @@ export function createBankside(source: Object3D): Bankside {
 
   const planted = [...placements.values()].reduce((total, list) => total + list.length, 0);
   console.info(
-    `[bankside] ${planted} plants in ${meshes.length} draws, ${stones.object.count} boulders.`,
+    `[bankside] ${planted} plants in ${meshes.length} draws (${refused} refused), ` +
+      `${stones.object.count} boulders.`,
   );
 
   return {
@@ -162,8 +198,16 @@ function scatterBanks(random: () => number, plant: Plant): void {
       for (let i = 0; i < 4; i += 1) {
         // Biased toward the water: squaring the sample puts most of the mass in
         // the wet third of the section.
+        //
+        // The inner bound is the *waterline*, not the bed's half-width. The bed
+        // is flat only out to `halfWidth` and then climbs, and it climbs a good
+        // way before it breaks the surface — so a scatter starting at the bed's
+        // edge put nearly half its plants out in open water, where they are
+        // refused, and the density that was meant to be thickest at the water
+        // was thinnest there instead.
+        const shore = river.halfWidth * 1.6;
         const t = random() ** 1.7;
-        const offset = side * (river.halfWidth * 0.85 + t * (top - river.halfWidth * 0.85));
+        const offset = side * (shore + t * (top - shore));
         const jitter = (random() - 0.5) * 1.1;
 
         const px = x - offset * slope * across + jitter;
@@ -189,10 +233,15 @@ function scatterBanks(random: () => number, plant: Plant): void {
 function scatterVerges(random: () => number, plant: Plant): void {
   const gutter = 1.0;
 
+  // Standing on the paving is refused by `plant` itself now, against the whole
+  // path network rather than against whichever route this loop happens to run
+  // beside. What is left at the call site is the one thing the network cannot
+  // know: a junction has to stay open, so the verge holds well back from where
+  // the avenue meets the promenade.
   for (let z = AVENUE.from - 2; z < 80; z += 0.85) {
     for (const side of [-1, 1]) {
       const x = side * (AVENUE.halfWidth + gutter + random() * 2.6);
-      if (offAvenue(x, z) < 0.4) continue;
+      if (offPromenade(x, z) < 4) continue;
       plant(random() < 0.55 ? 'mass' : 'verge', x, z, 1.0 + random() * 0.85);
     }
   }
@@ -202,7 +251,7 @@ function scatterVerges(random: () => number, plant: Plant): void {
   for (let x = -REALM.run / 2; x < REALM.run / 2; x += 1.1) {
     for (const side of [-1, 1]) {
       const z = promenade + side * (reach + random() * 3.2);
-      if (offPromenade(x, z) < 0.4 || offAvenue(x, z) < 4) continue;
+      if (offAvenue(x, z) < 4) continue;
       plant(random() < 0.6 ? 'mass' : 'verge', x, z, 1.0 + random() * 0.9);
     }
   }
@@ -272,7 +321,7 @@ function boulders(random: () => number): { object: InstancedMesh; dispose(): voi
     axis.set(random() - 0.5, random() - 0.5, random() - 0.5).normalize();
     spin.setFromAxisAngle(axis, random() * Math.PI);
     scale.set(size, size * (0.6 + random() * 0.5), size * (0.8 + random() * 0.5));
-    seat.set(px, heightAt(px, pz) + size * 0.22, pz);
+    seat.set(px, surfaceAt(px, pz) + size * 0.22, pz);
     transforms.push(matrix.clone().compose(seat, spin, scale));
   }
 

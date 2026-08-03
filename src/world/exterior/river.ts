@@ -7,16 +7,13 @@ import {
 } from 'three';
 import { riverAt, riverSlope, riverSurface } from './paths';
 import { LAND } from './site';
-import { heightAt } from './terrain';
+import { surfaceAt } from './terrain';
 
 export interface River {
   readonly object: Mesh;
   update(dt: number): void;
   dispose(): void;
 }
-
-/** How far past the channel the surface runs, so it always ends under the bank. */
-const OVERLAP = 1.1;
 
 /**
  * Metres between sections along the stream, and quads across it.
@@ -26,8 +23,32 @@ const OVERLAP = 1.1;
  * spaced — at ten rows over a 5.8 m section that is 64 cm, and the waterline
  * came out as a visibly faceted polygon rather than as an edge.
  */
-const STEP = 2.0;
-const ACROSS = 18;
+const STEP = 1.0;
+const ACROSS = 34;
+
+/**
+ * How far light gets through the water, in metres.
+ *
+ * The whole read now hangs off this. A stream is not a coloured surface, it is
+ * a thin absorbing layer over a bed you can see, and the one thing that says so
+ * is that the *same* water is clear at the edge and dark in the middle. Beer's
+ * law gives that for free from the depth already at every vertex: at the 0.55 m
+ * channel bottom the column absorbs about three quarters, and the last handspan
+ * against the bank absorbs almost nothing.
+ */
+const EXTINCTION = 0.34;
+
+/**
+ * How much of a grazing reflection survives the water being transparent.
+ *
+ * The two readings of this stream are from opposite geometries — looked down
+ * into from the bridge, where Fresnel is near zero and the bed is the subject,
+ * and looked along from the bank, where it is near one and the surface is a
+ * mirror. A constant opacity has to pick one and loses the other. Lifting alpha
+ * with the view angle keeps both, because alpha is what the reflection is
+ * multiplied by on the way out.
+ */
+const SHEEN = 0.82;
 
 /** Where the ribbon starts and stops. East end reaches into the lake it issues from. */
 const FROM = LAND.lake.west + 14;
@@ -55,7 +76,26 @@ const TO = -320;
  */
 export function createRiver(): River {
   const { river } = LAND;
-  const half = river.halfWidth + OVERLAP;
+  /**
+   * The ribbon is cut to the **whole swale**, not to the channel's nominal
+   * half-width, and is then masked back by its own depth.
+   *
+   * `halfWidth` is a statement about the bed, and the bed is only the flat part
+   * of the section — past it the ground climbs to the bank top over `swale`
+   * metres, and it crosses the water surface a good way up that climb. A ribbon
+   * quoted at the bed's width therefore stopped *inside* its own waterline: the
+   * water was still 47 cm deep where the mesh ended, so it terminated on a cut
+   * polygon edge with the alpha feather never reaching zero, and the real
+   * waterline — the line where the terrain rises through the surface — was
+   * never drawn anywhere.
+   *
+   * Cutting wide and masking on depth makes the edge a *measurement of the
+   * ground* rather than a claim about it, which is `learnings.md` §9's
+   * corollary: a per-vertex mask says where the surface is, a boundary chosen
+   * to be hidden by something else says only where that something else happens
+   * to be today.
+   */
+  const half = river.halfWidth + river.swale;
 
   const columns = Math.ceil((FROM - TO) / STEP) + 1;
   const positions: number[] = [];
@@ -87,7 +127,7 @@ export function createRiver(): River {
 
       positions.push(x, surface, z);
       uvs.push(arc * 0.25, across * 0.25);
-      depths.push(Math.max(0, surface - heightAt(x, z)));
+      depths.push(Math.max(0, surface - surfaceAt(x, z)));
       channel.push(arc, across);
     }
   }
@@ -121,10 +161,16 @@ export function createRiver(): River {
     // over it. The reflection is therefore both dimmer and duller than an open
     // water surface, and the *ratio* of albedo to environment is the whole read
     // rather than either value on its own.
-    color: 0x25382f,
-    roughness: 0.16,
+    //
+    // This is now the colour of the *water*, not of the stream. What the eye
+    // reads as the stream's colour is this laid over the bed at a thickness
+    // that varies across the channel, which is why the flat version could never
+    // work however it was graded: an opaque sheet has one colour by
+    // construction, and the thing being drawn has a different one everywhere.
+    color: 0x22362d,
+    roughness: 0.12,
     metalness: 0,
-    envMapIntensity: 0.55,
+    envMapIntensity: 0.65,
     transparent: true,
     depthWrite: true,
   });
@@ -141,12 +187,11 @@ export function createRiver(): River {
          attribute float aDepth;
          attribute vec2 aChannel;
          varying float vDepth;
-         varying vec2 vChannel;
-         varying vec3 vFlow;`,
+         varying vec2 vChannel;`,
       )
       .replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>\nvDepth = aDepth;\nvChannel = aChannel;\nvFlow = position;',
+        '#include <begin_vertex>\nvDepth = aDepth;\nvChannel = aChannel;',
       );
 
     shader.fragmentShader = shader.fragmentShader
@@ -155,8 +200,7 @@ export function createRiver(): River {
         `#include <common>
          uniform float uTime;
          varying float vDepth;
-         varying vec2 vChannel;
-         varying vec3 vFlow;`,
+         varying vec2 vChannel;`,
       )
       .replace(
         '#include <normal_fragment_begin>',
@@ -176,39 +220,47 @@ export function createRiver(): River {
          // Broken hardest where it is shallowest, which is where a real stream
          // runs over its own bed and where the only white water appears.
          float shallow = 1.0 - smoothstep(0.05, 0.55, vDepth);
-         normal = normalize(normal + vec3(flow.x, 0.0, flow.y) * (0.55 + shallow * 1.6));`,
-      )
-      .replace(
-        '#include <map_fragment>',
-        `#include <map_fragment>
-         // The bed, read through the water — but only in the last handspan of
-         // shallows against the bank, not across the channel.
+         normal = normalize(normal + vec3(flow.x, 0.0, flow.y) * (0.55 + shallow * 1.6));
+
+         // How much of the water column is in the way, by Beer's law.
          //
-         // Widening this to a metre was a misreading. The complaint that the
-         // river looked like a flat dark stripe was true, and the cause was not
-         // the water: it was that there was nothing on the banks. In the
-         // photograph the channel *is* a flat dark stripe, and it works because
-         // it is glimpsed between masses of reed with pale boulders breaking the
-         // waterline. That is a planting problem, and shading the water paler to
-         // compensate only made it read as a puddle.
-         float bed = 1.0 - smoothstep(0.02, 0.30, vDepth);
-         vec3 stone = vec3(0.30, 0.27, 0.21);
-         float grain = fract(sin(dot(floor(vFlow.xz * 9.0), vec2(12.99, 78.23))) * 43758.5);
-         stone *= 0.78 + grain * 0.5;
-         diffuseColor.rgb = mix(diffuseColor.rgb, stone, bed * 0.7);
-         // Feathered out at the waterline instead of ending on a cut edge. The
-         // bank is uneven at a finer scale than this mesh resolves, so a hard
+         // This replaces a constant opacity and a painted-on bed, and the two
+         // faults it removes are the same fault: a stream drawn as an opaque
+         // surface has to *depict* being shallow, and every attempt to do that
+         // — a stone colour mixed in near the edge, a paler shading across the
+         // channel — reads as a puddle, because what says "shallow" is seeing
+         // the actual ground through it and nothing else does.
+         //
+         // The bed underneath is real terrain, gravel-textured wherever it sits
+         // below the water line, so there is nothing left to fake.
+         float column = 1.0 - exp(-vDepth / ${EXTINCTION.toFixed(3)});
+
+         // Fresnel, so the surface is a mirror along the bank and a window from
+         // the bridge. Alpha multiplies the reflection on the way out, so
+         // lifting it here is what keeps the sky in the water at grazing angles
+         // without making the channel opaque when looked into.
+         float facing = saturate(dot(normal, normalize(vViewPosition)));
+         float glance = pow(1.0 - facing, 5.0);
+
+         // Feathered at the waterline instead of ending on a cut edge. The bank
+         // is uneven at a finer scale than this mesh resolves, so a hard
          // boundary would read as a sheet laid over the ground.
-         diffuseColor.a *= smoothstep(0.0, 0.10, vDepth);`,
+         float wetted = smoothstep(0.0, 0.06, vDepth);
+         diffuseColor.a = saturate(mix(column, 1.0, glance * ${SHEEN.toFixed(2)})) * wetted;
+
+         // The ribbon is cut wider than the water and masked back to it, so the
+         // dry part of the swale is covered by fragments that must not exist.
+         // Alpha alone will not do it: the mesh writes depth, so a transparent
+         // fragment over dry ground still occludes the bank behind it.
+         if (diffuseColor.a < 0.01) discard;`,
       )
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
-         // Water you can see the bottom of is not a mirror. At 0.09 roughness
-         // the whole stream returned sky whatever the bed did underneath it,
-         // which put a pale sheet over the one cue that says it is shallow.
-         // Broken shallow water scatters, so it goes rough where the bed shows.
-         roughnessFactor = mix(roughnessFactor, 0.62, 1.0 - smoothstep(0.02, 0.30, vDepth));`,
+         // Water you can see the bottom of is not a mirror. Broken shallow
+         // water scatters, so it goes rough over the shallows and stays sharp
+         // in the channel where it is deep enough to hold a reflection.
+         roughnessFactor = mix(roughnessFactor, 0.55, 1.0 - smoothstep(0.04, 0.34, vDepth));`,
       );
   };
 

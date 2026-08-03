@@ -77,11 +77,24 @@ export function createLake(): Lake {
     }
   }
 
+  // Wound so the surface faces **up**, and this was wrong for as long as the
+  // lake has existed: columns advance in +X and rows in +Z, and taking them in
+  // the order (a, b, a+1) puts the cross product at −Y. Every triangle of the
+  // lake was therefore back-facing and `FrontSide` discarded the entire body of
+  // water — with the correct vertex count, the correct extent, the correct
+  // shader and no warning anywhere.
+  //
+  // It survived review because the failure is invisible by construction: what
+  // you see instead of the lake is the lake *bed*, which is terrain, which is
+  // exactly where a lake is supposed to be. `learnings.md` §9a is this same
+  // fault on the avenue's paving, and the tell is the same — geometry that is
+  // generated rather than placed does not fail loudly, it just quietly is not
+  // there.
   for (let column = 0; column < columns - 1; column += 1) {
     for (let row = 0; row < rows - 1; row += 1) {
       const a = column * rows + row;
       const b = a + rows;
-      indices.push(a, b, a + 1, a + 1, b, b + 1);
+      indices.push(a, a + 1, b, a + 1, b + 1, b);
     }
   }
 
@@ -91,6 +104,18 @@ export function createLake(): Lake {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
+
+  // Reported, because the fault above cannot be seen and can be measured in one
+  // line. A water surface whose average normal does not point up is not a water
+  // surface, whatever the vertex count says.
+  const normals = geometry.getAttribute('normal');
+  let facing = 0;
+  for (let index = 0; index < normals.count; index += 1) facing += normals.getY(index);
+  console.info(
+    `[exterior] lake: ${indices.length / 3} triangles, ` +
+      `${wet.filter((value) => value > 0.02).length}/${wet.length} vertices wet, ` +
+      `mean normal y ${(facing / normals.count).toFixed(2)}.`,
+  );
 
   const material = new MeshStandardMaterial({
     // What the water is where it is not reflecting.

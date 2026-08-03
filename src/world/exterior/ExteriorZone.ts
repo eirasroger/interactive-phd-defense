@@ -5,6 +5,7 @@ import { TRANSITION } from '@/config/presentation';
 import type { Atmosphere } from '@/engine/render/atmosphere';
 import type { ZoneContext, ZoneDefinition, ZoneInstance } from '@/engine/world/types';
 import { createBakedPart, createBuilding, findParts, sharpen, type Building } from './building';
+import { createCanopyField } from './canopy';
 import { createLake, type Lake } from './lake';
 import { createParkland, type Parkland } from './parkland';
 import { createPlanting, type Planting } from './planting';
@@ -36,9 +37,11 @@ export const EXTERIOR_ASSETS = [
   'grassTexture',
   'meadowTexture',
   'soilTexture',
+  'riverbedTexture',
   'clayTexture',
   'graniteTexture',
   'cobbleTexture',
+  'gravelTexture',
   'clayNormal',
   'graniteNormal',
   'cobbleNormal',
@@ -138,10 +141,6 @@ class Exterior implements ZoneInstance {
   constructor(private readonly context: ZoneContext) {
     const { assets, stage } = context;
 
-    this.terrain = createTerrain({
-      grass: assets.texture('grassTexture'),
-      soil: assets.texture('soilTexture'),
-    });
     this.lake = createLake();
     this.river = createRiver();
     this.bridge = createBridge();
@@ -150,6 +149,10 @@ class Exterior implements ZoneInstance {
       clay: { map: assets.texture('clayTexture'), normal: assets.texture('clayNormal') },
       granite: { map: assets.texture('graniteTexture'), normal: assets.texture('graniteNormal') },
       cobble: { map: assets.texture('cobbleTexture'), normal: assets.texture('cobbleNormal') },
+      // No normal map of its own: loose gravel under planting is read at three
+      // metres and its relief is below the threshold a normal buys anything at,
+      // so the cobble's stands in rather than shipping a fourth map.
+      gravel: { map: assets.texture('gravelTexture'), normal: assets.texture('cobbleNormal') },
     });
 
     // Three modules read the planting asset's node hierarchy directly, and all
@@ -158,11 +161,29 @@ class Exterior implements ZoneInstance {
     // photographs the trees onto billboards, the bankside clones species by
     // name, and the parkland instances whole trees into the park — none of them
     // ships an asset of its own.
+    // **The planting is built before the ground it stands on**, and the order is
+    // the design rather than an accident of construction. Grass does not grow
+    // the same under a tree, and the only description of where the trees are is
+    // the plan that just placed them — painting a matching map would be a second
+    // description of one thing, agreeing until the seed changes.
+    //
+    // Nothing here needs the terrain *mesh*, only `heightAt`, which is a pure
+    // function. So the dependency runs one way: the planting asks the ground
+    // where it is, then the ground asks the planting what is standing on it.
+    const canopy = createCanopyField();
+
     const flora = assets.model(PLANTING_ASSET).scene;
-    this.woodland = createWoodland(context.renderer, flora);
+    this.woodland = createWoodland(context.renderer, flora, { canopy });
     this.bankside = createBankside(flora);
-    this.parkland = createParkland(flora, assets.model(PARK_ASSET).scene);
-    this.planting = createPlanting(assets.model(PLANTING_ASSET));
+    this.parkland = createParkland(flora, assets.model(PARK_ASSET).scene, { canopy });
+    this.planting = createPlanting(assets.model(PLANTING_ASSET), { canopy });
+
+    this.terrain = createTerrain({
+      grass: assets.texture('grassTexture'),
+      soil: assets.texture('soilTexture'),
+      riverbed: assets.texture('riverbedTexture'),
+      canopy,
+    });
 
     stage.add(
       this.terrain.object,

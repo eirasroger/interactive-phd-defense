@@ -266,6 +266,22 @@ export const BRIDGE = {
 } as const;
 
 /**
+ * The built strip either side of every carriageway.
+ *
+ * A narrow granite kerb standing `rise` proud of the paving, then a strip of
+ * small cobbles dished `dish` below it as a gutter against the planting. The
+ * section itself is `realm.ts`'s business; what lives here is the width,
+ * because it is not only a paving dimension — it is the edge everything else on
+ * the site has to keep clear of, and `offBuilt` in `paths.ts` needs the same
+ * number the paving is built from. Two copies of it is two different answers to
+ * where the path stops.
+ */
+export const PATH_EDGE = { kerb: 0.3, gutter: 0.55, rise: 0.05, dish: 0.03 } as const;
+
+/** How far the built edge reaches past the carriageway, in metres. */
+export const PATH_EDGE_WIDTH = PATH_EDGE.kerb + PATH_EDGE.gutter;
+
+/**
  * The riverside walk, as the reach it runs over.
  *
  * Its centreline is `riversideAt`; what lives here is only where it starts and

@@ -16,6 +16,8 @@ import graniteNormalUrl from './textures/granite-normal.jpg?url';
 import grassTextureUrl from './textures/grass.jpg?url';
 import meadowTextureUrl from './textures/meadow.jpg?url';
 import soilTextureUrl from './textures/soil.jpg?url';
+import riverbedTextureUrl from './textures/riverbed.jpg?url';
+import gravelTextureUrl from './textures/gravel.jpg?url';
 
 /**
  * Every loadable asset, addressed by a stable id.
@@ -36,11 +38,19 @@ export const manifest: readonly AssetEntry[] = [
   { id: 'grassTexture', url: grassTextureUrl, kind: 'texture' },
   { id: 'meadowTexture', url: meadowTextureUrl, kind: 'texture' },
   { id: 'soilTexture', url: soilTextureUrl, kind: 'texture' },
+  // The channel bottom, and it is a third ground layer rather than a shading
+  // trick in the water. Once the stream absorbs by depth instead of being an
+  // opaque sheet, what the audience is looking at from the bridge is this.
+  { id: 'riverbedTexture', url: riverbedTextureUrl, kind: 'texture' },
   // The paving split from `world_design.md` §2.2: red clay in the park, grey
   // granite at the building, a cobble gutter against the planting at every edge.
   { id: 'clayTexture', url: clayTextureUrl, kind: 'texture' },
   { id: 'graniteTexture', url: graniteTextureUrl, kind: 'texture' },
   { id: 'cobbleTexture', url: cobbleTextureUrl, kind: 'texture' },
+  // The planting beds at the entrance. Without a surface of their own the beds
+  // are granite with plants standing in it, which is what "the ground the
+  // building sits on should be devoid of plants" is actually looking at.
+  { id: 'gravelTexture', url: gravelTextureUrl, kind: 'texture' },
   // Normals for the three, and they are not optional dressing. Paving whose
   // joints live only in the albedo is a photograph of paving: nothing on it
   // ever catches the light, so the avenue read as a sheet of flat red whatever
