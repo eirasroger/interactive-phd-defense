@@ -36,7 +36,7 @@ const TIERS: Record<QualityTier, QualitySettings> = {
     shadowMapSize: 1024,
     postProcessing: false,
     bloomStrength: 0,
-    anisotropy: 4,
+    anisotropy: 8,
     environmentResolution: 256,
     particleBudget: 20_000,
   },
@@ -46,7 +46,9 @@ const TIERS: Record<QualityTier, QualitySettings> = {
     shadowMapSize: 2048,
     postProcessing: true,
     bloomStrength: 0.22,
-    anisotropy: 8,
+    // Ground and paving are read at grazing angles from every Act I pose, which
+    // is precisely where anisotropy is the only filter that helps.
+    anisotropy: 16,
     environmentResolution: 256,
     particleBudget: 80_000,
   },

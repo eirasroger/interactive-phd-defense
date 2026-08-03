@@ -1,7 +1,7 @@
 import { CanvasTexture, EquirectangularReflectionMapping, SRGBColorSpace, type Texture } from 'three';
 
 /**
- * Dusk, as a two-pixel-wide equirectangular gradient.
+ * Daylight, as a narrow equirectangular gradient.
  *
  * Mapped equirectangularly, the texture's vertical axis *is* elevation, so a
  * one-dimensional gradient produces a correct sky for any camera orientation
@@ -9,20 +9,21 @@ import { CanvasTexture, EquirectangularReflectionMapping, SRGBColorSpace, type T
  * texture drives image-based lighting, which is what makes the building's
  * shaded faces pick up sky colour rather than going flat black.
  *
- * Dusk is chosen for the reason the whole exterior is: at low light, realism
- * comes from silhouette and gradient rather than from surface detail nobody
- * has time to author.
+ * It has to agree with the bake. `exterior_building.py` lights the building
+ * under a physical daylight sky at a 28° sun; a dusk gradient here would put a
+ * sunlit building under an evening sky, which reads instantly as wrong even
+ * to someone who could not say why.
  */
 const STOPS: ReadonlyArray<readonly [number, string]> = [
-  [0.0, '#03050a'],
-  [0.3, '#070b13'],
-  [0.44, '#0f1926'],
-  [0.492, '#1c2836'],
+  [0.0, '#2f6ab0'],
+  [0.26, '#4a88c6'],
+  [0.42, '#7fadd8'],
+  [0.485, '#b9d2e5'],
   // The horizon sits at exactly v = 0.5, which is eye level.
-  [0.5, '#26313d'],
-  [0.508, '#1b212a'],
-  [0.6, '#0b0e13'],
-  [1.0, '#06070a'],
+  [0.5, '#d3e2ee'],
+  [0.512, '#8c9a7c'],
+  [0.62, '#5f6d4c'],
+  [1.0, '#47523a'],
 ];
 
 export function createSkyTexture(): Texture {

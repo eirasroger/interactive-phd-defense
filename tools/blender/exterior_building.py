@@ -1,41 +1,18 @@
-"""Generate the Act I exterior building with two baked lighting states.
+"""Act I exterior building.
 
     blender --background --python tools/blender/exterior_building.py
+    blender --background --python tools/blender/exterior_building.py -- --bay
+    blender --background --python tools/blender/exterior_building.py -- --preview
 
 Output: src/assets/models/exterior-building.glb
-
-The building has to do something a static asset normally cannot: travel from an
-unspecified massing model to a specified building over the course of Act I. It
-does that with **one geometry and two bakes**.
-
-    baseColorTexture  - specified. Concrete, glass, warm interiors, full GI.
-    emissiveTexture   - massing. The same forms as white study-model card.
-
-The web material mixes the two by a uniform, so the transition costs a texture
-blend rather than a second mesh, and no transparency sorting is involved. It is
-also the truer reading: a physical study model already has the reveals cut into
-it, it simply is not made of anything yet.
-
-Geometry notes:
-
-- **Reveals are built, not cut.** Each volume is a core inset by REVEAL, wrapped
-  in full-width spandrel bands. The gap between them is the window recess. No
-  booleans, and the glazing self-shadows because the spandrel above genuinely
-  overhangs it.
-- **Edge conditions carry the realism.** Parapet caps, a plinth, a canopy and
-  mullions with real depth. Buildings read as real through these long before
-  anyone resolves a material.
-
-Axis convention: glTF y-up export maps Blender (x, y, z) to (x, z, -y), so
-Blender -Y is the web's +Z. The building faces -Y here, which is the direction
-the camera approaches from in the web world.
-
-Dimensions mirror src/world/exterior/site.ts. Blender (x, y, z) = web (x, -z, y).
+Notes:  docs/blender/exterior_building.md
 """
 
 from __future__ import annotations
 
+import json
 import math
+import random
 import sys
 from pathlib import Path
 
@@ -44,102 +21,239 @@ import bpy
 from mathutils import Vector
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-OUTPUT = PROJECT_ROOT / "src" / "assets" / "models" / "exterior-building.glb"
+MODELS = PROJECT_ROOT / "src" / "assets" / "models"
+OUTPUT = MODELS / "exterior-building.glb"
+CONSTRUCTION_OUTPUT = MODELS / "exterior-construction.glb"
+CANDIDATE_OUTPUT = MODELS / "facade-candidates.glb"
+SLOT_FILL_OUTPUT = MODELS / "facade-slot-fill.glb"
+PLANTING_OUTPUT = MODELS / "exterior-planting.glb"
+TEXTURES_OUT = PROJECT_ROOT / "src" / "assets" / "textures"
+WORK = PROJECT_ROOT / "work" / "blender"
+BLEND = WORK / "exterior_building.blend"
+RENDERS = WORK / "renders"
+ASSET_DIR = WORK / "assets"
+DETAIL_DIR = WORK / "detail"
+
+# Conifers, not the island trees. Those are gnarled Mediterranean olives with
+# sparse silver foliage: against a green lawn they read as dead, and the fault
+# was the species rather than the grading, the decimation or the resolution.
+# Pine and fir are what a northern European park is actually planted with, and
+# they are dense and evergreen, so there is no dry season to grade away.
+#
+# Weighted by repetition: fir is the dense conical mass that reads as planting
+# at a distance, pine is a bare trunk under a high crown — correct for a Scots
+# pine and thin on its own — and the small broadleaf breaks the rhythm.
+TREE_ASSETS = ("fir_tree_01", "fir_tree_01", "fir_tree_01", "pine_tree_01", "tree_small_02")
+HEDGE_ASSETS = ("shrub_02", "fir_sapling_medium", "pine_sapling_medium")
+GROUND_ASSETS = ("shrub_01", "shrub_03", "shrub_04", "fern_02", "celandine_01", "nettle_plant")
+GRASS_ASSETS = ("grass_medium_02", "grass_medium_01")
+
+ASSET_LOD = "LOD1"
+
+# Poly Haven ships trees at two resolutions and neither is a web budget: the
+# whole-tree mesh is half a million vertices, so eight of them are four million
+# before anything else is in the scene. The templates are decimated once, while
+# their mesh data is still single-user, so every instance shares the reduced
+# mesh and the GLB carries it once.
+# Empty on purpose: foliage is not decimated at all.
+#
+# A canopy is thousands of disconnected alpha-mapped quads, and DECIMATE works
+# by collapsing edges — on this topology that does not simplify a leaf, it
+# destroys it, turning quads into degenerate triangles that no longer carry
+# their card. At 0.22 the trees read as bare armatures and at 0.6 you could
+# still see straight through them, which is the tell: a real reduction would
+# have thinned the canopy evenly rather than punched holes in it.
+#
+# The LOD ladder is the right lever, and Poly Haven already provides it —
+# `ASSET_LOD` picks the rung. Decimating on top of a chosen LOD is asking a
+# general-purpose operator to redo work the asset author already did properly.
+LOD_RATIO: dict[str, float] = {}
 
 COLLECTION = "exterior"
 SCENE = "exterior_build"
 
-BAKE_SIZE = 2048
-BAKE_SAMPLES = 96
+# Sized for the finished presentation, not for a fast turnaround. The occlusion
+# atlas is mostly interior faces on this geometry, so the visible elevation only
+# ever gets a fraction of it — 2048 left it coarse enough to read as blotching
+# rather than as shading. Samples are high for the same reason: a denoised
+# low-sample AO bake is smooth in the wrong way, and the blotches it leaves
+# survive every later fix.
+BAKE_SIZE = 4096
+CANDIDATE_BAKE = 2048
+BAKE_SAMPLES = 320
 
-# Facade assembly. These are the numbers that decide whether the building reads
-# as architecture or as boxes, so they are kept together and named.
-# Reveal depth is a balance, not a free parameter. Deep enough and the glazing
-# self-shadows convincingly; too deep and the jamb — the return face at each end
-# of a ribbon, which no recessed window can be without — turns into an unlit
-# black slot at every corner.
-REVEAL = 0.18
-SPANDREL_RATIO = 0.58  # share of a storey that is solid band
-PIER = 1.1             # corner pier width
-FIN_WIDTH = 0.16
-FIN_DEPTH = 0.55       # projection proud of the facade
-BAY = 3.6
+# How far occlusion reaches. Sized to the ground-floor setback, so the soffit
+# under the oversail darkens across its full depth rather than only in the
+# corners, without the whole elevation picking up a sky-visibility gradient.
+AO_DISTANCE = 4.5
+GLTF_SETTINGS = "glTF Material Output"
 
-# A string course at every floor line. Architecturally it ties the elevation
-# together; practically its top face is the one horizontal surface inside the
-# reveal, so it catches sky light and stops the recess reading as a void.
-SILL_PROUD = 0.16
-SILL_THICKNESS = 0.18
-PARAPET_HEIGHT = 0.7
-PARAPET_PROUD = 0.12
-PLINTH_HEIGHT = 0.55
-PLINTH_PROUD = 0.34
+BAY = 4.2
+BAYS = 8
+WIDTH = BAY * BAYS
+DEPTH = 16.0
 
-# Sun, matching EXTERIOR_ATMOSPHERE.keyOffset in the web world.
-# blender (x, y, z) -> web (x, z, -y), so this is web [-58, 19, 22].
+GROUND_H = 4.0
+STOREY = 3.1
+UPPER = 4
+TOP = GROUND_H + UPPER * STOREY
+
+SKIN = 0.35
+CORE_INSET = 0.5
+GROUND_SETBACK = 1.6
+BALCONY_PROUD = 1.45
+PARAPET_H = 0.55
+
+FRONT_Y = -DEPTH / 2.0
+GROUND_Y = FRONT_Y + GROUND_SETBACK
+BACK_Y = DEPTH / 2.0
+
+WINDOW = (1.6, 1.8)
+WINDOW_SILL = 0.95
+GLASS_RECESS = 0.26
+
+BAY_TYPES = ("pier", "slot", "pier", "balcony", "balcony", "screen", "balcony", "pier")
+SLOT_BAY = 1
+ENTRANCE_BAYS = (3, 4)
+
+SLOT = {
+    "angle_depth": 0.24,
+    "angle_thickness": 0.06,
+    "ties": (4, 5),
+    "insulated_levels": 2,
+    "board": 0.09,
+}
+
+# The options stand well west of the building on open promenade, square to a
+# camera that has turned its back on the elevation. Hung beside the vacant bay
+# they competed with it, and the shot had to carry the building, the slot and
+# four alternatives at once. Standing apart, they get the frame to themselves
+# and the building keeps only a corner of it.
 #
-# Kept low and well round to the -X side: a sun near the camera's own axis
-# flattens the massing, and a sun directly behind it throws the whole shadow out
-# of frame. This rakes the two faces the camera sees and lays the shadow across
-# the ground to the right, where it is visible.
-# Elevation ~24°. At 9° the shadow cast by any projection is 6x its depth, so a
-# 0.16 sill blacked out a whole glazing band and the corner piers read as holes.
-# Shadow length scales as 1/tan(elevation), so this is the parameter that
-# governs whether small architectural detail reads or swallows the facade.
-SUN_VECTOR = Vector((-55.0, -21.0, 26.0))
-# A COMBINED bake stores scene-referred radiance, not a tone-mapped image, so
-# these are chosen for where they land in the texture rather than for how the
-# preview looks. The face the camera sees takes the sun at about 0.34 incidence;
-# at an albedo of 0.46 that puts the lit concrete near 0.5, shaded faces near
-# 0.12, and leaves headroom before anything clips.
-# The ratio between these two is the whole look. A sky that competes with the
-# sun gives flat overcast daylight and a white styrofoam model; holding it well
-# below leaves the sun to model the massing and lets the shaded faces go cool
-# and dark, which is what dusk actually is.
-# Absolute level is set by the *brightest* face, not the one being looked at.
-# The face square to the sun takes it at 0.918 incidence; at energy 14 that
-# baked to ~1.9 and clipped flat. Sun and sky drop together so the ratio — which
-# is what the look depends on — is unchanged.
-SUN_ENERGY = 4.0
-SUN_COLOR = (1.0, 0.78, 0.55)
-# The physical sky is far brighter than a flat colour at the same number. Left
-# at 1.0 it washes out the lamp completely and the building loses every shadow.
-SKY_STRENGTH = 0.087
-SKY_COLOR = (0.20, 0.30, 0.46)  # fallback only, if the sky node is unavailable
+# The band between PROMENADE_NEAR and BED_NEAR is planted with nothing by rule,
+# which is also the corridor the panels travel along to enter and leave.
+REVIEW = {
+    # Far west, well clear of the building. An earlier row at -45 sat inside the
+    # frustum of every Act I pose that looks west across the park, so the panels
+    # kept clipping into the edge of slides they had no business being in — and
+    # the shot that framed them had to stand 43 m back to keep the building's
+    # corner, which left them small.
+    #
+    # Nothing here is shared with the building's own poses any more, so the
+    # review camera can come in to 30 m and the panels can fill the frame.
+    "centre": -95.0,
+    "y": -27.0,
+    "spacing": 5.6,
+    "base": 0.06,
+    "standoff": 30.0,
+    # How far west of the row the camera aims, which is what puts the panels in
+    # the right of frame and leaves the left for the caption column.
+    "lead": 4.0,
+}
 
-# Windows are an accent, not a light source. At 2.4 they blew to white and took
-# the entire facade with them; dusk photography sits them a little above the lit
-# surface, not fifty times above it.
-INTERIOR_COLOR = (1.0, 0.72, 0.42)
-# Sits between sunlit concrete (~0.5) and shaded concrete (~0.08), so glazing
-# reads as warm and occupied without becoming the brightest thing in frame. The
-# web world dims the whole bake uniformly, so this ratio is what survives.
-INTERIOR_STRENGTH = 0.22
+# The wedge between the review camera and the row. Enforced in `place_asset()`.
+REVIEW_CLEAR = {
+    "x": (-118.0, -72.0),
+    "y": (-62.0, -22.0),
+}
 
-# Warm grey, not white. A neutral high-albedo surface under a cool sky is
-# exactly what reads as an untextured model.
-CONCRETE = (0.40, 0.39, 0.37, 1.0)
-# Card reads lighter than concrete but must still land inside the texture. At
-# 0.80 the lit faces baked to ~1.25 radiance and clipped flat white in an 8-bit
-# map, throwing away the shading that makes it a model rather than a silhouette.
-CARD = (0.46, 0.46, 0.45, 1.0)
+CANDIDATE = {
+    "width": BAY - 0.1,
+    # Two storeys, not one. A facade option is a whole bay, and at the standoff
+    # the row needs to fit four panels plus a caption column a single-storey
+    # sample reads as a card rather than as a piece of building.
+    #
+    # Height is the only lever left on how large they read. Keeping the
+    # building's corner in the frame sets a minimum standoff — the corner
+    # leaves frame below about 42 m — so the camera cannot come closer.
+    "height": 7.2,
+    "thickness": 0.30,
+    # Deliberately not the building's 75 mm course and 225 mm unit. The review
+    # camera stands 43 m off, where a 75 mm course is two pixels and a 225 mm
+    # unit is six — at that size all four options were the same dark rectangle,
+    # which makes a scene about choosing between them pointless.
+    #
+    # These are the coarsest articulation each option can carry and still be
+    # the thing it claims to be. `build_candidates` already says the
+    # differences must live in profile rather than surface; this is what that
+    # costs once the distance is known.
+    "course": 0.22,
+    "unit": 0.50,
+    "relief": 0.10,
+}
 
-# size and location are given in Blender axes; levels 0 marks plant, which gets
-# no floors and no glazing.
-VOLUMES = [
-    {"name": "podium", "size": (28.0, 20.0, 5.0), "location": (0.0, 0.0, 2.5), "levels": 1},
-    {"name": "tower", "size": (14.0, 13.0, 13.0), "location": (-5.0, 1.0, 11.5), "levels": 4},
-    {"name": "wing", "size": (10.0, 12.0, 5.5), "location": (8.0, -1.0, 7.75), "levels": 2},
-    {"name": "plant", "size": (5.0, 5.0, 2.4), "location": (-5.0, 1.0, 19.2), "levels": 0},
-]
+SCAFFOLD = {
+    "bays": (5, 8),
+    "overhang": 0.7,
+    "lift": 2.0,
+    "spacing": 2.1,
+    "standoff": 1.75,
+    "deck": 1.25,
+    "tube": 0.05,
+    "board": (0.225, 0.038),
+    "headroom": 0.6,
+}
 
 ENTRANCE = {
     "width": 6.4,
-    "height": 3.6,
-    "setback": 1.5,
-    "canopy_depth": 2.6,
-    "canopy_thickness": 0.32,
+    "height": 3.2,
+    "leaf_gap": 0.06,
+    "canopy_proud": 1.4,
+    "canopy_thickness": 0.26,
+    "frame": 0.22,
+    "clear_bays": (2, 3, 4, 5),
 }
+
+SUN_VECTOR = Vector((-50.0, -64.0, 44.0))
+SUN_ENERGY = 3.3
+SUN_COLOR = (1.0, 0.95, 0.88)
+SKY_STRENGTH = 0.038
+SKY_DISPLAY = 0.16
+SKY_COLOR = (0.32, 0.45, 0.68)
+
+INTERIOR_COLOR = (1.0, 0.82, 0.6)
+INTERIOR_STRENGTH = 0.05
+
+PALETTE = {
+    "brick": ((0.078, 0.064, 0.058, 1.0), 0.90, 0.0),
+    "backing": ((0.15, 0.147, 0.140, 1.0), 0.85, 0.0),
+    "frame": ((0.42, 0.415, 0.395, 1.0), 0.52, 0.0),
+    "metal": ((0.048, 0.048, 0.052, 1.0), 0.42, 0.85),
+    "screen": ((0.44, 0.31, 0.115, 1.0), 0.34, 0.80),
+    "soffit": ((0.34, 0.33, 0.315, 1.0), 0.86, 0.0),
+    "balustrade": ((0.17, 0.25, 0.235, 1.0), 0.09, 0.0),
+    "paving": ((0.20, 0.198, 0.190, 1.0), 0.90, 0.0),
+    "soil": ((0.055, 0.042, 0.032, 1.0), 0.95, 0.0),
+    "steel": ((0.30, 0.31, 0.325, 1.0), 0.44, 0.70),
+    "timber": ((0.26, 0.195, 0.115, 1.0), 0.80, 0.0),
+    "insulation": ((0.40, 0.355, 0.245, 1.0), 0.86, 0.0),
+    "stock": ((0.135, 0.078, 0.055, 1.0), 0.90, 0.0),
+    "hoarding": ((0.055, 0.115, 0.185, 1.0), 0.62, 0.0),
+    "bark": ((0.062, 0.052, 0.044, 1.0), 0.92, 0.0),
+    "foliage": ((0.062, 0.132, 0.038, 1.0), 0.84, 0.0),
+    # Muted, not emerald. A saturated green tint applied across a whole ground
+    # plane reads as artificial turf, and it is the one surface large enough
+    # that its hue sets the mood of every frame.
+    "grass": ((0.098, 0.121, 0.064, 1.0), 0.90, 0.0),
+}
+
+LOBBY_COLOR = (1.0, 0.86, 0.66)
+LOBBY_STRENGTH = 1.8
+
+# Poly Haven map, real-world tile in metres, and how hard to pull the source
+# photograph toward the palette hue. The tile is the asset's own published
+# coverage, so a brick reads at the size a brick actually is.
+DETAIL = {
+    "brick": ("brick_wall_10", 1.9, 0.75),
+    "backing": ("concrete_wall_005", 1.15, 0.55),
+    "soffit": ("concrete_wall_005", 1.15, 0.65),
+    "stock": ("brick_wall_10", 1.9, 0.5),
+    "paving": ("square_concrete_pavers", 1.8, 0.8),
+}
+DETAIL_SIZE = 2048
+DETAIL_NORMAL_STRENGTH = 0.9
+DETAIL_UV = "detail"
+OCCLUSION_UV = "occlusion"
 
 
 # --------------------------------------------------------------------------
@@ -148,15 +262,6 @@ ENTRANCE = {
 
 
 def use_scene() -> bpy.types.Scene:
-    """A dedicated scene, built from nothing.
-
-    Run interactively, this script inherits whatever the open .blend was last
-    used for — and scene-level state is not visible in the geometry. A session
-    left over from the corridor bake had render settings that silently dropped
-    both the sun and the world, which cost an hour to find and looked exactly
-    like a modelling fault. Owning the scene removes the whole class of problem
-    and makes the interactive path match `blender --background`.
-    """
     scene = bpy.data.scenes.get(SCENE)
     if scene is None:
         scene = bpy.data.scenes.new(SCENE)
@@ -166,7 +271,6 @@ def use_scene() -> bpy.types.Scene:
 
 
 def collection() -> bpy.types.Collection:
-    """A dedicated collection, so running this never disturbs other work."""
     scene = use_scene()
 
     existing = bpy.data.collections.get(COLLECTION)
@@ -181,7 +285,7 @@ def collection() -> bpy.types.Collection:
     return existing
 
 
-def add_box(target, name: str, size, location):
+def add_box(target, name: str, size, location, rotation=None):
     mesh = bpy.data.meshes.new(name)
     obj = bpy.data.objects.new(name, mesh)
 
@@ -197,9 +301,6 @@ def add_box(target, name: str, size, location):
     mesh.from_pydata(verts, [], faces)
     mesh.update()
 
-    # Hand-wound faces are not reliably outward, and an inverted normal bakes as
-    # a black facet. Recalculating is cheaper than getting the winding right by
-    # inspection for every face.
     bm = bmesh.new()
     bm.from_mesh(mesh)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
@@ -207,6 +308,8 @@ def add_box(target, name: str, size, location):
     bm.free()
 
     obj.location = location
+    if rotation:
+        obj.rotation_euler = rotation
     target.objects.link(obj)
     return obj
 
@@ -220,10 +323,7 @@ def boolean_cut(obj, cutter) -> None:
         bpy.ops.object.modifier_apply(modifier=modifier.name)
 
 
-def bevel(obj, width: float = 0.025, segments: int = 2) -> None:
-    """A hard edge is the clearest tell that geometry is synthetic. Everything
-    real has a radius, and at dusk the highlight it catches is most of what
-    separates a building from a box."""
+def bevel(obj, width: float = 0.02, segments: int = 2) -> None:
     modifier = obj.modifiers.new(name="bevel", type="BEVEL")
     modifier.width = width
     modifier.segments = segments
@@ -238,231 +338,1147 @@ def bevel(obj, width: float = 0.025, segments: int = 2) -> None:
 # --------------------------------------------------------------------------
 
 
-def storey_heights(volume) -> tuple[float, float, float]:
-    height = volume["size"][2]
-    levels = max(volume["levels"], 1)
-    storey = height / levels
-    spandrel = storey * SPANDREL_RATIO
-    return storey, spandrel, storey - spandrel
+class Parts(dict):
+    def put(self, key: str, obj):
+        self.setdefault(key, []).append(obj)
+        return obj
+
+    def extend(self, key: str, objects):
+        self.setdefault(key, []).extend(objects)
+
+    def all(self) -> list:
+        return [obj for group in self.values() for obj in group]
 
 
-def build_volume(target, volume) -> tuple[list, list]:
-    """Returns (solid parts, glass parts)."""
-    name = volume["name"]
-    width, depth, height = volume["size"]
-    cx, cy, cz = volume["location"]
-    base = cz - height / 2.0
-    levels = volume["levels"]
+def bay_x(index: int) -> float:
+    return -WIDTH / 2.0 + BAY * (index + 0.5)
 
-    solids: list = []
-    glass: list = []
 
-    if levels == 0:
-        solids.append(add_box(target, f"{name}_solid", (width, depth, height), (cx, cy, cz)))
-        solids.append(parapet(target, name, width, depth, cx, cy, base + height))
-        return solids, glass
+def level_base(level: int) -> float:
+    return GROUND_H + level * STOREY
 
-    storey, spandrel, glazing = storey_heights(volume)
 
-    # The core is the wall the glazing sits against. Inset on all four sides, it
-    # is what turns the spandrel bands into an overhang.
-    solids.append(
-        add_box(
-            target,
-            f"{name}_core",
-            (width - 2 * REVEAL, depth - 2 * REVEAL, height),
-            (cx, cy, cz),
-        )
+def place(axis: str, u: float, t: float, v: float):
+    return (u, t, v) if axis == "y" else (t, u, v)
+
+
+def spans(axis: str, along: float, through: float, up: float):
+    return (along, through, up) if axis == "y" else (through, along, up)
+
+
+def punched(parts: Parts, target, name: str, axis: str, u: float, face: float,
+            base: float, along: float, height: float, inward: float) -> None:
+    """A solid skin panel with a window opening built from four pieces."""
+    opening_w, opening_h = WINDOW
+    sill = base + WINDOW_SILL
+    head = sill + opening_h
+    top = base + height
+    t = face + inward * SKIN / 2.0
+    jamb = (along - opening_w) / 2.0
+
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("brick", add_box(
+            target, f"{name}_jamb_{side}", spans(axis, jamb, SKIN, height),
+            place(axis, u + offset * (along - jamb) / 2.0, t, base + height / 2.0),
+        ))
+
+    parts.put("brick", add_box(
+        target, f"{name}_under", spans(axis, opening_w, SKIN, sill - base),
+        place(axis, u, t, (base + sill) / 2.0),
+    ))
+    parts.put("brick", add_box(
+        target, f"{name}_over", spans(axis, opening_w, SKIN, top - head),
+        place(axis, u, t, (head + top) / 2.0),
+    ))
+    parts.put("frame", add_box(
+        target, f"{name}_cill", spans(axis, opening_w + 0.16, SKIN + 0.1, 0.09),
+        place(axis, u, t - inward * 0.04, sill + 0.02),
+    ))
+    parts.put("glass", add_box(
+        target, f"{name}_glass", spans(axis, opening_w - 0.06, 0.06, opening_h - 0.06),
+        place(axis, u, face + inward * GLASS_RECESS, (sill + head) / 2.0),
+    ))
+
+
+def pier_bay(parts: Parts, target, index: int, level: int) -> None:
+    punched(
+        parts, target, f"bay{index}_l{level}", "y",
+        bay_x(index), FRONT_Y, level_base(level), BAY, STOREY, 1.0,
     )
 
-    for level in range(levels):
-        band_z = base + level * storey + spandrel / 2.0
-        solids.append(
-            add_box(target, f"{name}_spandrel_{level}", (width, depth, spandrel), (cx, cy, band_z))
-        )
 
-        glaze_z = base + level * storey + spandrel + glazing / 2.0
-        glass.extend(glazing_ring(target, name, level, volume, glaze_z, glazing))
+def slot_bay(parts: Parts, target, index: int, level: int) -> None:
+    """One bay of brick cladding never placed.
 
-    solids.extend(sill_ring(target, volume))
-    solids.extend(fin_ring(target, volume))
+    Cladding hangs off the frame, so a missing bay does not leave a hole through
+    the building — it leaves the backing wall visible with its fixings exposed.
+    The structure is complete and waiting, which is the early-design condition
+    made physical.
+    """
+    base = level_base(level)
+    x = bay_x(index)
+    face = FRONT_Y + CORE_INSET
+    name = f"bay{index}_l{level}"
 
-    for sign_x in (-1.0, 1.0):
-        for sign_y in (-1.0, 1.0):
-            solids.append(
-                add_box(
-                    target,
-                    f"{name}_pier",
-                    (PIER, PIER, height),
-                    (
-                        cx + sign_x * (width - PIER) / 2.0,
-                        cy + sign_y * (depth - PIER) / 2.0,
-                        cz,
-                    ),
+    parts.put("backing", add_box(
+        target, f"{name}_backing", (BAY, 0.1, STOREY),
+        (x, face, base + STOREY / 2.0),
+    ))
+
+    depth = SLOT["angle_depth"]
+    thickness = SLOT["angle_thickness"]
+    parts.put("steel", add_box(
+        target, f"{name}_angle", (BAY - 0.16, depth, thickness),
+        (x, face - depth / 2.0, base + thickness / 2.0),
+    ))
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("steel", add_box(
+            target, f"{name}_bracket_{side}", (0.09, depth, 0.34),
+            (x + offset * (BAY - 0.6) / 2.0, face - depth / 2.0, base + 0.17),
+        ))
+
+    if level < SLOT["insulated_levels"]:
+        board = SLOT["board"]
+        parts.put("insulation", add_box(
+            target, f"{name}_board", (BAY - 0.34, board, STOREY - 0.42),
+            (x, face - board / 2.0 - 0.05, base + 0.24 + (STOREY - 0.42) / 2.0),
+        ))
+        return
+
+    across, up = SLOT["ties"]
+    reach, rise = BAY - 1.1, STOREY - 0.9
+    for i in range(across):
+        for j in range(up):
+            parts.put("steel", add_box(
+                target, f"{name}_tie_{i}_{j}", (0.05, 0.18, 0.05),
+                (
+                    x - reach / 2.0 + reach * i / (across - 1),
+                    face - 0.09,
+                    base + 0.45 + rise * j / (up - 1),
+                ),
+            ))
+
+
+def balcony_bay(parts: Parts, target, index: int, level: int) -> None:
+    base = level_base(level)
+    x = bay_x(index)
+    nose = FRONT_Y - BALCONY_PROUD
+
+    parts.put("glass", add_box(
+        target, f"bay{index}_l{level}_glazing", (BAY - 0.4, 0.06, STOREY - 0.5),
+        (x, FRONT_Y + 0.12, base + 0.25 + (STOREY - 0.5) / 2.0),
+    ))
+    parts.put("frame", add_box(
+        target, f"bay{index}_l{level}_mullion", (0.12, 0.14, STOREY - 0.5),
+        (x, FRONT_Y + 0.06, base + 0.25 + (STOREY - 0.5) / 2.0),
+    ))
+    parts.put("soffit", add_box(
+        target, f"bay{index}_l{level}_slab", (BAY, BALCONY_PROUD, 0.26),
+        (x, FRONT_Y - BALCONY_PROUD / 2.0, base + 0.13),
+    ))
+    parts.put("soffit", add_box(
+        target, f"bay{index}_l{level}_head", (BAY, BALCONY_PROUD, 0.26),
+        (x, FRONT_Y - BALCONY_PROUD / 2.0, base + STOREY - 0.13),
+    ))
+
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("metal", add_box(
+            target, f"bay{index}_l{level}_cheek_{side}", (0.16, BALCONY_PROUD, STOREY),
+            (x + offset * (BAY - 0.16) / 2.0, FRONT_Y - BALCONY_PROUD / 2.0, base + STOREY / 2.0),
+        ))
+
+    parts.put("balustrade", add_box(
+        target, f"bay{index}_l{level}_balustrade", (BAY - 0.36, 0.035, 1.05),
+        (x, nose + 0.08, base + 0.26 + 0.55),
+    ))
+    parts.put("metal", add_box(
+        target, f"bay{index}_l{level}_rail", (BAY - 0.32, 0.07, 0.06),
+        (x, nose + 0.08, base + 0.26 + 1.1),
+    ))
+
+
+def screen_bay(parts: Parts, target, index: int, level: int) -> None:
+    base = level_base(level)
+    x = bay_x(index)
+
+    parts.put("glass", add_box(
+        target, f"bay{index}_l{level}_glazing", (BAY - 0.4, 0.06, STOREY - 0.4),
+        (x, FRONT_Y + 0.14, base + 0.2 + (STOREY - 0.4) / 2.0),
+    ))
+
+    blades = 8
+    pitch = (STOREY - 0.4) / blades
+    for i in range(blades):
+        parts.put("screen", add_box(
+            target, f"bay{index}_l{level}_blade_{i}", (BAY - 0.5, 0.11, pitch * 0.62),
+            (x, FRONT_Y - 0.14, base + 0.2 + (i + 0.5) * pitch),
+        ))
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("metal", add_box(
+            target, f"bay{index}_l{level}_stile_{side}", (0.1, 0.16, STOREY - 0.3),
+            (x + offset * (BAY - 0.5) / 2.0, FRONT_Y - 0.14, base + 0.15 + (STOREY - 0.3) / 2.0),
+        ))
+
+
+BAY_BUILDERS = {
+    "pier": pier_bay,
+    "slot": slot_bay,
+    "balcony": balcony_bay,
+    "screen": screen_bay,
+}
+
+
+def build_core(parts: Parts, target) -> None:
+    inner = WIDTH - 2 * SKIN
+    upper_front = FRONT_Y + CORE_INSET
+    upper_back = BACK_Y - SKIN
+
+    parts.put("brick", add_box(
+        target, "core_upper", (inner, upper_back - upper_front, TOP - GROUND_H),
+        (0.0, (upper_front + upper_back) / 2.0, (GROUND_H + TOP) / 2.0),
+    ))
+    parts.put("brick", add_box(
+        target, "core_ground", (inner, upper_back - GROUND_Y, GROUND_H),
+        (0.0, (GROUND_Y + upper_back) / 2.0, GROUND_H / 2.0),
+    ))
+
+
+def build_front(parts: Parts, target) -> None:
+    for index, kind in enumerate(BAY_TYPES):
+        builder = BAY_BUILDERS[kind]
+        for level in range(UPPER):
+            builder(parts, target, index, level)
+
+
+def build_flanks(parts: Parts, target) -> None:
+    columns = 3
+    step = (DEPTH - 2 * SKIN) / columns
+    start = -DEPTH / 2.0 + SKIN
+
+    for side, x in (("w", -WIDTH / 2.0), ("e", WIDTH / 2.0)):
+        inward = 1.0 if side == "w" else -1.0
+        for column in range(columns):
+            u = start + (column + 0.5) * step
+            for level in range(UPPER):
+                punched(
+                    parts, target, f"flank_{side}_{column}_l{level}", "x",
+                    u, x, level_base(level), step, STOREY, inward,
                 )
-            )
-
-    solids.append(parapet(target, name, width, depth, cx, cy, base + height))
-    return solids, glass
 
 
-def parapet(target, name: str, width: float, depth: float, cx: float, cy: float, top: float):
-    return add_box(
-        target,
-        f"{name}_parapet",
-        (width + PARAPET_PROUD, depth + PARAPET_PROUD, PARAPET_HEIGHT),
-        (cx, cy, top - PARAPET_HEIGHT / 4.0),
-    )
+def build_back(parts: Parts, target) -> None:
+    parts.put("brick", add_box(
+        target, "back_skin", (WIDTH, SKIN, TOP),
+        (0.0, BACK_Y - SKIN / 2.0, TOP / 2.0),
+    ))
 
 
-def faces(volume):
-    """The four facade planes: (span, plane offset, axis) per face."""
-    width, depth, _ = volume["size"]
-    cx, cy, _ = volume["location"]
-    return [
-        ("y", span := width - 2 * PIER, (cx, cy - depth / 2.0), depth),
-        ("y", span, (cx, cy + depth / 2.0), depth),
-        ("x", depth - 2 * PIER, (cx - width / 2.0, cy), width),
-        ("x", depth - 2 * PIER, (cx + width / 2.0, cy), width),
-    ]
+def build_ground(parts: Parts, target) -> None:
+    parts.put("soffit", add_box(
+        target, "ground_soffit", (WIDTH, GROUND_SETBACK, 0.34),
+        (0.0, FRONT_Y + GROUND_SETBACK / 2.0, GROUND_H - 0.17),
+    ))
 
-
-def glazing_ring(target, name: str, level: int, volume, z: float, height: float) -> list:
-    """Glass, set deep in the reveal.
-
-    The glass carries its own emission rather than being lit by emitters placed
-    behind it: the core is solid, so there is no interior for a light to sit in.
-    An emissive pane bakes the same warm glow onto the surrounding reveal and
-    still catches a specular highlight off the sky.
-    """
-    parts = []
-    for index, (axis, span, plane, _) in enumerate(faces(volume)):
-        if span <= 0:
+    clear = ENTRANCE["width"] / 2.0 + 0.6
+    for index in range(BAYS + 1):
+        x = -WIDTH / 2.0 + BAY * index
+        if abs(x) < clear:
             continue
-        px, py = plane
-        # Just proud of the core face, so it does not z-fight with it.
-        inward = (REVEAL - 0.06) * (1.0 if index in (0, 2) else -1.0)
-        if axis == "y":
-            size = (span, 0.1, height)
-            location = (px, py + inward, z)
-        else:
-            size = (0.1, span, height)
-            location = (px + inward, py, z)
-        parts.append(add_box(target, f"{name}_glass_{level}_{index}", size, location))
-    return parts
+        parts.put("metal", add_box(
+            target, f"column_{index}", (0.3, 0.3, GROUND_H),
+            (x, FRONT_Y + 0.3, GROUND_H / 2.0),
+        ))
 
+    parts.put("brick", add_box(
+        target, "ground_skin", (WIDTH, SKIN, GROUND_H),
+        (0.0, GROUND_Y - SKIN / 2.0, GROUND_H / 2.0),
+    ))
 
-def sill_ring(target, volume) -> list:
-    """A continuous string course at each floor line, wrapping the volume."""
-    name = volume["name"]
-    width, depth, height = volume["size"]
-    cx, cy, cz = volume["location"]
-    base = cz - height / 2.0
-    storey, spandrel, _ = storey_heights(volume)
-
-    parts = []
-    for level in range(volume["levels"]):
-        z = base + level * storey + spandrel
-        parts.append(
-            add_box(
-                target,
-                f"{name}_sill_{level}",
-                (width + 2 * SILL_PROUD, depth + 2 * SILL_PROUD, SILL_THICKNESS),
-                (cx, cy, z),
-            )
-        )
-    return parts
-
-
-def fin_ring(target, volume) -> list:
-    """Full-height vertical fins, proud of the facade.
-
-    These do more for realism than any amount of surface detail. They give the
-    elevation a rhythm at bay spacing, and because they project they catch the
-    low sun and lay a hard shadow across the facade — which is the cue that
-    reads as a real building rather than a textured box.
-    """
-    name = volume["name"]
-    _, _, height = volume["size"]
-    cz = volume["location"][2]
-    parts = []
-
-    for index, (axis, span, plane, _) in enumerate(faces(volume)):
-        if span <= 0:
+    # The bays either side of the entrance stay solid. A door set in a
+    # continuous run of identical shop glazing is not an entrance, it is one
+    # more pane — which is exactly how it read before, at every distance.
+    for index in range(BAYS):
+        if index in ENTRANCE["clear_bays"]:
             continue
-        px, py = plane
-        outward = -FIN_DEPTH / 2.0 if index in (0, 2) else FIN_DEPTH / 2.0
-        count = max(int(span // BAY), 1)
-        step = span / count
-        for i in range(1, count):
-            offset = -span / 2.0 + i * step
-            if axis == "y":
-                size = (FIN_WIDTH, FIN_DEPTH, height)
-                location = (px + offset, py + outward, cz)
-            else:
-                size = (FIN_DEPTH, FIN_WIDTH, height)
-                location = (px + outward, py + offset, cz)
-            parts.append(add_box(target, f"{name}_fin_{index}_{i}", size, location))
-    return parts
+        parts.put("glass", add_box(
+            target, f"ground_glass_{index}", (BAY - 1.2, 0.06, 2.3),
+            (bay_x(index), GROUND_Y - GLASS_RECESS, 1.55),
+        ))
 
 
-def build_entrance(target, solids: list) -> tuple[list, list, list]:
-    """A recessed entrance with a canopy, on the podium's -Y face.
-
-    The opening is a real void, cut through the core, the ground-floor spandrel
-    and the plinth. A recess faked by placing geometry in front of a solid wall
-    reads as a sticker at exactly the angle the camera arrives from, and this is
-    the one shot in the act that is square to the facade.
-
-    The canopy is doing more work than it looks: it is the only element that
-    projects far enough to throw a shadow across the facade, which is what tells
-    the eye there is a real sun.
-    """
-    podium = VOLUMES[0]
-    _, depth, _ = podium["size"]
-    face_y = podium["location"][1] - depth / 2.0
-
+def build_entrance(parts: Parts, target) -> None:
     w = ENTRANCE["width"]
     h = ENTRANCE["height"]
-    setback = ENTRANCE["setback"]
-    back_y = face_y + setback
 
     cutter = add_box(
-        target,
-        "entrance_cutter",
-        (w, setback + 1.0, h),
-        (0.0, face_y + setback / 2.0 - 0.5, h / 2.0),
+        target, "entrance_cutter", (w, SKIN + 0.6, h),
+        (0.0, GROUND_Y - SKIN / 2.0, h / 2.0),
     )
-    for part in solids:
-        if part.name.startswith(("podium_core", "podium_spandrel_0", "plinth")):
-            boolean_cut(part, cutter)
+    for obj in parts.get("brick", []):
+        if obj.name in ("ground_skin", "core_ground"):
+            boolean_cut(obj, cutter)
     bpy.data.objects.remove(cutter, do_unlink=True)
 
-    new_solids = [
-        add_box(
-            target,
-            "canopy",
-            (w + 4.2, ENTRANCE["canopy_depth"], ENTRANCE["canopy_thickness"]),
-            (0.0, face_y - ENTRANCE["canopy_depth"] / 2.0, h + 0.9),
-        ),
-    ]
+    frame = ENTRANCE["frame"]
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("frame", add_box(
+            target, f"entrance_jamb_{side}", (frame, SKIN + 0.16, h + frame),
+            (offset * (w + frame) / 2.0, GROUND_Y - SKIN / 2.0, (h + frame) / 2.0),
+        ))
+    parts.put("frame", add_box(
+        target, "entrance_head", (w + 2 * frame, SKIN + 0.16, frame),
+        (0.0, GROUND_Y - SKIN / 2.0, h + frame / 2.0),
+    ))
 
-    glass = [add_box(target, "entrance_glass", (w, 0.1, h), (0.0, back_y - 0.06, h / 2.0))]
-    return new_solids, glass
+    # The one element that projects past the column line. It throws a hard
+    # shadow across the recess and breaks the unbroken horizontal of the
+    # oversail, which is what separates a doorway from a shopfront at distance.
+    proud = ENTRANCE["canopy_proud"]
+    depth = GROUND_Y - (FRONT_Y - proud)
+    parts.put("soffit", add_box(
+        target, "entrance_canopy", (w + 3.0, depth, ENTRANCE["canopy_thickness"]),
+        (0.0, GROUND_Y - depth / 2.0, h + frame + ENTRANCE["canopy_thickness"] / 2.0),
+    ))
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("metal", add_box(
+            target, f"entrance_hanger_{side}", (0.07, 0.07, 0.62),
+            (offset * (w + 2.4) / 2.0, FRONT_Y - proud + 0.3, h + frame + 0.55),
+        ))
+
+    parts.put("paving", add_box(
+        target, "threshold", (w + 3.4, 3.2, 0.14), (0.0, GROUND_Y - 1.6, 0.05),
+    ))
+
+    parts.put("lobby", add_box(
+        target, "lobby", (w - 0.3, 0.2, h - 0.3),
+        (0.0, GROUND_Y + 1.4, (h - 0.3) / 2.0 + 0.1),
+    ))
+
+    leaf = (w - ENTRANCE["leaf_gap"]) / 2.0
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("glass", add_box(
+            target, f"door_{side}", (leaf - 0.04, 0.07, h - 0.08),
+            (offset * (leaf + ENTRANCE["leaf_gap"]) / 2.0, GROUND_Y - 0.1, h / 2.0),
+        ))
+        parts.put("metal", add_box(
+            target, f"door_{side}_stile", (0.09, 0.1, h - 0.08),
+            (offset * ENTRANCE["leaf_gap"], GROUND_Y - 0.1, h / 2.0),
+        ))
 
 
-def build_plinth(target) -> list:
-    podium = VOLUMES[0]
-    width, depth, _ = podium["size"]
-    cx, cy, _ = podium["location"]
-    return [
-        add_box(
-            target,
-            "plinth",
-            (width + PLINTH_PROUD, depth + PLINTH_PROUD, PLINTH_HEIGHT),
-            (cx, cy, PLINTH_HEIGHT / 2.0),
+def build_roof(parts: Parts, target) -> None:
+    parts.put("brick", add_box(
+        target, "parapet", (WIDTH + 0.12, DEPTH + 0.12, PARAPET_H),
+        (0.0, 0.0, TOP + PARAPET_H / 2.0),
+    ))
+    parts.put("metal", add_box(
+        target, "parapet_cap", (WIDTH + 0.34, DEPTH + 0.34, 0.09),
+        (0.0, 0.0, TOP + PARAPET_H),
+    ))
+    parts.put("metal", add_box(
+        target, "roof_plant", (7.0, 5.0, 2.2),
+        (5.6, 1.6, TOP + 1.1),
+    ))
+
+
+def add_blob(target, name: str, radius: float, location, scale, subdivisions: int = 1):
+    mesh = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=subdivisions, radius=radius)
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+
+    obj = bpy.data.objects.new(name, mesh)
+    obj.location = location
+    obj.scale = scale
+    target.objects.link(obj)
+    return obj
+
+
+def add_taper(target, name: str, bottom: float, top: float, depth: float, location):
+    mesh = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    bmesh.ops.create_cone(
+        bm, cap_ends=True, cap_tris=False, segments=8,
+        radius1=bottom, radius2=top, depth=depth,
+    )
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+
+    obj = bpy.data.objects.new(name, mesh)
+    obj.location = location
+    target.objects.link(obj)
+    return obj
+
+
+APRON = {"x": 25.0, "near": -17.0}
+BED_DEPTH = 5.6
+BED_NEAR = APRON["near"] - BED_DEPTH
+PATH_HALF = 3.6
+
+PROMENADE_DEPTH = 8.5
+PROMENADE_NEAR = BED_NEAR - PROMENADE_DEPTH
+PROMENADE_RUN = 600.0
+VERGE_DEPTH = 3.0
+
+MEADOW_NEAR = PROMENADE_NEAR - 34.0
+
+
+def band(site: Parts, target, key: str, name: str, near: float, far: float,
+         width: float, height: float, z: float = 0.0) -> None:
+    site.put(key, add_box(
+        target, name, (width, far - near, height), (0.0, (near + far) / 2.0, z),
+    ))
+
+
+def build_paving(site: Parts, target) -> None:
+    site.put("paving", add_box(
+        target, "forecourt", (2 * APRON["x"], FRONT_Y - BED_NEAR, 0.12),
+        (0.0, (FRONT_Y + BED_NEAR) / 2.0, 0.02),
+    ))
+
+    for side, offset in (("w", -1.0), ("e", 1.0)):
+        width = APRON["x"] - PATH_HALF
+        site.put("soil", add_box(
+            target, f"bed_{side}", (width, BED_DEPTH, 0.16),
+            (offset * (PATH_HALF + width / 2.0), (APRON["near"] + BED_NEAR) / 2.0, 0.02),
+        ))
+
+    band(site, target, "paving", "promenade",
+         PROMENADE_NEAR, BED_NEAR, PROMENADE_RUN, 0.12, 0.02)
+
+    for side, offset in (("w", -1.0), ("e", 1.0)):
+        site.put("soil", add_box(
+            target, f"verge_{side}", (86.0, VERGE_DEPTH, 0.14),
+            (offset * 62.0, PROMENADE_NEAR - VERGE_DEPTH / 2.0, 0.01),
+        ))
+
+
+
+_TEMPLATES: dict[str, list] = {}
+
+
+def asset_template(name: str) -> list:
+    if name in _TEMPLATES:
+        return _TEMPLATES[name]
+
+    blends = sorted((ASSET_DIR / name).glob("*.blend"))
+    if not blends:
+        _TEMPLATES[name] = []
+        return []
+
+    with bpy.data.libraries.load(str(blends[0]), link=False) as (source, loaded):
+        loaded.objects = list(source.objects)
+
+    _TEMPLATES[name] = [obj for obj in loaded.objects if obj and obj.type == 'MESH']
+    return _TEMPLATES[name]
+
+
+def split_lod(name: str) -> tuple[str, str]:
+    head, _, tail = name.rpartition("_")
+    return (head, tail) if head and tail.startswith("LOD") else (name, "")
+
+
+_VARIANTS: dict[str, list] = {}
+
+
+def asset_variants(name: str) -> list:
+    """One placeable object per plant variant.
+
+    A Poly Haven plant blend carries every LOD of every variant plus the loose
+    leaf and branch parts its geometry nodes scatter. Placing the lot stacks
+    four resolutions of the same plant on top of each other and strews the
+    source parts at the origin, so the file is filtered down to a single
+    resolution of each whole plant.
+    """
+    if name in _VARIANTS:
+        return _VARIANTS[name]
+
+    groups: dict[str, dict[str, object]] = {}
+    for obj in asset_template(name):
+        if "geometry_nodes" in obj.name or obj.name.endswith("_geo"):
+            continue
+        base, lod = split_lod(obj.name)
+        groups.setdefault(base, {})[lod] = obj
+
+    picked = []
+    for lods in groups.values():
+        for key in (ASSET_LOD, "LOD0", ""):
+            if key in lods:
+                picked.append(lods[key])
+                break
+
+    whole = [obj for obj in picked if split_lod(obj.name)[0] == name]
+    if not whole and picked:
+        tallest = max(obj.dimensions.z for obj in picked)
+        whole = [obj for obj in picked if obj.dimensions.z > tallest * 0.5]
+
+    ratio = LOD_RATIO.get(name)
+    if ratio:
+        for obj in whole:
+            reduce_mesh(obj, ratio)
+
+    _VARIANTS[name] = whole
+    return whole
+
+
+def reduce_mesh(obj, ratio: float) -> None:
+    """Decimate a template in place, before anything instances it.
+
+    A modifier cannot be applied to multi-user mesh data, so this has to happen
+    while the template is the only user. The object is linked to the scene
+    collection only long enough for the operator to have a context, and the
+    reduced mesh is then shared by every copy.
+    """
+    root = bpy.context.scene.collection
+    root.objects.link(obj)
+    modifier = obj.modifiers.new(name="lod", type="DECIMATE")
+    modifier.ratio = ratio
+    with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
+        bpy.ops.object.modifier_apply(modifier=modifier.name)
+    root.objects.unlink(obj)
+
+
+def have_assets() -> bool:
+    return any(asset_variants(name) for name in HEDGE_ASSETS + TREE_ASSETS)
+
+
+def blocks_review(name: str, x: float, y: float) -> bool:
+    """Whether a plant would stand in the review row's sightline.
+
+    The panels get one scene and they have to carry it alone, so the wedge
+    between the camera and the row stays clear of anything with a canopy. A
+    tree planted here is not a small defect: it stands directly in front of an
+    option the audience is being asked to choose between. Ground cover is
+    exempt — it is below the panels and is what keeps the foreground alive.
+    """
+    if name in GRASS_ASSETS or name in GROUND_ASSETS:
+        return False
+    return (REVIEW_CLEAR["x"][0] <= x <= REVIEW_CLEAR["x"][1]
+            and REVIEW_CLEAR["y"][0] <= y <= REVIEW_CLEAR["y"][1])
+
+
+def place_asset(site: Parts, target, name: str, location, rotation: float,
+                metres: float, rng) -> None:
+    """Place one plant at a height in metres, not at a multiple of its own size.
+
+    Scale used to be a blind factor, which silently encodes an assumption about
+    every asset's native height. Swapping the island trees for conifers proved
+    the cost: a factor tuned for a 4 m olive produced 30 m pines that buried the
+    building, and nothing in the pipeline could have reported it.
+
+    Normalising against the template's measured height means an asset can be
+    swapped for any other and the site still reads at the size it was designed
+    at.
+    """
+    if blocks_review(name, location[0], location[1]):
+        print(f"[exterior] skipped {name} at {location[0]:.1f},{location[1]:.1f}: review sightline")
+        return
+    variants = asset_variants(name)
+    if not variants:
+        return
+
+    source = rng.choice(variants)
+    native = source.dimensions.z
+    if native <= 0.0:
+        return
+    factor = metres / native
+
+    obj = source.copy()
+    obj.data = source.data
+    obj.location = location
+    obj.rotation_euler = (0.0, 0.0, rotation)
+    obj.scale = (factor, factor, factor * rng.uniform(0.92, 1.12))
+    target.objects.link(obj)
+    site.put("flora", obj)
+
+
+def spread(site: Parts, target, assets, count: int, bounds, height, rng) -> None:
+    """`height` is a range in metres — the height the plant should stand."""
+    x0, x1, y0, y1 = bounds
+    low, high = height
+    for _ in range(count):
+        place_asset(
+            site, target, rng.choice(assets),
+            (rng.uniform(x0, x1), rng.uniform(y0, y1), 0.05),
+            rng.uniform(0.0, math.tau),
+            rng.uniform(low, high),
+            rng,
         )
-    ]
+
+
+def scatter_planting(site: Parts, target, rng) -> None:
+    near = APRON["near"]
+    for offset in (-1.0, 1.0):
+        inner = offset * PATH_HALF
+        outer = offset * APRON["x"]
+        bounds = (min(inner, outer), max(inner, outer), BED_NEAR + 0.5, near - 0.5)
+        spread(site, target, HEDGE_ASSETS, 38, bounds, (1.3, 2.1), rng)
+        spread(site, target, GROUND_ASSETS, 150, bounds, (0.35, 0.85), rng)
+
+    # Nothing may stand between PROMENADE_NEAR and BED_NEAR: that band is the
+    # pedestrian route, and a tree planted in it reads as an obstacle rather
+    # than as landscape. Trees go in the beds, in the verges, or on open grass.
+    # Heights in metres. A park conifer beside a five-storey slab is roughly
+    # half its height; taller and the building stops being the subject.
+    verge = PROMENADE_NEAR - VERGE_DEPTH / 2.0
+    for x, y, metres in (
+        (-23.5, BED_NEAR + 1.2, 9.5),
+        (14.5, BED_NEAR + 0.6, 8.0),
+        (-31.0, near + 2.4, 7.2),
+        (27.5, near + 1.0, 7.8),
+        (-30.0, verge, 8.6),
+        (33.0, verge, 9.0),
+        (-72.0, -20.0, 10.5),
+        (42.0, PROMENADE_NEAR - 7.0, 9.2),
+        (-58.0, PROMENADE_NEAR - 12.0, 8.4),
+        (58.0, PROMENADE_NEAR - 10.0, 7.6),
+    ):
+        place_asset(
+            site, target, rng.choice(TREE_ASSETS), (x, y, 0.0),
+            rng.uniform(0.0, math.tau), metres, rng,
+        )
+
+    # Widened past the building's own frontage: the review camera stands out at
+    # x = -95 and had nothing but bare lawn in its foreground.
+    spread(
+        site, target, GRASS_ASSETS, 900,
+        (-135.0, 90.0, MEADOW_NEAR, PROMENADE_NEAR - VERGE_DEPTH - 0.5), (0.25, 0.55), rng,
+    )
+    spread(
+        site, target, GROUND_ASSETS, 110,
+        (-135.0, 90.0, MEADOW_NEAR + 6.0, PROMENADE_NEAR - VERGE_DEPTH - 1.5), (0.4, 0.9), rng,
+    )
+
+
+def add_shrub(site: Parts, target, name: str, x: float, y: float, radius: float, rng) -> None:
+    for index in range(3):
+        site.put("foliage", add_blob(
+            target, f"{name}_{index}", radius,
+            (
+                x + rng.uniform(-radius, radius) * 0.7,
+                y + rng.uniform(-radius, radius) * 0.5,
+                radius * rng.uniform(0.6, 0.95),
+            ),
+            (rng.uniform(0.8, 1.3), rng.uniform(0.8, 1.2), rng.uniform(0.6, 0.95)),
+        ))
+
+
+def build_hedge(site: Parts, target, rng) -> None:
+    y = (APRON["near"] + BED_NEAR) / 2.0
+    for side, offset in (("w", -1.0), ("e", 1.0)):
+        span = APRON["x"] - PATH_HALF
+        count = 9
+        for index in range(count):
+            x = offset * (PATH_HALF + span * (index + 0.5) / count)
+            add_shrub(
+                site, target, f"shrub_{side}_{index}", x,
+                y + rng.uniform(-1.3, 1.3), rng.uniform(0.75, 1.15), rng,
+            )
+
+
+def add_tree(site: Parts, target, name: str, x: float, y: float, height: float, rng) -> None:
+    trunk = height * 0.42
+    site.put("bark", add_taper(
+        target, f"{name}_trunk", 0.24, 0.14, trunk, (x, y, trunk / 2.0),
+    ))
+    for index in range(4):
+        radius = height * rng.uniform(0.17, 0.24)
+        site.put("foliage", add_blob(
+            target, f"{name}_canopy_{index}", radius,
+            (
+                x + rng.uniform(-0.6, 0.6),
+                y + rng.uniform(-0.6, 0.6),
+                trunk + height * rng.uniform(0.12, 0.34),
+            ),
+            (rng.uniform(0.9, 1.25), rng.uniform(0.9, 1.25), rng.uniform(0.8, 1.1)),
+            subdivisions=2,
+        ))
+
+
+def build_trees(site: Parts, target, rng) -> None:
+    placements = (
+        (-15.5, BED_NEAR + 2.2, 8.6),
+        (13.0, BED_NEAR + 1.6, 7.4),
+        (-26.0, APRON["near"] + 3.0, 6.8),
+        (24.5, APRON["near"] + 1.5, 7.0),
+    )
+    for index, (x, y, height) in enumerate(placements):
+        add_tree(site, target, f"tree_{index}", x, y, height, rng)
+
+
+FLORA_TEXTURE = 1024
+# Normal is worth its payload under real-time light — it is what stops a canopy
+# reading as a flat cut-out. Roughness is not: a leaf is matte, the map is
+# nearly constant, and it was 14 textures for no visible difference.
+FLORA_KEEP = ("Base Color", "Alpha", "Normal")
+
+# Poly Haven's plants are photographed in whatever season they were scanned in,
+# and several of them are late-summer dry. Against a green lawn under a blue sky
+# they read as dead rather than as planting, which is the single loudest thing
+# wrong with the site.
+#
+# Matched by material name, and only leaves and ground cover. Branch, trunk and
+# bark materials are left alone — pushing those green turns a tree into a prop.
+FOLIAGE_SUMMER = (0.086, 0.176, 0.055)
+FOLIAGE_TINT = 0.45
+FOLIAGE_NAMES = (
+    "leaf", "leaves", "needle", "foliage", "canopy", "frond",
+    "shrub", "grass", "bush", "hedge", "fern", "plant", "celandine", "nettle",
+)
+BARK_NAMES = ("branch", "trunk", "bark", "stem", "wood", "twig", "root")
+
+
+def is_foliage(name: str) -> bool:
+    lowered = name.lower()
+    if any(hint in lowered for hint in BARK_NAMES):
+        return False
+    return any(hint in lowered for hint in FOLIAGE_NAMES)
+
+
+def simplify_flora(objects) -> None:
+    """Trim planting materials, and grade the foliage to summer.
+
+    Normal and roughness are kept now. Dropping them was a payload decision made
+    when the whole exterior was baked and drawn unlit, so nothing on screen
+    responded to light anyway; with real-time lighting they are what stops a
+    canopy reading as a flat cut-out.
+
+    The tint is the important half. Several of these assets were scanned dry,
+    and a dry canopy against a green lawn reads as a dead tree.
+    """
+    seen: set[str] = set()
+    images: set[str] = set()
+    tinted = 0
+
+    for obj in objects:
+        for material in obj.data.materials:
+            if material is None or material.name in seen or material.node_tree is None:
+                continue
+            seen.add(material.name)
+            tree = material.node_tree
+            foliage = is_foliage(material.name)
+
+            bsdf = next((n for n in tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+            if bsdf:
+                for link in list(tree.links):
+                    if link.to_node is bsdf and link.to_socket.name not in FLORA_KEEP:
+                        tree.links.remove(link)
+
+            for node in tree.nodes:
+                image = getattr(node, "image", None)
+                if image is None or image.name in images:
+                    continue
+                images.add(image.name)
+
+                # Colour space is the discriminator, not graph position. A first
+                # version matched only images linked straight into Base Color
+                # and graded nothing at all: these materials route colour
+                # through a mix node, so the image is never the node the socket
+                # sees. Alpha, normal and roughness are all `Non-Color`, which
+                # is exactly the set that must not be tinted.
+                if foliage and image.colorspace_settings.name != 'Non-Color':
+                    apply_tint(image, FOLIAGE_SUMMER, FOLIAGE_TINT, relevel=True)
+                    image.pack()
+                    tinted += 1
+
+                if max(image.size) > FLORA_TEXTURE:
+                    image.scale(FLORA_TEXTURE, FLORA_TEXTURE)
+
+    print(f"[exterior] planting: {len(seen)} materials, {len(images)} textures, "
+          f"{tinted} graded to summer")
+
+
+def build_site(target) -> Parts:
+    rng = random.Random(20260802)
+    site = Parts()
+
+    build_paving(site, target)
+    if have_assets():
+        scatter_planting(site, target, rng)
+    else:
+        print(f"[exterior] no library assets in {ASSET_DIR}; using massing planting")
+        build_hedge(site, target, rng)
+        build_trees(site, target, rng)
+    return site
+
+
+def scaffold_extent() -> tuple[float, float, int, float]:
+    first, last = SCAFFOLD["bays"]
+    over = SCAFFOLD["overhang"]
+    start = -WIDTH / 2.0 + BAY * first - over
+    end = -WIDTH / 2.0 + BAY * last + over
+    count = max(round((end - start) / SCAFFOLD["spacing"]), 1)
+    return start, end, count, (end - start) / count
+
+
+def build_scaffold(parts: Parts, target) -> None:
+    """Tube-and-fitting scaffold over the slot bay and its neighbours.
+
+    Its value is the lattice it makes against the sky and the shadow it lays on
+    itself, so the members carry real depth rather than being decals. It is a
+    separate asset because Act IV shows the same building without it.
+    """
+    start, end, bays, pitch = scaffold_extent()
+    lift = SCAFFOLD["lift"]
+    tube = SCAFFOLD["tube"]
+    deck = SCAFFOLD["deck"]
+    inner = FRONT_Y - SCAFFOLD["standoff"]
+    outer = inner - deck
+    lifts = int((TOP + SCAFFOLD["headroom"]) // lift) + 1
+    height = lifts * lift
+
+    for index in range(bays + 1):
+        x = start + index * pitch
+        for row, y in (("i", inner), ("o", outer)):
+            parts.put("steel", add_box(
+                target, f"scaffold_standard_{row}_{index}", (tube, tube, height),
+                (x, y, height / 2.0),
+            ))
+            parts.put("timber", add_box(
+                target, f"scaffold_sole_{row}_{index}", (0.30, 0.30, 0.05),
+                (x, y, 0.025),
+            ))
+
+    for level in range(1, lifts + 1):
+        z = level * lift
+        for row, y in (("i", inner), ("o", outer)):
+            parts.put("steel", add_box(
+                target, f"scaffold_ledger_{row}_{level}", (end - start, tube, tube),
+                ((start + end) / 2.0, y, z),
+            ))
+
+        for index in range(bays + 1):
+            x = start + index * pitch
+            parts.put("steel", add_box(
+                target, f"scaffold_transom_{index}_{level}", (tube, deck, tube),
+                (x, (inner + outer) / 2.0, z + tube),
+            ))
+
+        boards = int(deck // SCAFFOLD["board"][0])
+        for plank in range(boards):
+            y = outer + (plank + 0.5) * deck / boards
+            parts.put("timber", add_box(
+                target, f"scaffold_board_{level}_{plank}",
+                (end - start, SCAFFOLD["board"][0] - 0.01, SCAFFOLD["board"][1]),
+                ((start + end) / 2.0, y, z + tube + SCAFFOLD["board"][1] / 2.0),
+            ))
+
+        for rail, offset in (("guard", 1.05), ("mid", 0.55)):
+            parts.put("steel", add_box(
+                target, f"scaffold_{rail}_{level}", (end - start, tube, tube),
+                ((start + end) / 2.0, outer, z + offset),
+            ))
+        parts.put("timber", add_box(
+            target, f"scaffold_toe_{level}", (end - start, 0.035, 0.16),
+            ((start + end) / 2.0, outer - 0.04, z + 0.14),
+        ))
+
+    span = 2 * pitch
+    angle = math.atan2(2 * lift, span)
+    length = math.hypot(span, 2 * lift)
+    for level in range(0, lifts - 1, 2):
+        for index in range(0, bays - 1, 2):
+            direction = 1.0 if (level // 2) % 2 == 0 else -1.0
+            parts.put("steel", add_box(
+                target, f"scaffold_brace_{index}_{level}", (length, tube, tube),
+                (
+                    start + (index + 1) * pitch,
+                    outer - 0.06,
+                    (level + 1) * lift,
+                ),
+                rotation=(0.0, -direction * angle, 0.0),
+            ))
+
+    for level in range(2, lifts, 2):
+        for index in range(0, bays + 1, 2):
+            parts.put("steel", add_box(
+                target, f"scaffold_tie_{index}_{level}",
+                (tube, SCAFFOLD["standoff"] + 0.2, tube),
+                (start + index * pitch, FRONT_Y - SCAFFOLD["standoff"] / 2.0 + 0.1,
+                 level * lift - 0.4),
+            ))
+
+
+def build_hoarding(parts: Parts, target) -> None:
+    """Encloses the active work zone at the east end only.
+
+    A run across the whole frontage would stand between the camera and the
+    mock-up panels, which are the thing Act I is actually looking at.
+    """
+    y = APRON["near"] - 0.6
+    for index in range(8):
+        x = 2.6 + index * 2.45
+        parts.put("hoarding", add_box(
+            target, f"hoarding_{index}", (2.4, 0.08, 2.4), (x, y, 1.2),
+        ))
+        parts.put("steel", add_box(
+            target, f"hoarding_post_{index}", (0.09, 0.09, 2.5), (x + 1.2, y - 0.06, 1.25),
+        ))
+
+
+def build_props(parts: Parts, target, rng) -> None:
+    for stack in range(3):
+        x = 6.0 + stack * 1.5
+        y = APRON["near"] + 3.4
+        courses = rng.randint(5, 8)
+        parts.put("timber", add_box(
+            target, f"pallet_{stack}", (1.15, 0.95, 0.14), (x, y, 0.07),
+        ))
+        for course in range(courses):
+            parts.put("stock", add_box(
+                target, f"pallet_{stack}_pack_{course}", (1.1, 0.9, 0.15),
+                (x + rng.uniform(-0.03, 0.03), y + rng.uniform(-0.03, 0.03),
+                 0.14 + 0.075 + course * 0.15),
+            ))
+
+    parts.put("steel", add_box(
+        target, "skip", (3.6, 1.8, 1.25), (17.8, APRON["near"] + 2.6, 0.63),
+    ))
+
+    bench = (12.4, APRON["near"] + 3.8)
+    parts.put("timber", add_box(
+        target, "trestle", (2.4, 0.8, 0.08), (bench[0], bench[1], 0.85),
+    ))
+    for leg in range(4):
+        parts.put("steel", add_box(
+            target, f"trestle_leg_{leg}", (0.07, 0.07, 0.85),
+            (
+                bench[0] + (1.05 if leg % 2 else -1.05),
+                bench[1] + (0.3 if leg < 2 else -0.3),
+                0.42,
+            ),
+        ))
+
+
+def candidate_place(index: int) -> float:
+    """Evenly along the review row, centred on `REVIEW`."""
+    span = (len(CANDIDATE_BUILDERS) - 1) * REVIEW["spacing"]
+    return REVIEW["centre"] - span / 2.0 + index * REVIEW["spacing"]
+
+
+def candidate_frame(parts: Parts, target, name: str, x: float) -> tuple[float, float]:
+    """A thin carrier edge so each option reads as a discrete panel.
+
+    The panels are the width of the bay module they would fill and stand on the
+    ground as site mock-ups do, so nothing about them can be mistaken for built
+    work — they are the decision, not the building.
+    """
+    width = CANDIDATE["width"]
+    height = CANDIDATE["height"]
+    thickness = CANDIDATE["thickness"]
+    y = REVIEW["y"]
+    base = REVIEW["base"]
+
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("steel", add_box(
+            target, f"{name}_edge_{side}", (0.05, thickness + 0.06, height + 0.1),
+            (x + offset * (width + 0.05) / 2.0, y, base + height / 2.0),
+        ))
+    for side, offset in (("b", -1.0), ("t", 1.0)):
+        parts.put("steel", add_box(
+            target, f"{name}_rim_{side}", (width + 0.1, thickness + 0.06, 0.05),
+            (x, y, base + height / 2.0 + offset * (height + 0.05) / 2.0),
+        ))
+    return base, y - thickness / 2.0
+
+
+def candidate_flat(parts: Parts, target, name: str, x: float) -> None:
+    base, _ = candidate_frame(parts, target, name, x)
+    parts.put("brick", add_box(
+        target, f"{name}_face",
+        (CANDIDATE["width"], CANDIDATE["thickness"], CANDIDATE["height"]),
+        (x, REVIEW["y"], base + CANDIDATE["height"] / 2.0),
+    ))
+
+
+def candidate_relief(parts: Parts, target, name: str, x: float) -> None:
+    base, face = candidate_frame(parts, target, name, x)
+    width, height = CANDIDATE["width"], CANDIDATE["height"]
+    parts.put("brick", add_box(
+        target, f"{name}_face", (width, CANDIDATE["thickness"], height),
+        (x, REVIEW["y"], base + height / 2.0),
+    ))
+
+    course = CANDIDATE["course"]
+    unit = CANDIDATE["unit"]
+    rows = int(height / (course * 3))
+    columns = int(width / (unit * 2))
+    for row in range(rows):
+        for column in range(columns):
+            offset = (unit if row % 2 else 0.0)
+            cx = x - width / 2.0 + unit + column * unit * 2 + offset
+            if abs(cx - x) > width / 2.0 - unit / 2.0:
+                continue
+            proud = CANDIDATE["relief"]
+            parts.put("brick", add_box(
+                target, f"{name}_header_{row}_{column}", (unit - 0.03, proud, course - 0.03),
+                (cx, face - proud / 2.0, base + course * 1.5 + row * course * 3),
+            ))
+
+
+def candidate_screen(parts: Parts, target, name: str, x: float) -> None:
+    base, _ = candidate_frame(parts, target, name, x)
+    width, height = CANDIDATE["width"], CANDIDATE["height"]
+    thickness = CANDIDATE["thickness"]
+    course = CANDIDATE["course"]
+    unit = CANDIDATE["unit"]
+    rows = int(height / course)
+
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("brick", add_box(
+            target, f"{name}_pier_{side}", (unit, thickness, height),
+            (x + offset * (width - unit) / 2.0, REVIEW["y"], base + height / 2.0),
+        ))
+
+    inner = width - 2 * unit
+    perforated = max(int(inner / (unit * 1.6)), 2)
+    for row in range(rows):
+        z = base + course / 2.0 + row * course
+        if row % 3 == 2:
+            for column in range(perforated):
+                cx = x - inner / 2.0 + inner * (column + 0.5) / perforated
+                parts.put("brick", add_box(
+                    target, f"{name}_slip_{row}_{column}", (unit, thickness, course - 0.008),
+                    (cx, REVIEW["y"], z),
+                ))
+        else:
+            parts.put("brick", add_box(
+                target, f"{name}_course_{row}", (inner, thickness, course - 0.008),
+                (x, REVIEW["y"], z),
+            ))
+
+
+def candidate_demountable(parts: Parts, target, name: str, x: float) -> None:
+    """Panelised and unbonded: the option that can be taken back off.
+
+    The joint grid is what distinguishes it, so it is a wide open reveal on a
+    two-by-three grid rather than a hairline on a two-by-two. At the review
+    distance a 45 mm joint carries no shadow and this panel was indistinguish-
+    able from the plain one — which made the choice between them meaningless.
+    """
+    base, _ = candidate_frame(parts, target, name, x)
+    width, height = CANDIDATE["width"], CANDIDATE["height"]
+    gap = 0.18
+    columns_across, rows_up = 2, 3
+    tile_w = (width - gap * (columns_across - 1)) / columns_across
+    tile_h = (height - gap * (rows_up - 1)) / rows_up
+
+    parts.put("steel", add_box(
+        target, f"{name}_subframe", (width, 0.12, height),
+        (x, REVIEW["y"] + 0.09, base + height / 2.0),
+    ))
+    for rail in range(rows_up + 1):
+        parts.put("steel", add_box(
+            target, f"{name}_rail_{rail}", (width + 0.1, 0.09, 0.06),
+            (x, REVIEW["y"] + 0.02, base + rail * (tile_h + gap) + 0.03),
+        ))
+
+    for row in range(rows_up):
+        for column in range(columns_across):
+            parts.put("brick", add_box(
+                target, f"{name}_tile_{row}_{column}", (tile_w, 0.11, tile_h),
+                (
+                    x - width / 2.0 + tile_w / 2.0 + column * (tile_w + gap),
+                    REVIEW["y"] - 0.04,
+                    base + tile_h / 2.0 + row * (tile_h + gap),
+                ),
+            ))
+            for clip in (-1.0, 1.0):
+                parts.put("steel", add_box(
+                    target, f"{name}_clip_{row}_{column}_{int(clip)}", (0.05, 0.13, 0.05),
+                    (
+                        x - width / 2.0 + tile_w / 2.0 + column * (tile_w + gap)
+                        + clip * (tile_w / 2.0 - 0.12),
+                        REVIEW["y"] + 0.03,
+                        base + tile_h / 2.0 + row * (tile_h + gap) + tile_h / 2.0 - 0.08,
+                    ),
+                ))
+
+
+CANDIDATE_BUILDERS = (
+    ("flat", candidate_flat),
+    ("relief", candidate_relief),
+    ("screen", candidate_screen),
+    ("demountable", candidate_demountable),
+)
+
+
+def build_candidates(target) -> list[Parts]:
+    """Four full-size mock-up panels standing in a row on open promenade.
+
+    Real projects erect sample panels on site for approval, so this needs no
+    floating-object convention. The differences are in profile rather than in
+    surface, because texture vanishes on a projector at thirty metres and
+    silhouette does not.
+
+    They rest here; the runtime slides them in and out past the frame edge, so
+    nothing is ever seen appearing or disappearing on the spot.
+    """
+    panels = []
+    for index, (label, builder) in enumerate(CANDIDATE_BUILDERS):
+        parts = Parts()
+        name = f"candidate_{index + 1}_{label}"
+        builder(parts, target, name, candidate_place(index))
+        for group in parts.values():
+            for obj in group:
+                bevel(obj, width=0.006)
+        panels.append(parts)
+    return panels
+
+
+def build_slot_fill(target) -> Parts:
+    """The cladding that fills the vacant bay once it has been specified.
+
+    Act IV only. It is the neighbouring pier bay's own treatment, so the filled
+    elevation reads as the building always intended rather than as a patch.
+    """
+    parts = Parts()
+    for level in range(UPPER):
+        pier_bay(parts, target, SLOT_BAY, level)
+    for key, group in parts.items():
+        if key == "glass":
+            continue
+        for obj in group:
+            bevel(obj)
+    return parts
+
+
+def build_construction(target) -> Parts:
+    rng = random.Random(20260803)
+    parts = Parts()
+
+    build_scaffold(parts, target)
+    build_hoarding(parts, target)
+    build_props(parts, target, rng)
+
+    for group in parts.values():
+        for obj in group:
+            bevel(obj, width=0.008)
+
+    return parts
+
+
+def build_geometry(target) -> Parts:
+    parts = Parts()
+
+    build_core(parts, target)
+    build_front(parts, target)
+    build_flanks(parts, target)
+    build_back(parts, target)
+    build_ground(parts, target)
+    build_entrance(parts, target)
+    build_roof(parts, target)
+
+    for key, group in parts.items():
+        if key == "glass":
+            continue
+        for obj in group:
+            bevel(obj)
+
+    return parts
 
 
 # --------------------------------------------------------------------------
@@ -480,57 +1496,273 @@ def principled(name: str, base_color, roughness: float, metallic: float = 0.0):
     return material
 
 
+def detail_texture(key: str, slot: str, tint: float) -> Path:
+    """A web-sized, palette-graded copy of one Poly Haven map.
+
+    Written to disk rather than mutated in memory because the glTF exporter
+    copies file-backed images straight through: edits made only to
+    `image.pixels` would never reach the GLB, and nothing would say so.
+    """
+    asset, _, _ = DETAIL[key]
+    source = next((ASSET_DIR / asset).glob(f"{slot}.*"), None)
+    if source is None:
+        raise RuntimeError(f"{key}: {asset}/{slot} is missing — run fetch_assets.py")
+
+    DETAIL_DIR.mkdir(parents=True, exist_ok=True)
+    destination = DETAIL_DIR / f"{key}_{slot}.jpg"
+
+    image = bpy.data.images.load(str(source), check_existing=False)
+    if tint > 0.0:
+        apply_tint(image, PALETTE[key][0], tint, relevel=True)
+    image.scale(DETAIL_SIZE, DETAIL_SIZE)
+
+    settings = bpy.context.scene.render.image_settings
+    settings.file_format = 'JPEG'
+    settings.quality = 94
+    image.save_render(str(destination), scene=bpy.context.scene)
+    bpy.data.images.remove(image)
+    return destination
+
+
+def detail_image(key: str, slot: str, tint: float, colour: bool):
+    label = f"{key}_{slot}"
+    existing = bpy.data.images.get(label)
+    if existing:
+        bpy.data.images.remove(existing, do_unlink=True)
+
+    image = bpy.data.images.load(str(detail_texture(key, slot, tint)), check_existing=False)
+    image.name = label
+    if not colour:
+        image.colorspace_settings.name = 'Non-Color'
+    return image
+
+
+def detail_material(key: str):
+    """Surface detail as a tiling map on a real UV set, not as a baked atlas.
+
+    The whole building used to resolve to one 2048 atlas — roughly forty texels
+    per metre once the never-seen back and roof had taken their share, against
+    the fifty-five per metre the entrance pose asks for. Detail that lives in a
+    fixed-size atlas is sharp at exactly one distance; detail that tiles is
+    sharp at all of them, and costs less because four assets share one map.
+
+    Tiling is in metres. `project_detail_uv()` writes world coordinates divided
+    by this tile straight into the UV set, so no mapping node is involved and
+    the exporter has nothing to reinterpret.
+    """
+    asset, tile, tint = DETAIL[key]
+    base_color, roughness, metallic = PALETTE[key]
+    material = principled(key, base_color, roughness, metallic)
+    tree = material.node_tree
+    bsdf = tree.nodes["Principled BSDF"]
+
+    coords = tree.nodes.new("ShaderNodeUVMap")
+    coords.uv_map = DETAIL_UV
+    coords.location = (-1000, 100)
+
+    base = tree.nodes.new("ShaderNodeTexImage")
+    base.image = detail_image(key, "Diffuse", tint, colour=True)
+    base.location = (-700, 220)
+    tree.links.new(coords.outputs["UV"], base.inputs["Vector"])
+    tree.links.new(base.outputs["Color"], bsdf.inputs["Base Color"])
+
+    normal = tree.nodes.new("ShaderNodeTexImage")
+    normal.image = detail_image(key, "nor_gl", 0.0, colour=False)
+    normal.location = (-700, -180)
+    shaper = tree.nodes.new("ShaderNodeNormalMap")
+    shaper.uv_map = DETAIL_UV
+    shaper.location = (-400, -180)
+    shaper.inputs["Strength"].default_value = DETAIL_NORMAL_STRENGTH
+    tree.links.new(coords.outputs["UV"], normal.inputs["Vector"])
+    tree.links.new(normal.outputs["Color"], shaper.inputs["Color"])
+    tree.links.new(shaper.outputs["Normal"], bsdf.inputs["Normal"])
+
+    print(f"[exterior] detail {key}: {asset} at {tile:.2f} m "
+          f"({DETAIL_SIZE / tile:.0f} texels/m)")
+    return material
+
+
+def tint_node(tree, source, color, amount: float):
+    """Keep the texture's luminance detail, take the hue from the palette."""
+    mix = tree.nodes.new("ShaderNodeMix")
+    mix.data_type = 'RGBA'
+    mix.blend_type = 'COLOR'
+    mix.location = (-360, 160)
+    mix.inputs[0].default_value = amount
+    mix.inputs[7].default_value = color
+    tree.links.new(source, mix.inputs[6])
+    return mix.outputs[2]
+
+
+def textured_material(name: str, texture: str, tile: float, fallback, tint: float = 0.0):
+    """Ground surfaces, tiled in world metres so the scale is not guesswork."""
+    root = ASSET_DIR / texture
+    diffuse = next(root.glob("Diffuse.*"), None)
+    if diffuse is None:
+        return principled(name, fallback[0], fallback[1], fallback[2])
+
+    material = principled(name, fallback[0], fallback[1])
+    tree = material.node_tree
+    bsdf = tree.nodes["Principled BSDF"]
+
+    coords = tree.nodes.new("ShaderNodeNewGeometry")
+    coords.location = (-1000, 0)
+    mapping = tree.nodes.new("ShaderNodeMapping")
+    mapping.location = (-820, 0)
+    mapping.inputs["Scale"].default_value = (1.0 / tile, 1.0 / tile, 1.0 / tile)
+    tree.links.new(coords.outputs["Position"], mapping.inputs["Vector"])
+
+    base = tree.nodes.new("ShaderNodeTexImage")
+    base.image = bpy.data.images.load(str(diffuse), check_existing=True)
+    base.location = (-600, 160)
+    tree.links.new(mapping.outputs["Vector"], base.inputs["Vector"])
+    surface = base.outputs["Color"]
+    if tint > 0.0:
+        surface = tint_node(tree, surface, fallback[0], tint)
+    tree.links.new(surface, bsdf.inputs["Base Color"])
+
+    rough = next(root.glob("Rough.*"), None)
+    if rough:
+        node = tree.nodes.new("ShaderNodeTexImage")
+        node.image = bpy.data.images.load(str(rough), check_existing=True)
+        node.image.colorspace_settings.name = 'Non-Color'
+        node.location = (-600, -140)
+        tree.links.new(mapping.outputs["Vector"], node.inputs["Vector"])
+        tree.links.new(node.outputs["Color"], bsdf.inputs["Roughness"])
+
+    normal = next(root.glob("nor_gl.*"), None)
+    if normal:
+        node = tree.nodes.new("ShaderNodeTexImage")
+        node.image = bpy.data.images.load(str(normal), check_existing=True)
+        node.image.colorspace_settings.name = 'Non-Color'
+        node.location = (-600, -440)
+        shaper = tree.nodes.new("ShaderNodeNormalMap")
+        shaper.location = (-320, -440)
+        shaper.inputs["Strength"].default_value = 0.6
+        tree.links.new(mapping.outputs["Vector"], node.inputs["Vector"])
+        tree.links.new(node.outputs["Color"], shaper.inputs["Color"])
+        tree.links.new(shaper.outputs["Normal"], bsdf.inputs["Normal"])
+
+    return material
+
+
+def emissive_material(name: str, color, strength: float):
+    material = principled(name, (0.0, 0.0, 0.0, 1.0), 1.0)
+    bsdf = material.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Emission Color"].default_value = (*color, 1.0)
+    bsdf.inputs["Emission Strength"].default_value = strength
+    return material
+
+
+def glazing_material(name: str, strength: float):
+    """Near-mirror, because glass reads by what it reflects.
+
+    At 0.28 this rendered as black holes in the elevation. A dielectric
+    reflects about 4% head-on, so a rough glass blurs the sky down to the
+    average of a dim gradient and there is nothing left to see; the reflection
+    only becomes visible when it is sharp enough to carry the sky's own
+    brightness, and when Fresnel lifts it at the grazing angles the act's poses
+    actually view the facade from.
+    """
+    material = principled(name, (0.032, 0.045, 0.062, 1.0), 0.06)
+    bsdf = material.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Emission Color"].default_value = (*INTERIOR_COLOR, 1.0)
+    bsdf.inputs["Emission Strength"].default_value = strength
+    return material
+
+
 def assign(objects, material) -> None:
     for obj in objects:
         obj.data.materials.clear()
         obj.data.materials.append(material)
 
 
+SPECIAL_MATERIALS = {
+    "glass": lambda: glazing_material("glass", INTERIOR_STRENGTH),
+    "lobby": lambda: emissive_material("lobby", LOBBY_COLOR, LOBBY_STRENGTH),
+    "brick": lambda: detail_material("brick"),
+    "backing": lambda: detail_material("backing"),
+    "soffit": lambda: detail_material("soffit"),
+    "stock": lambda: detail_material("stock"),
+    "soil": lambda: textured_material("soil", "park_dirt", 2.0, PALETTE["soil"]),
+    "grass": lambda: textured_material("grass", "leafy_grass", 2.5, PALETTE["grass"], tint=0.85),
+    # On the detail path rather than the site path: the entrance threshold is
+    # part of the building asset, and the site's raw 2K library maps rode into
+    # the GLB with it — 6.8 MB of a 9.9 MB export, for a strip of paving under
+    # the doors.
+    "paving": lambda: detail_material("paving"),
+}
+
+
+def apply_palette(parts: Parts) -> None:
+    for key, group in parts.items():
+        if key == "flora":
+            continue
+        special = SPECIAL_MATERIALS.get(key)
+        if special:
+            assign(group, special())
+        else:
+            base_color, roughness, metallic = PALETTE[key]
+            assign(group, principled(key, base_color, roughness, metallic))
+
+        # Projected here rather than only at bake time so the preview renders
+        # the same surface the browser will. A preview that shows flat colour
+        # where the asset ships tiling detail sends you looking for a fault in
+        # the material — see `learnings.md` §4.
+        for obj in group:
+            project_detail_uv(obj)
+
+
 def add_sun(target) -> None:
     light = bpy.data.lights.new("sun", type='SUN')
     light.energy = SUN_ENERGY
     light.color = SUN_COLOR
-    light.angle = 0.03
+    light.angle = 0.02
 
     lamp = bpy.data.objects.new("sun", light)
     direction = SUN_VECTOR.normalized()
-    lamp.location = direction * 120.0
+    lamp.location = direction * 150.0
     lamp.rotation_euler = (-direction).to_track_quat('-Z', 'Y').to_euler()
     target.objects.link(lamp)
 
 
+def split_camera_ray(tree, lighting, display) -> None:
+    """Light the scene at one sky strength and show the camera another."""
+    output = next(n for n in tree.nodes if n.type == 'OUTPUT_WORLD')
+    path = tree.nodes.new("ShaderNodeLightPath")
+    path.location = (-320, 420)
+    mix = tree.nodes.new("ShaderNodeMixShader")
+    mix.location = (140, 240)
+
+    tree.links.new(path.outputs["Is Camera Ray"], mix.inputs["Fac"])
+    tree.links.new(lighting.outputs["Background"], mix.inputs[1])
+    tree.links.new(display.outputs["Background"], mix.inputs[2])
+    tree.links.new(mix.outputs["Shader"], output.inputs["Surface"])
+
+
 def set_sky() -> None:
-    """A physical sky, not a flat colour.
-
-    A uniform world makes the glazing reflect one dead value across every pane,
-    which is what made the facade read as plastic. A real sky gradient gives the
-    glass something to vary against, warms the ambient near the horizon and
-    cools it overhead — and it does all of that for the shaded faces too.
-
-    Angles are derived from SUN_VECTOR so the sky and the shadow-casting lamp
-    cannot drift apart.
-    """
-    # Always a fresh world for this scene: a reused one can carry ray-visibility
-    # flags that stop it lighting anything, which reads as a black render.
     world = bpy.data.worlds.new("exterior_sky")
     bpy.context.scene.world = world
     world.use_nodes = True
 
     tree = world.node_tree
-    background = tree.nodes["Background"]
-    background.inputs["Strength"].default_value = SKY_STRENGTH
+    lighting = tree.nodes["Background"]
+    lighting.inputs["Strength"].default_value = SKY_STRENGTH
+
+    display = tree.nodes.new("ShaderNodeBackground")
+    display.location = (-140, 40)
+    display.inputs["Strength"].default_value = SKY_DISPLAY
+    split_camera_ray(tree, lighting, display)
 
     direction = SUN_VECTOR.normalized()
     try:
         sky = tree.nodes.new("ShaderNodeTexSky")
     except RuntimeError:
-        background.inputs["Color"].default_value = (*SKY_COLOR, 1.0)
+        for node in (lighting, display):
+            node.inputs["Color"].default_value = (*SKY_COLOR, 1.0)
         return
 
-    # The physical sky model is named differently across versions — Blender 5
-    # calls it MULTIPLE_SCATTERING, earlier releases NISHITA. Assigning a name
-    # the build does not know raises, and silently losing the sky to a flat
-    # colour is very hard to spot in a render, so each is tried in turn.
+    sky.location = (-520, 200)
     for sky_type in ('MULTIPLE_SCATTERING', 'NISHITA'):
         try:
             sky.sky_type = sky_type
@@ -540,112 +1772,88 @@ def set_sky() -> None:
 
     sky.sun_elevation = math.asin(max(-1.0, min(1.0, direction.z)))
     sky.sun_rotation = math.atan2(direction.y, direction.x)
-    # The lamp casts the shadows; a second sun in the dome would double them.
     sky.sun_disc = False
-    for attribute, value in (("dust_density", 2.2), ("air_density", 1.0)):
+    for attribute, value in (("dust_density", 1.1), ("air_density", 1.0)):
         if hasattr(sky, attribute):
             setattr(sky, attribute, value)
 
-    tree.links.new(sky.outputs["Color"], background.inputs["Color"])
+    for node in (lighting, display):
+        tree.links.new(sky.outputs["Color"], node.inputs["Color"])
 
 
 def add_shadow_catcher(target):
-    """Ground exists only so the bake has something to bounce off and something
-    to receive contact shadow. It is not exported — the web world owns the
-    ground plane."""
     ground = add_box(target, "bake_ground", (600.0, 600.0, 0.2), (0.0, 0.0, -0.1))
-    # Paving, not tarmac. Too dark and it returns no bounce to the underside of
-    # the canopy or the reveals, which is where the ground's contribution is
-    # actually visible.
-    assign([ground], principled("bake_ground", (0.11, 0.115, 0.125, 1.0), 0.92))
+    assign([ground], textured_material("grass", "leafy_grass", 2.5, PALETTE["grass"], tint=0.85))
     return ground
 
 
-# --------------------------------------------------------------------------
-# build
-# --------------------------------------------------------------------------
-
-
-def build_geometry(target):
-    solids: list = []
-    glass: list = []
-
-    for volume in VOLUMES:
-        s, g = build_volume(target, volume)
-        solids += s
-        glass += g
-
-    # The plinth exists before the entrance is cut, so the opening goes through
-    # it rather than stopping on top of it.
-    solids += build_plinth(target)
-
-    s, g = build_entrance(target, solids)
-    solids += s
-    glass += g
-
-    for part in solids:
-        bevel(part)
-
-    return solids, glass
-
-
-def glazing_material(name: str, strength: float):
-    """Dark, glossy and quietly emissive. Emission is what makes a dusk building
-    look occupied; the low roughness is what lets it still reflect the sky."""
-    # Deliberately not a mirror. A COMBINED bake stores one fixed view of the
-    # world, so any specular reflection is baked from the viewpoint it was
-    # rendered at and becomes wrong the moment the camera moves — which, in a
-    # presentation built entirely on camera travel, is immediately. Mirror
-    # glazing also swung from white to black across a single pane depending on
-    # what each angle happened to reflect, which is what produced the black
-    # corners. Tinted, near-diffuse glass bakes correctly and reads correctly
-    # from every pose.
-    material = principled(name, (0.035, 0.05, 0.072, 1.0), 0.35, metallic=0.0)
-    bsdf = material.node_tree.nodes["Principled BSDF"]
-    bsdf.inputs["Emission Color"].default_value = (*INTERIOR_COLOR, 1.0)
-    bsdf.inputs["Emission Strength"].default_value = strength
-    return material
-
-
-def preview():
-    """Geometry and lighting only — for looking at, not for exporting."""
-    target = collection()
-    solids, glass = build_geometry(target)
-
-    assign(solids, principled("concrete", CONCRETE, 0.68))
-    assign(glass, glazing_material("glass", INTERIOR_STRENGTH))
-
+def light_scene(target) -> None:
     add_sun(target)
     add_shadow_catcher(target)
     set_sky()
 
-    total = sum(len(obj.data.polygons) for obj in solids + glass)
-    print(f"[exterior] parts: {len(solids) + len(glass)}  polys: {total}")
-    return solids, glass
-
 
 # --------------------------------------------------------------------------
 # preview rendering
-#
-# Kept in the script rather than typed into a live session, so that what the
-# form was judged against is reproducible rather than remembered.
 # --------------------------------------------------------------------------
 
-# The web world's `leverage` pose, converted: web [-24, 2.2, 52] -> blender.
+
 PREVIEW_POSE = {
-    "location": Vector((-24.0, -52.0, 2.2)),
-    "target": Vector((-16.0, -6.0, 12.0)),
-    "fov": 46.0,
+    "location": Vector((-24.0, -58.0, 4.0)),
+    "target": Vector((-14.0, -12.0, 7.0)),
+    "fov": 42.0,
+}
+
+SITE_POSE = {
+    "location": Vector((-42.0, -82.0, 13.0)),
+    "target": Vector((0.0, -6.0, 8.0)),
+    "fov": 40.0,
+}
+
+BAY_POSE = {
+    "location": Vector((-16.0, -32.0, 8.2)),
+    "target": Vector((bay_x(SLOT_BAY), -8.0, 8.2)),
+    "fov": 34.0,
+}
+
+ENTRANCE_POSE = {
+    "location": Vector((0.0, -26.0, 3.4)),
+    "target": Vector((0.0, -6.4, 3.0)),
+    "fov": 38.0,
+}
+
+SCAFFOLD_POSE = {
+    "location": Vector((22.0, -40.0, 7.0)),
+    "target": Vector((10.5, -9.0, 9.0)),
+    "fov": 40.0,
+}
+
+# Square to the review row and close, aimed `lead` metres west of it. Derived
+# rather than typed: the row's own position decides where the camera stands.
+# Mirrored by the `practice` pose in src/scenes.
+CANDIDATES_POSE = {
+    "location": Vector((REVIEW["centre"], REVIEW["y"] - REVIEW["standoff"], 4.2)),
+    "target": Vector((REVIEW["centre"] - REVIEW["lead"], REVIEW["y"], 3.5)),
+    "fov": 40.0,
+}
+
+POSES = {
+    "exterior": PREVIEW_POSE,
+    "candidates": CANDIDATES_POSE,
+    "site": SITE_POSE,
+    "bay": BAY_POSE,
+    "entrance": ENTRANCE_POSE,
+    "scaffold": SCAFFOLD_POSE,
 }
 
 
-def add_preview_camera(target):
-    import math
+def add_preview_camera(target, pose=None):
+    pose = pose or PREVIEW_POSE
 
     data = bpy.data.cameras.get("preview_cam") or bpy.data.cameras.new("preview_cam")
     data.sensor_fit = 'VERTICAL'
     data.lens_unit = 'FOV'
-    data.angle_y = math.radians(PREVIEW_POSE["fov"])
+    data.angle_y = math.radians(pose["fov"])
     data.clip_end = 600.0
 
     cam = bpy.data.objects.get("preview_cam")
@@ -653,9 +1861,9 @@ def add_preview_camera(target):
         cam = bpy.data.objects.new("preview_cam", data)
         target.objects.link(cam)
     cam.data = data
-    cam.location = PREVIEW_POSE["location"]
+    cam.location = pose["location"]
     cam.rotation_euler = (
-        (PREVIEW_POSE["target"] - PREVIEW_POSE["location"]).to_track_quat('-Z', 'Y').to_euler()
+        (pose["target"] - pose["location"]).to_track_quat('-Z', 'Y').to_euler()
     )
     bpy.context.scene.camera = cam
     return cam
@@ -666,7 +1874,7 @@ def configure_cycles(samples: int = 64) -> None:
     scene.render.engine = 'CYCLES'
     try:
         scene.cycles.device = 'GPU'
-    except Exception:  # noqa: BLE001 - CPU-only machines are fine
+    except Exception:  # noqa: BLE001
         pass
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
@@ -674,21 +1882,50 @@ def configure_cycles(samples: int = 64) -> None:
     scene.render.resolution_x = 1600
     scene.render.resolution_y = 900
     scene.render.resolution_percentage = 100
-    scene.view_settings.view_transform = 'AgX'
+    scene.view_settings.view_transform = 'Standard'
     scene.view_settings.look = 'None'
     scene.view_settings.exposure = 0.0
 
 
-def render_preview(filepath: str, samples: int = 64) -> str:
-    # Deliberately not collection(): that clears the collection, which would
-    # delete the very geometry this is about to render.
+def render_preview(name: str = "exterior", samples: int = 48, pose=None) -> Path:
     target = bpy.data.collections.get(COLLECTION) or collection()
-    add_preview_camera(target)
+    add_preview_camera(target, pose or POSES.get(name))
     configure_cycles(samples)
-    bpy.context.scene.render.filepath = filepath
+
+    RENDERS.mkdir(parents=True, exist_ok=True)
+    path = RENDERS / f"{name}.png"
+    bpy.context.scene.render.filepath = str(path)
     bpy.context.scene.render.image_settings.file_format = 'PNG'
     bpy.ops.render.render(write_still=True)
-    return filepath
+    print(f"[exterior] rendered {path}")
+    return path
+
+
+def preview() -> Parts:
+    target = collection()
+    parts = build_geometry(target)
+    site = build_site(target)
+    construction = build_construction(target)
+    candidates = build_candidates(target)
+    apply_palette(parts)
+    apply_palette(site)
+    apply_palette(construction)
+    for panel in candidates:
+        apply_palette(panel)
+    if "--filled" in sys.argv:
+        fill = build_slot_fill(target)
+        apply_palette(fill)
+
+    light_scene(target)
+
+    objects = parts.all() + site.all() + construction.all()
+    objects += [obj for panel in candidates for obj in panel.all()]
+    total = sum(len(obj.data.polygons) for obj in objects)
+    print(f"[exterior] parts: {len(objects)}  polys: {total}")
+    print(f"[exterior] size: {WIDTH:.1f} x {DEPTH:.1f} x {TOP + PARAPET_H:.1f}")
+    print(f"[exterior] slot bay centre x: {bay_x(SLOT_BAY):.3f}")
+    print(f"[exterior] construction parts: {len(construction.all())}")
+    return parts
 
 
 # --------------------------------------------------------------------------
@@ -696,7 +1933,7 @@ def render_preview(filepath: str, samples: int = 64) -> str:
 # --------------------------------------------------------------------------
 
 
-def join_all(parts: list):
+def join_all(parts: list, name: str):
     bpy.ops.object.select_all(action='DESELECT')
     for part in parts:
         part.select_set(True)
@@ -704,15 +1941,48 @@ def join_all(parts: list):
     bpy.ops.object.join()
 
     obj = bpy.context.active_object
-    obj.name = "exterior_building"
-    # Origin at the site origin, so the web world can place it by zone position
-    # rather than by an offset nobody can derive later.
+    obj.name = name
     bpy.context.scene.cursor.location = (0.0, 0.0, 0.0)
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     return obj
 
 
-def unwrap(obj) -> None:
+DETAIL_AXES = ((1, 2), (0, 2), (0, 1))
+
+
+def project_detail_uv(obj) -> None:
+    """World coordinates, in metres, divided by each material's tile.
+
+    A box projection rather than an unwrap: tiling detail wants continuity
+    across the whole elevation, and seams between islands are exactly what an
+    unwrap creates. Written straight into the UV set instead of through a
+    mapping node, because glTF carries UVs and would have to reinterpret a node
+    graph — and Blender's exporter reinterprets what it cannot express by
+    silently dropping it.
+    """
+    mesh = obj.data
+    layer = mesh.uv_layers.get(DETAIL_UV) or mesh.uv_layers.new(name=DETAIL_UV)
+    tiles = [
+        DETAIL[slot.material.name][1] if slot.material and slot.material.name in DETAIL else 1.0
+        for slot in obj.material_slots
+    ]
+    uvs = layer.data
+
+    for polygon in mesh.polygons:
+        tile = tiles[polygon.material_index] if polygon.material_index < len(tiles) else 1.0
+        normal = polygon.normal
+        axis = max(range(3), key=lambda i: abs(normal[i]))
+        u_axis, v_axis = DETAIL_AXES[axis]
+        for loop in polygon.loop_indices:
+            position = mesh.vertices[mesh.loops[loop].vertex_index].co
+            uvs[loop].uv = (position[u_axis] / tile, position[v_axis] / tile)
+
+
+def unwrap_occlusion(obj) -> None:
+    mesh = obj.data
+    layer = mesh.uv_layers.get(OCCLUSION_UV) or mesh.uv_layers.new(name=OCCLUSION_UV)
+    mesh.uv_layers.active = layer
+
     bpy.ops.object.select_all(action='DESELECT')
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
@@ -721,9 +1991,45 @@ def unwrap(obj) -> None:
     bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.006)
     bpy.ops.object.mode_set(mode='OBJECT')
 
+    if mesh.uv_layers[0].name != DETAIL_UV:
+        raise RuntimeError(f"{obj.name}: detail UVs must be first, got {mesh.uv_layers[0].name}")
+
+
+def gltf_settings_tree():
+    """The one node group Blender's glTF exporter reads occlusion out of.
+
+    glTF has no lightmap, and its occlusion channel is the only baked-lighting
+    slot the format carries. The exporter finds it by this exact group name, so
+    it is built here rather than assumed to exist.
+    """
+    tree = bpy.data.node_groups.get(GLTF_SETTINGS)
+    if tree:
+        return tree
+    tree = bpy.data.node_groups.new(GLTF_SETTINGS, "ShaderNodeTree")
+    tree.interface.new_socket("Occlusion", in_out='INPUT', socket_type='NodeSocketFloat')
+    tree.nodes.new("NodeGroupInput")
+    return tree
+
+
+def wire_occlusion(obj, image) -> None:
+    for material in obj.data.materials:
+        tree = material.node_tree
+        coords = tree.nodes.new("ShaderNodeUVMap")
+        coords.uv_map = OCCLUSION_UV
+        coords.location = (-1000, -700)
+
+        node = tree.nodes.new("ShaderNodeTexImage")
+        node.image = image
+        node.location = (-700, -700)
+        tree.links.new(coords.outputs["UV"], node.inputs["Vector"])
+
+        settings = tree.nodes.new("ShaderNodeGroup")
+        settings.node_tree = gltf_settings_tree()
+        settings.location = (-380, -700)
+        tree.links.new(node.outputs["Color"], settings.inputs["Occlusion"])
+
 
 def set_bake_target(obj, image) -> None:
-    """Point every material slot at the same image, so one bake covers them all."""
     for material in obj.data.materials:
         tree = material.node_tree
         for node in [n for n in tree.nodes if n.name.startswith("BAKE_TARGET")]:
@@ -740,141 +2046,327 @@ def bake_into(obj, image) -> None:
     scene.render.engine = 'CYCLES'
     scene.cycles.samples = BAKE_SAMPLES
     scene.cycles.use_denoising = True
-    scene.render.bake.use_pass_direct = True
-    scene.render.bake.use_pass_indirect = True
     scene.render.bake.margin = 10
+    # Bleed along mesh adjacency rather than outward in image space. The mesh is
+    # built from overlapping boxes, so many islands are interior faces baking to
+    # solid black; an image-space margin walks that black across whatever island
+    # the packer happened to put next to it. Widening the gap instead only trades
+    # the artifact for wasted atlas.
+    scene.render.bake.margin_type = 'ADJACENT_FACES'
+    scene.world.light_settings.distance = AO_DISTANCE
 
     set_bake_target(obj, image)
     bpy.ops.object.select_all(action='DESELECT')
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.bake(type='COMBINED', use_clear=True)
+    bpy.ops.object.bake(type='AO', use_clear=True)
 
 
-def bake_image(name: str):
-    """A bake target with a guaranteed name.
-
-    `bpy.data.images.new` does not replace on collision, it suffixes — so a
-    second run in the same session silently creates `name.001` and anything
-    looking the image up by name reads the *previous* run's result. Removing
-    first is what makes repeated interactive runs mean what they say.
-    """
+def bake_image(name: str, size: int = BAKE_SIZE):
     existing = bpy.data.images.get(name)
     if existing:
         bpy.data.images.remove(existing, do_unlink=True)
-    return bpy.data.images.new(name, BAKE_SIZE, BAKE_SIZE)
+    return bpy.data.images.new(name, size, size)
 
 
-def make_card(obj) -> None:
-    """Turn every surface into white study-model card for the second bake."""
-    for material in obj.data.materials:
-        bsdf = material.node_tree.nodes.get("Principled BSDF")
-        if not bsdf:
-            continue
-        bsdf.inputs["Base Color"].default_value = CARD
-        bsdf.inputs["Roughness"].default_value = 0.85
-        bsdf.inputs["Metallic"].default_value = 0.0
-        bsdf.inputs["Emission Strength"].default_value = 0.0
+def report_levels(name: str, image) -> None:
+    """What an occlusion bake is worth checking for.
 
+    The old numbers — max, p99, percent clipped — were the right ones for a
+    combined bake, where the risk was blowing out. Occlusion cannot blow out;
+    its failure is coming back dark, because a large share of a joined mesh's
+    faces are interior and fully occluded, and a bake that is dark everywhere
+    looks exactly like one that is dark for a reason.
 
-def finish_material(obj, specified, card):
-    """One material carrying both bakes.
-
-    glTF has a single base colour slot, so the second bake rides in the emissive
-    slot. Neither is used as lighting by the web renderer — it mixes the two
-    maps by a uniform — but this is the only way to get both through a GLB
-    without exporting the geometry twice.
+    **Read it as a trend, not as a measurement of the facade.** These are texel
+    counts over the whole atlas, and this mesh is built from overlapping boxes,
+    so a large closed share is expected — most faces are interior and genuinely
+    see nothing. Watch for it moving between runs, not for its absolute value.
+    Masking on alpha does not separate the two: the bake writes alpha 1 across
+    the atlas, so every texel counts as covered.
     """
-    material = bpy.data.materials.new("exterior_building")
-    material.use_nodes = True
-    tree = material.node_tree
-    bsdf = tree.nodes["Principled BSDF"]
+    import numpy
 
-    base = tree.nodes.new("ShaderNodeTexImage")
-    base.image = specified
-    base.location = (-500, 300)
-    tree.links.new(base.outputs["Color"], bsdf.inputs["Base Color"])
+    pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
+    image.pixels.foreach_get(pixels)
+    values = pixels.reshape(-1, 4)[:, 0]
 
-    emissive = tree.nodes.new("ShaderNodeTexImage")
-    emissive.image = card
-    emissive.location = (-500, -60)
-    tree.links.new(emissive.outputs["Color"], bsdf.inputs["Emission Color"])
-    bsdf.inputs["Emission Strength"].default_value = 1.0
-
-    bsdf.inputs["Roughness"].default_value = 1.0
-    bsdf.inputs["Metallic"].default_value = 0.0
-
-    obj.data.materials.clear()
-    obj.data.materials.append(material)
-
-    specified.pack()
-    card.pack()
-    return material
+    print(f"[exterior] {name} occlusion: mean {values.mean():.3f}  "
+          f"open {(values > 0.9).mean() * 100.0:.1f}%  "
+          f"closed {(values < 0.1).mean() * 100.0:.1f}%")
 
 
-def export(obj) -> None:
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+def isolate_materials(obj) -> None:
+    """Give this asset private copies of every material it uses.
 
-    # Selection state lives on the object and is shared between scenes, so
-    # anything left selected in another scene rides along in the export. An
-    # interactive run picked up the corridor bay this way. Clearing globally and
-    # pinning to the active scene closes both routes.
+    `principled()` returns one datablock per name, so every asset in the scene
+    shares `brick`, `steel` and the rest. Wiring one asset's occlusion map into
+    a shared material wires it into every asset baked afterwards, and the tell
+    is subtle enough to survive a review — two assets reporting identical bake
+    levels. See `learnings.md` §7c.
+    """
+    for slot in obj.material_slots:
+        if slot.material:
+            slot.material = slot.material.copy()
+
+
+def save_blend() -> None:
+    WORK.mkdir(parents=True, exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=str(BLEND), copy=True)
+    print(f"[exterior] saved {BLEND}")
+
+
+def export(objects, destination: Path = OUTPUT, occluded: bool = True) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    group = objects if isinstance(objects, list) else [objects]
+
     for other in bpy.data.objects:
         try:
             other.select_set(False)
         except RuntimeError:
             pass
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    for obj in group:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = group[0]
 
     bpy.ops.export_scene.gltf(
-        filepath=str(OUTPUT),
+        filepath=str(destination),
         export_format="GLB",
         use_selection=True,
         use_active_scene=True,
         export_apply=True,
         export_draco_mesh_compression_enable=True,
         export_draco_mesh_compression_level=6,
-        # Two 2048 bakes as PNG came to 4 MB. They are photographic, not line
-        # art, so JPEG costs nothing visible and roughly quarters the payload.
         export_image_format='JPEG',
-        export_jpeg_quality=82,
+        export_jpeg_quality=95,
         export_cameras=False,
         export_lights=False,
         export_yup=True,
     )
-    print(f"[exterior] wrote {OUTPUT} ({OUTPUT.stat().st_size / 1024:.1f} KB)")
+    if occluded:
+        verify_export(destination)
+    print(f"[exterior] wrote {destination} ({destination.stat().st_size / 1024:.1f} KB)")
 
 
-def build_asset():
-    target = collection()
-    solids, glass = build_geometry(target)
+def verify_export(destination: Path) -> None:
+    """Assert the exporter kept the occlusion map and its own UV set.
 
-    assign(solids, principled("concrete", CONCRETE, 0.68))
-    assign(glass, glazing_material("glass", INTERIOR_STRENGTH))
+    Blender's glTF exporter drops what it cannot express rather than failing,
+    so an occlusion map wired through the wrong node group, or a second UV set
+    no material references, disappears in silence and the browser gets a
+    building with no baked shading at all. See `learnings.md` §2.
+    """
+    data = destination.read_bytes()
+    length = int.from_bytes(data[12:16], "little")
+    document = json.loads(data[20:20 + length])
 
-    add_sun(target)
-    add_shadow_catcher(target)
-    set_sky()
+    materials = document.get("materials", [])
+    missing = [m.get("name", "?") for m in materials if "occlusionTexture" not in m]
+    if missing:
+        raise RuntimeError(f"{destination.name}: no occlusion on {', '.join(missing)}")
 
-    obj = join_all(solids + glass)
-    unwrap(obj)
+    coords = {m["occlusionTexture"].get("texCoord", 0) for m in materials}
+    if coords != {1}:
+        raise RuntimeError(f"{destination.name}: occlusion reads TEXCOORD {sorted(coords)}, want 1")
 
-    specified = bake_image("exterior_specified")
-    bake_into(obj, specified)
 
-    make_card(obj)
-    card = bake_image("exterior_card")
-    bake_into(obj, card)
+def bake_surface(obj, name: str, size: int = BAKE_SIZE):
+    """Bake what real-time light cannot reach, and only that.
 
-    finish_material(obj, specified, card)
-    print(f"[exterior] polys: {len(obj.data.polygons)}")
+    The bake used to hold the whole appearance — albedo, sun, shadow, bounce —
+    and the browser drew it unlit. That made every surface a flat photograph:
+    the glazing, the brass screens and the metal cheeks never caught the light,
+    and those three are most of what gives the reference facade its character.
+
+    What is baked now is occlusion alone: the soffit under the oversail, the
+    window reveals, the undersides of the balcony boxes, the contact line where
+    the building meets the ground. Sun, shadow and reflection are real-time, so
+    they answer the camera. Occlusion is view-independent, which is precisely
+    why it is the part worth freezing into a map.
+    """
+    project_detail_uv(obj)
+    unwrap_occlusion(obj)
+    isolate_materials(obj)
+
+    occlusion = bake_image(f"{name}_occlusion", size)
+    bake_into(obj, occlusion)
+    report_levels(name, occlusion)
+    wire_occlusion(obj, occlusion)
+
+    occlusion.pack()
+    print(f"[exterior] {name} polys: {len(obj.data.polygons)}")
     return obj
 
 
+def build_asset() -> None:
+    """Bake the construction state first, then strike it and bake the building.
+
+    Act IV shows this building finished. Anything standing in the scene when the
+    building bakes has its shadow burned into the brick permanently, so the
+    scaffold is baked while the building is present — it needs the building's
+    shadow — and then removed before the building bakes itself.
+    """
+    target = collection()
+    parts = build_geometry(target)
+    site = build_site(target)
+    construction = build_construction(target)
+    candidates = build_candidates(target)
+    fill = build_slot_fill(target)
+
+    apply_palette(parts)
+    apply_palette(site)
+    apply_palette(construction)
+    apply_palette(fill)
+    for panel in candidates:
+        apply_palette(panel)
+    light_scene(target)
+
+    panels = []
+    for index, panel in enumerate(candidates):
+        label = CANDIDATE_BUILDERS[index][0]
+        obj = join_all(panel.all(), f"candidate_{index + 1}_{label}")
+        bake_surface(obj, f"candidate_{index + 1}", CANDIDATE_BAKE)
+        panels.append(obj)
+    export(panels, CANDIDATE_OUTPUT)
+    for obj in panels:
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+    filled = join_all(fill.all(), "facade_slot_fill")
+    bake_surface(filled, "slot_fill", CANDIDATE_BAKE)
+    export(filled, SLOT_FILL_OUTPUT)
+    bpy.data.objects.remove(filled, do_unlink=True)
+
+    scaffold = join_all(construction.all(), "exterior_construction")
+    bake_surface(scaffold, "construction")
+    export(scaffold, CONSTRUCTION_OUTPUT)
+    bpy.data.objects.remove(scaffold, do_unlink=True)
+
+    building = join_all(parts.all(), "exterior_building")
+    bake_surface(building, "exterior")
+    export(building, OUTPUT)
+
+    # Planting ships unbaked, with its own library materials. Unwrapping and
+    # lightmapping thousands of alpha-mapped leaf cards would cost far more
+    # than lighting them in the browser, and their leaf shadow is already in
+    # the building's bake because they stood in the scene while it ran.
+    export_planting(site)
+
+
+def requested_views() -> list[str]:
+    views = [name for name in POSES if f"--{name}" in sys.argv]
+    if "--preview" in sys.argv and not views:
+        views = ["exterior"]
+    return views
+
+
+WEB_TEXTURES = {
+    "grass": ("leafy_grass", "Diffuse", "grass"),
+    "paving": ("square_concrete_pavers", "Diffuse", "paving"),
+    "soil": ("park_dirt", "Diffuse", None),
+}
+WEB_TEXTURE_SIZE = 1024
+LUMA = (0.2126, 0.7152, 0.0722)
+
+
+def apply_tint(image, color, amount: float = 1.0, relevel: bool = False) -> None:
+    """Take luminance from the texture and hue from the palette.
+
+    The same correction `tint_node()` makes in the render, done once here
+    instead. `leafy_grass` is a dry leafy floor and `square_concrete_pavers` is
+    warm; untinted, the browser gets a parched khaki lawn and terracotta paving
+    under a building whose levels were graded against the palette.
+
+    `relevel` additionally rescales the texture so its mean luminance lands on
+    the palette entry's. Without it a photographic map is a second, silent
+    source of truth for how dark a surface is, and every level tuned against
+    `PALETTE` has to be redone the day the texture is swapped.
+    """
+    import numpy
+
+    pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
+    image.pixels.foreach_get(pixels)
+    rgba = pixels.reshape(-1, 4)
+
+    weights = numpy.array(LUMA, dtype=numpy.float32)
+    target = numpy.array(color[:3], dtype=numpy.float32)
+    reference = float(numpy.dot(target, weights))
+    if reference <= 0.0:
+        return
+
+    luma = rgba[:, :3] @ weights
+    if relevel:
+        mean = float(luma.mean())
+        if mean > 0.0:
+            luma = luma * (reference / mean)
+
+    tinted = numpy.outer(luma / reference, target)
+    rgba[:, :3] = numpy.clip(rgba[:, :3] * (1.0 - amount) + tinted * amount, 0.0, 1.0)
+
+    image.pixels.foreach_set(rgba.reshape(-1))
+
+
+def write_web_textures() -> None:
+    """Web-sized copies of the ground textures.
+
+    The site's paving is rebuilt in Three.js rather than exported: it is six
+    boxes, and its materials tile in world metres off a procedural node that
+    glTF cannot carry. Shipping the maps and repeating them in the browser is
+    both smaller and more controllable than baking a 600 m promenade.
+    """
+    TEXTURES_OUT.mkdir(parents=True, exist_ok=True)
+    settings = bpy.context.scene.render.image_settings
+    settings.file_format = 'JPEG'
+    settings.quality = 85
+
+    for name, (asset, slot, palette) in WEB_TEXTURES.items():
+        source = next((ASSET_DIR / asset).glob(f"{slot}.*"), None)
+        if source is None:
+            print(f"[exterior] missing texture for {name}", file=sys.stderr)
+            continue
+
+        image = bpy.data.images.load(str(source), check_existing=False)
+        image.scale(WEB_TEXTURE_SIZE, WEB_TEXTURE_SIZE)
+        if palette:
+            apply_tint(image, PALETTE[palette][0])
+        path = TEXTURES_OUT / f"{name}.jpg"
+        image.save_render(str(path), scene=bpy.context.scene)
+        bpy.data.images.remove(image)
+        print(f"[exterior] texture {path.name}: {path.stat().st_size / 1024:.0f} KB")
+
+
+def export_planting(site: Parts) -> None:
+    flora = site.get("flora", [])
+    if not flora:
+        return
+    # Unbaked, and so carrying no occlusion. Unwrapping and baking thousands of
+    # alpha-mapped leaf cards would cost far more than lighting them in the
+    # browser, and their leaf shadow already reaches the building through the
+    # real-time shadow map.
+    simplify_flora(flora)
+    export(flora, PLANTING_OUTPUT, occluded=False)
+
+
 def main() -> None:
-    obj = build_asset()
-    export(obj)
+    if "--textures" in sys.argv:
+        write_web_textures()
+        return
+
+    if "--planting" in sys.argv:
+        target = collection()
+        site = build_site(target)
+        apply_palette(site)
+        export_planting(site)
+        return
+
+    views = requested_views()
+    if views:
+        preview()
+        for name in views:
+            render_preview(name)
+        return
+
+    build_asset()
+    save_blend()
 
 
 if __name__ == "__main__":

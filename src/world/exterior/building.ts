@@ -1,108 +1,121 @@
-import { Mesh, MeshBasicMaterial, type MeshStandardMaterial, type Object3D, type Texture } from 'three';
+import { Mesh, MeshStandardMaterial, type Material, type Object3D, type Texture } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export interface Building {
   readonly object: Object3D;
-  /**
-   * How specified the design is, 0 to 1.
-   *
-   * 0 is the study model: the same forms in white card, lit but unspecified.
-   * 1 is the built building — concrete, glazing, warm interiors. The distance
-   * between them is the Act I argument, that a building's material trajectory
-   * is fixed while almost nothing about it has been decided.
-   */
-  setSpecification(value: number): void;
   dispose(): void;
 }
 
-const clamp01 = (value: number): number => Math.min(Math.max(value, 0), 1);
+/**
+ * How hard the baked occlusion bites.
+ *
+ * Not 1. Occlusion is a visibility term, not a light transport one — it says
+ * how much sky a point can see, and says nothing about the light that arrives
+ * by bouncing off the ground and the reveals. At full strength the vacant bay
+ * went black: it is a recess, so its occlusion is near zero, and the bounce
+ * that lit its insulation panels in Blender has no counterpart here.
+ */
+const OCCLUSION = 0.65;
 
 /**
- * The exterior, as two baked lighting states over one geometry.
+ * The exterior, lit here rather than painted in Blender.
  *
- * Both bakes come from `tools/blender/exterior_building.py` and ride in a
- * single GLB — the specified state in the base colour slot, the card state in
- * the emissive slot, which is the only way glTF carries two maps for one mesh.
- * Neither is used as lighting here: the material is unlit and mixes the two by
- * a uniform, so the whole transition costs one texture fetch and no second mesh.
+ * Everything used to arrive as one baked albedo drawn unlit — sun, shadow,
+ * bounce and colour flattened into a single map per asset. That map was sharp
+ * at exactly one distance, and because nothing was lit, the glazing, the brass
+ * screens and the metal cheeks never caught the light.
  *
- * An unlit material is not a compromise. The bake holds bounce light, contact
- * shadow and ambient occlusion that no real-time light can reproduce; relighting
- * it would wash out exactly what it was run for. The building still casts a
- * real-time shadow onto the ground, because shadow casting reads depth and does
- * not care what the surface material is.
+ * What arrives now is the material itself: tiling brick and concrete on a
+ * world-scale UV set, so surface detail is as sharp at the entrance as from the
+ * establishing pose, plus one baked occlusion map on a second UV set carrying
+ * what real-time light cannot work out — the soffit under the oversail, the
+ * window reveals, the undersides of the balcony boxes.
+ *
+ * **An exterior asset is a hierarchy, not a mesh.** Blender joins each asset
+ * into one object carrying a material slot per palette entry, and glTF stores
+ * that as one primitive per material, which `GLTFLoader` expands into one child
+ * mesh per material. Anything here that reduces an asset to a single mesh keeps
+ * one material and silently discards the rest. See `learnings.md` §7e.
  */
 export function createBuilding(gltf: GLTF): Building {
-  const source = findMesh(gltf);
-  const baked = source.material as MeshStandardMaterial;
-
-  const specified = baked.map;
-  const card = baked.emissiveMap;
-  if (!specified || !card) {
-    throw new Error('exteriorBuilding is missing one of its two baked maps.');
-  }
-
-  const specification = { value: 0 };
-  const material = mixedMaterial(specified, card, specification);
-
-  // Geometry belongs to the asset cache and is shared with every later visit,
-  // so it is reused rather than cloned, and never disposed here.
-  const object = new Mesh(source.geometry, material);
-  object.castShadow = true;
-  object.receiveShadow = false;
-
-  return {
-    object,
-    setSpecification(value: number) {
-      specification.value = clamp01(value);
-    },
-    dispose() {
-      material.dispose();
-    },
-  };
-}
-
-function findMesh(gltf: GLTF): Mesh {
-  let found: Mesh | null = null;
-  gltf.scene.traverse((child) => {
-    if (!found && (child as Mesh).isMesh) found = child as Mesh;
-  });
-  if (!found) throw new Error('exteriorBuilding contains no mesh.');
-  return found;
+  return createBakedPart(gltf.scene);
 }
 
 /**
- * Unlit, fogged, and crossfading between the two bakes.
+ * One exported object, with every material it carries.
  *
- * `MeshBasicMaterial` is patched rather than replaced by a `ShaderMaterial` so
- * fog, tone mapping and colour management keep working exactly as they do
- * everywhere else in the world.
+ * Cloned rather than reparented: the GLTF belongs to the asset cache and is
+ * handed out again on every later visit to the zone, so its own hierarchy has
+ * to stay intact. `Object3D.clone()` copies the tree and shares geometry and
+ * materials by reference, which is what makes this cheap.
  */
-function mixedMaterial(
-  specified: Texture,
-  card: Texture,
-  specification: { value: number },
-): MeshBasicMaterial {
-  const material = new MeshBasicMaterial({ map: specified, fog: true });
+export function createBakedPart(source: Object3D): Building {
+  const object = source.clone(true);
 
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms['uCard'] = { value: card };
-    shader.uniforms['uSpecification'] = specification;
+  let meshes = 0;
+  object.traverse((child) => {
+    const mesh = child as Mesh;
+    if (!mesh.isMesh) return;
+    meshes += 1;
+    configure(mesh.material);
+    mesh.castShadow = true;
+    // The elevation shadows itself: the balcony boxes project 1.45 m and at a
+    // 28 degrees sun throw the band across the facade that reads as a real sun.
+    // That shading is not in the bake any more, so it has to be cast.
+    mesh.receiveShadow = true;
+  });
 
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-        uniform sampler2D uCard;
-        uniform float uSpecification;`,
-      )
-      .replace(
-        '#include <map_fragment>',
-        `vec4 specifiedTexel = texture2D( map, vMapUv );
-        vec4 cardTexel = texture2D( uCard, vMapUv );
-        diffuseColor *= mix( cardTexel, specifiedTexel, uSpecification );`,
-      );
-  };
+  if (meshes === 0) throw new Error(`${source.name || 'exterior part'} contains no mesh.`);
+  return { object, dispose() {} };
+}
 
-  return material;
+function configure(material: Material | Material[]): void {
+  for (const entry of Array.isArray(material) ? material : [material]) {
+    if (!(entry instanceof MeshStandardMaterial)) continue;
+    if (!entry.aoMap) throw new Error(`${entry.name || 'exterior material'} has no occlusion map.`);
+
+    entry.aoMapIntensity = OCCLUSION;
+    entry.envMapIntensity = 1;
+  }
+}
+
+/**
+ * The top-level objects of an asset — one per object exported from Blender.
+ *
+ * Not the meshes. The candidates GLB holds four panels and each is a dozen
+ * primitives, so traversing to meshes returns nearer fifty objects and loses
+ * which panel each belongs to.
+ */
+export function findParts(gltf: GLTF, expected: number): Object3D[] {
+  const parts = [...gltf.scene.children];
+  if (parts.length !== expected) {
+    throw new Error(`Expected ${expected} objects in asset, found ${parts.length}.`);
+  }
+  return parts;
+}
+
+/**
+ * Raises anisotropy on every map the exterior ships.
+ *
+ * Brick tiles at half a metre per repeat and is read at grazing angles from
+ * every pose in the act, which is precisely the case trilinear filtering
+ * handles worst — it is also where the facade turned to mush at distance.
+ * Applied per zone rather than at load, because it is a quality-tier decision.
+ */
+export function sharpen(gltf: GLTF, anisotropy: number): void {
+  const seen = new Set<Texture>();
+  gltf.scene.traverse((child) => {
+    const mesh = child as Mesh;
+    if (!mesh.isMesh) return;
+
+    for (const entry of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      if (!(entry instanceof MeshStandardMaterial)) continue;
+      for (const map of [entry.map, entry.normalMap, entry.roughnessMap, entry.aoMap]) {
+        if (!map || seen.has(map)) continue;
+        seen.add(map);
+        map.anisotropy = anisotropy;
+        map.needsUpdate = true;
+      }
+    }
+  });
 }

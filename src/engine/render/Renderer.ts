@@ -34,7 +34,13 @@ export class Renderer {
 
     this.renderer = new WebGLRenderer({
       canvas: this.canvas,
-      antialias: quality.maxPixelRatio < 2,
+      // Always on. This was conditioned on `maxPixelRatio < 2`, which assumed a
+      // high tier implies a high-DPI display and supersamples the edges away.
+      // It does not: `effectivePixelRatio` is `min(devicePixelRatio, max)`, so a
+      // high-tier machine on an ordinary 1x monitor got pixel ratio 1 *and* no
+      // antialiasing — the worst of both, and the single largest quality defect
+      // in the exterior.
+      antialias: true,
       alpha: false,
       powerPreference: 'high-performance',
       // Needed so a lost context can be recovered rather than ending the talk.

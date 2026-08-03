@@ -1,12 +1,11 @@
 import {
-  BufferAttribute,
-  BufferGeometry,
   Group,
-  LineBasicMaterial,
-  LineSegments,
   Mesh,
   MeshStandardMaterial,
   PlaneGeometry,
+  RepeatWrapping,
+  SRGBColorSpace,
+  type Texture,
 } from 'three';
 import { SITE } from './site';
 
@@ -16,63 +15,72 @@ export interface Ground {
 }
 
 /**
- * The site: a dark plane and a survey grid.
+ * The parkland the building stands in.
  *
- * The grid is not decoration. It establishes, before a word is spoken, that
- * this world is drawn rather than photographed — the same drawn register the
- * corridor's plan view resolves into in Act III. It extends past the fog's
- * reach so its edge is never visible; the grid appears to run to the horizon
- * because nothing ever shows it stopping.
+ * A survey grid used to be drawn over this, to say before a word was spoken
+ * that the world is drawn rather than photographed. It is gone: at the grazing
+ * angles a standing camera reads the ground at, a regular line grid over a
+ * tiled texture reads as a wireframe mesh showing through the grass, which is
+ * the opposite of what it was for. If the drawn register is wanted back it
+ * belongs somewhere it cannot be mistaken for a rendering fault.
+ *
+ * Two tiles at different scales, rotated against each other. One tiled texture
+ * over a 900 m plane repeats often enough to beat against the pixel grid and
+ * produce exactly the regular squares the grid was blamed for; a second, larger
+ * and turned off-axis, breaks that period without a second texture download.
  */
-export function createGround(): Ground {
+export function createGround(grass: Texture): Ground {
   const object = new Group();
 
-  const planeGeometry = new PlaneGeometry(SITE.groundSize, SITE.groundSize);
-  planeGeometry.rotateX(-Math.PI / 2);
-  const planeMaterial = new MeshStandardMaterial({
-    color: 0x0d1016,
-    roughness: 0.96,
-    metalness: 0,
-  });
-  const plane = new Mesh(planeGeometry, planeMaterial);
-  plane.receiveShadow = true;
-  object.add(plane);
+  const base = layer(grass, SITE.groundSize / 2.5, 0, 1, 0);
+  object.add(base.mesh);
 
-  const gridGeometry = new BufferGeometry();
-  gridGeometry.setAttribute('position', new BufferAttribute(gridSegments(), 3));
-  const gridMaterial = new LineBasicMaterial({
-    color: 0x35485c,
-    transparent: true,
-    opacity: 0.17,
-  });
-  const grid = new LineSegments(gridGeometry, gridMaterial);
-  // Lifted clear of the plane: coplanar lines z-fight at grazing angles, which
-  // is exactly the angle a standing camera sees the ground at.
-  grid.position.y = 0.02;
-  object.add(grid);
+  // Lifted a hair and multiplied over the base, so it modulates rather than
+  // replaces. Coplanar would z-fight at exactly the angles this is here to fix.
+  const breakup = layer(grass, SITE.groundSize / 17, Math.PI / 5, 0.35, 0.03);
+  object.add(breakup.mesh);
 
   return {
     object,
     dispose() {
-      planeGeometry.dispose();
-      planeMaterial.dispose();
-      gridGeometry.dispose();
-      gridMaterial.dispose();
+      base.dispose();
+      breakup.dispose();
     },
   };
 }
 
-function gridSegments(): Float32Array {
-  const { gridSize, gridDivisions } = SITE;
-  const half = gridSize / 2;
-  const step = gridSize / gridDivisions;
-  const out: number[] = [];
+function layer(grass: Texture, repeat: number, rotation: number, opacity: number, lift: number) {
+  const geometry = new PlaneGeometry(SITE.groundSize, SITE.groundSize);
+  geometry.rotateX(-Math.PI / 2);
 
-  for (let i = 0; i <= gridDivisions; i += 1) {
-    const offset = -half + i * step;
-    out.push(-half, 0, offset, half, 0, offset);
-    out.push(offset, 0, -half, offset, 0, half);
-  }
+  const texture = grass.clone();
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.colorSpace = SRGBColorSpace;
+  texture.repeat.set(repeat, repeat);
+  texture.center.set(0.5, 0.5);
+  texture.rotation = rotation;
+  texture.needsUpdate = true;
 
-  return new Float32Array(out);
+  const material = new MeshStandardMaterial({
+    map: texture,
+    roughness: 0.97,
+    metalness: 0,
+    transparent: opacity < 1,
+    opacity,
+    depthWrite: opacity >= 1,
+  });
+
+  const mesh = new Mesh(geometry, material);
+  mesh.position.y = lift;
+  mesh.receiveShadow = opacity >= 1;
+
+  return {
+    mesh,
+    dispose() {
+      geometry.dispose();
+      texture.dispose();
+      material.dispose();
+    },
+  };
 }
