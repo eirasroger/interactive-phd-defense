@@ -2,6 +2,10 @@
 /docs/
 /CLAUDE.md
 
+# Blender source scenes and preview renders. The committed .py scripts are the
+# authoritative definition; these are working artefacts of running them.
+/work/
+
 # claude
 /.claude/
 
