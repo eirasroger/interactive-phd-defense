@@ -8,6 +8,7 @@ import {
 import { lakeDepth, riverAt, riverDepth, smoothstep, streamShare } from './paths';
 import { LAND } from './site';
 import { surfaceAt } from './terrain';
+import { createRippleTexture, RIPPLE_GLSL } from './water';
 
 export interface Lake {
   readonly object: Mesh;
@@ -33,42 +34,27 @@ const CELL = 3.5;
 const EXTINCTION = 0.7;
 
 /** How much of a grazing reflection survives the water being transparent. */
-const SHEEN = 0.9;
+const SHEEN = 0.88;
 
-/**
- * How hard the ripple trains tilt the surface.
- *
- * At a grazing angle the reflected ray moves by twice the surface tilt, so a few
- * degrees of wave slope sweeps ten or fifteen degrees of sky. Against a
- * panorama with cloud in it, four coherent sinusoids at full amplitude read as
- * corduroy. The honest fix is a broadband spectrum — a normal map and a second
- * texture; damping costs nothing and lands in the same place from every pose in
- * the act, none of which is closer than thirty metres.
- */
-const CHOP = 0.6;
+/** How hard the wave field tilts the surface. */
+const CHOP = 0.09;
 
 /**
  * Where the stream discharges, and how far its current survives.
  *
- * The lake carries the flow because nothing else can: the ribbon hands over
- * across eighteen metres of shoreline, and the two sheets are coplanar and both
- * write depth, so the overlap cannot be lengthened without the sort order
- * deciding which is drawn. The plume is a fan out of the outlet in which the
- * surface is disturbed and rougher, spreading and decaying over `reach`.
- *
- * `mouth` is the half-width at the shoreline and is the *flared* channel's — a
- * plume narrower than the mouth discharging it reads as a jet.
+ * The plume is a fan out of the outlet in which the surface is disturbed and
+ * rougher, spreading and decaying over `reach`. `mouth` is the half-width at the
+ * shoreline and is the *flared* channel's — a plume narrower than the mouth
+ * discharging it reads as a jet.
  */
 const OUTLET = { x: LAND.lake.west, z: riverAt(LAND.lake.west) } as const;
-const PLUME = { reach: 95, mouth: 15, spread: 0.45, tilt: 0.09 } as const;
+const PLUME = { reach: 95, mouth: 15, spread: 0.45, tilt: 0.08 } as const;
 
 /** How much of the outlet's current is at this point: 1 in it, 0 clear of it. */
 function plumeAt(x: number, z: number): number {
   const along = Math.max(0, x - OUTLET.x);
   const width = PLUME.mouth + along * PLUME.spread;
   const fan = 1 - smoothstep(width * 0.4, width, Math.abs(z - OUTLET.z));
-  // Squared, so it goes rather than trailing a faint disturbance across half the
-  // basin.
   const carry = 1 - smoothstep(0, PLUME.reach, along);
   return fan * carry * carry;
 }
@@ -87,9 +73,9 @@ function plumeAt(x: number, z: number): number {
  * material tuned for both reads as neither.
  *
  * **No planar reflection pass.** A second render from a mirrored camera costs
- * roughly a full frame for a surface only ever seen at grazing angles, where
- * what the water shows is almost entirely sky — and the sky is already in the
- * environment map. The ripples are the normal, not the geometry.
+ * roughly a full frame for a surface that shows almost nothing but sky, and the
+ * sky is already in the environment map. The ripples are the normal, not the
+ * geometry — see `water.ts`.
  */
 export function createLake(): Lake {
   const { lake } = LAND;
@@ -160,18 +146,17 @@ export function createLake(): Lake {
       `deepest ${Math.max(...depths).toFixed(2)} m.`,
   );
 
+  const ripples = createRippleTexture();
+
   const material = new MeshStandardMaterial({
     // The colour of the *water*, not of the lake: what reads as the lake's
     // colour is this laid over its own bed at a thickness varying from nothing
     // at the beach to five metres in the middle. Green rather than blue — a
     // Nordic lake carries peat, and the blue arrives from the sky it reflects.
-    color: 0x22423c,
-    // Not quite a mirror. At 0.055 the reflection samples the sharpest level of
-    // the environment, which turns each ripple train into a band once the sky
-    // has edges in it. Grazing views widen it much further — see below.
-    roughness: 0.09,
+    color: 0x1b3a34,
+    roughness: 0.07,
     metalness: 0,
-    envMapIntensity: 1.2,
+    envMapIntensity: 1,
     transparent: true,
     depthWrite: true,
   });
@@ -180,6 +165,7 @@ export function createLake(): Lake {
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = time;
+    shader.uniforms.uRipple = { value: ripples };
 
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -214,33 +200,21 @@ export function createLake(): Lake {
          varying float vDeep;
          varying float vPlume;
          varying float vShare;
-         varying vec2 vRipple;`,
+         varying vec2 vRipple;
+         ${RIPPLE_GLSL}`,
       )
       .replace(
         '#include <normal_fragment_begin>',
         `#include <normal_fragment_begin>
-         // Four ripple trains at incommensurable directions and rates. Fewer
-         // reads as corduroy; more is invisible at this distance.
-         //
-         // Damped in the shallows, because open water is worked by the whole
-         // fetch of the lake and a beach is not. Faded with distance too: the
-         // wavelength is about seven metres, under a pixel across the far half
-         // of the basin, and what a sub-pixel period draws is its own moire.
-         float open = smoothstep(0.05, 0.9, vDeep);
-         float lively = 1.0 - smoothstep(45.0, 150.0, length(vViewPosition));
-         vec2 ripple = vec2(0.0);
-         ripple += vec2( 0.94,  0.34) * cos(dot(vRipple, vec2( 0.94,  0.34)) * 0.85 + uTime * 1.55) * 0.055;
-         ripple += vec2(-0.42,  0.91) * cos(dot(vRipple, vec2(-0.42,  0.91)) * 1.37 + uTime * 2.10) * 0.038;
-         ripple += vec2( 0.71, -0.70) * cos(dot(vRipple, vec2( 0.71, -0.70)) * 2.63 + uTime * 3.05) * 0.021;
-         ripple += vec2( 0.20,  0.98) * cos(dot(vRipple, vec2( 0.20,  0.98)) * 4.11 + uTime * 4.40) * 0.011;
-         normal = normalize(normal + vec3(ripple.x, 0.0, ripple.y) * (0.25 + open * 0.75) * lively * ${CHOP.toFixed(2)});
+         // Damped in the shallows: open water is worked by the whole fetch of the
+         // lake and a beach is not.
+         float open = 0.3 + 0.7 * smoothstep(0.05, 0.9, vDeep);
+         vec2 ripple = rippleAt(vRipple, uTime) * open * ${CHOP.toFixed(2)};
+         normal = normalize(normal + vec3(ripple.x, 0.0, ripple.y));
 
-         // The outlet's plume, riding on the standing trains. Phase is distance
-         // from the mouth, so crests radiate and the wake reads as spreading
-         // rather than as a second set of waves pointing east.
-         //
-         // Not damped by 'open': a current is roughest where it is shallowest,
-         // which is the argument for damping the others and against damping this.
+         // The outlet's plume, riding on the wave field. Phase is distance from
+         // the mouth, so crests radiate and the wake reads as spreading rather
+         // than as a second set of waves pointing east.
          vec2 wake = vRipple - vec2(${OUTLET.x.toFixed(1)}, ${OUTLET.z.toFixed(1)});
          float away = length(wake);
          vec2 push = wake / max(away, 0.001);
@@ -248,12 +222,11 @@ export function createLake(): Lake {
            cos(away * 0.58 - uTime * 1.35) * 0.60 +
            cos(away * 1.19 - uTime * 2.15) * 0.30;
          normal = normalize(
-           normal + vec3(push.x, 0.0, push.y) * train * vPlume * lively * ${PLUME.tilt.toFixed(2)}
+           normal + vec3(push.x, 0.0, push.y) * train * vPlume * ${PLUME.tilt.toFixed(2)}
          );
 
-         // Everything below wants the rippled normal, so it lives here rather
-         // than at the map stage: normal does not exist until this include has
-         // run, and asking earlier fails to compile.
+         // Everything below wants the rippled normal, which does not exist until
+         // this include has run.
 
          // How much of the water column is in the way, by Beer's law.
          float column = 1.0 - exp(-vDeep / ${EXTINCTION.toFixed(3)});
@@ -287,21 +260,16 @@ export function createLake(): Lake {
         `#include <roughnessmap_fragment>
          // Water you can see the bottom of is not a mirror: the shallows scatter
          // off their own bed while open water stays sharp enough to carry sky.
-         roughnessFactor = mix(0.45, roughnessFactor, smoothstep(0.05, 1.1, vDeep));
+         roughnessFactor = mix(0.42, roughnessFactor, smoothstep(0.05, 1.1, vDeep));
 
-         // Nor is a grazing reflection. At ten degrees above the water a couple
-         // of degrees of ripple sweeps a sixth of the sky, so every train comes
-         // back as a band. Widening the lobe with the view angle is what the
-         // surface physically does — at grazing incidence a microfacet
-         // distribution is masked into a much broader one.
+         // Nor is a grazing reflection, though only mildly now the wave field is
+         // broadband and mipped rather than four coherent trains to smear out.
          //
-         // Read off the geometric view vector, not the rippled normal, and
-         // rotated into world space first: vViewPosition is view space, so its y
-         // is screen vertical rather than up. Left-multiplying by mat3(viewMatrix)
-         // applies the transpose, giving the world direction to the eye.
+         // Read off the geometric view vector, rotated into world space first:
+         // vViewPosition is view space, so its y is screen vertical rather than
+         // up. Left-multiplying by mat3(viewMatrix) applies the transpose.
          vec3 toEye = normalize(vViewPosition) * mat3(viewMatrix);
-         float graze = 1.0 - abs(toEye.y);
-         roughnessFactor = mix(roughnessFactor, 0.34, pow(graze, 2.5));
+         roughnessFactor = mix(roughnessFactor, 0.24, pow(1.0 - abs(toEye.y), 2.5));
 
          // A current is not a mirror at all. At the distance every pose sees this
          // from, an individual crest is a couple of pixels and the only
@@ -326,6 +294,7 @@ export function createLake(): Lake {
     dispose() {
       geometry.dispose();
       material.dispose();
+      ripples.dispose();
     },
   };
 }

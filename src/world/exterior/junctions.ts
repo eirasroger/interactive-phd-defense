@@ -103,15 +103,15 @@ const SECANT = 4.0;
 
 
 /**
- * How far past its tangent point a fillet runs on straight before handing back
- * to the ribbon.
+ * How far past its tangent point a fillet runs before handing back to the
+ * ribbon.
  *
  * The ribbons are swept in whole quads and can only stop on a quad boundary, so
  * the handover can miss by up to one step. Rather than cutting quads — which is
- * a mesh problem for a millimetre of benefit — the fillet simply overruns and
- * the ribbon gives way conservatively, so the two always overlap. The overlap
- * costs nothing because both are the same section on the same ground; it only
- * needs the fillet to win the depth test, which is what `TIER` is for.
+ * a mesh problem for a millimetre of benefit — the fillet overruns and the
+ * ribbon gives way conservatively, so the two always overlap. The overlap costs
+ * nothing because both are the same section on the same ground; it only needs
+ * the fillet to win the depth test, which is what `TIER` is for.
  *
  * Generous, because the ribbon gives way by more than a step: a section cut
  * square to a skewed route reaches back along it by the offset times the skew,
@@ -119,6 +119,16 @@ const SECANT = 4.0;
  * centreline does, and the whole quad goes with it.
  */
 export const LEAD = 2.8;
+
+/**
+ * Metres between stations along a lead.
+ *
+ * The lead is where the straight construction becomes the curve again, which
+ * cannot be done in one step. A station is also the width of a span in the fan
+ * that fills the junction, so a lead drawn as one 2.8 m chord let the top of the
+ * river bank come through the middle of its own paving.
+ */
+const STATION = 0.7;
 
 /** Stations round the arc. One every ~9°, which is smooth at a metre's range. */
 const ARC = 10;
@@ -231,8 +241,11 @@ interface Arms {
 
 /** One route leaving a junction corner: which way it goes, and how far it can. */
 interface Arm {
+  readonly path: Route;
   readonly along: Vec;
   readonly outward: Vec;
+  /** Which side of the centreline this arm's edge is, as the sign of its offset. */
+  readonly side: number;
   /** Ground distance from the corner to the end of the route, along `along`. */
   readonly run: number;
 }
@@ -277,13 +290,17 @@ function corner(
 
   const arms = {
     senior: {
+      path: senior,
       along: alongSenior,
       outward: scale(ns, Math.sign(offsetSenior)),
+      side: Math.sign(offsetSenior),
       run: runAhead(senior, meet, alongSenior),
     },
     minor: {
+      path: minor,
       along: alongMinor,
       outward: scale(nm, Math.sign(offsetMinor)),
+      side: Math.sign(offsetMinor),
       run: runAhead(minor, meet, alongMinor),
     },
   };
@@ -319,22 +336,9 @@ function wedge(arms: Arms, radius: number): {
   const tangentSenior = add(meet, scale(senior.along, tangent));
   const tangentMinor = add(meet, scale(minor.along, tangent));
 
-  const frames: Frame[] = [];
-  // The lead is what the arm has left after the arc, capped at what the ribbon
-  // needs. Where a route ends inside the junction's reach — the avenue does,
-  // at the bridge abutment — there is nothing to hand back to and paving that
-  // ran on would land under the deck.
-  const straight = (point: Vec, arm: Arm, spent: number): Frame => {
-    const lead = Math.max(0, Math.min(LEAD, arm.run - spent));
-    return {
-      x: point[0] + arm.along[0] * lead,
-      z: point[1] + arm.along[1] * lead,
-      nx: arm.outward[0],
-      nz: arm.outward[1],
-    };
-  };
-
-  frames.push(straight(tangentSenior, senior, tangent));
+  const frames: Frame[] = [
+    ...lead(senior, tangentSenior, tangent).reverse(),
+  ];
 
   const from = Math.atan2(tangentSenior[1] - centre[1], tangentSenior[0] - centre[0]);
   const to = Math.atan2(tangentMinor[1] - centre[1], tangentMinor[0] - centre[0]);
@@ -351,9 +355,65 @@ function wedge(arms: Arms, radius: number): {
     frames.push({ x: centre[0] - nx * radius, z: centre[1] - nz * radius, nx, nz });
   }
 
-  frames.push(straight(tangentMinor, minor, tangent));
+  frames.push(...lead(minor, tangentMinor, tangent));
 
   return { fillet: { frames }, tangentSenior, tangentMinor };
+}
+
+/**
+ * The stations between a tangent point and the ribbon the fillet hands back to.
+ *
+ * **Sampled from the route, not projected along a straight line.** The fillet is
+ * a straight-line construction and the riverside walk is a curve, so a lead run
+ * on straight leaves the ribbon's own edge by a third of a metre — and the two
+ * kerbs arrive at the handover as diverging bands with bare ground between them.
+ *
+ * The construction's offset from the curve is therefore carried at the tangent
+ * point, where the arc must be met exactly, and eased out well before the
+ * ribbon, which gives way generously and must be met exactly too.
+ *
+ * Capped by the run the arm has. Where a route ends inside the junction's reach
+ * — the avenue does, at the bridge abutment — paving that ran on would land
+ * under the deck.
+ */
+function lead(arm: Arm, tangent: Vec, spent: number): Frame[] {
+  const reach = Math.max(0, Math.min(LEAD, arm.run - spent));
+  if (reach <= 1e-3) return [];
+
+  const { path, side } = arm;
+  const offset = path.halfWidth * side;
+  const at = path.axis === 'z' ? tangent[1] : tangent[0];
+  const step = path.axis === 'z' ? arm.along[1] : arm.along[0];
+  const drift = sub(tangent, edgeAt(path, at, offset));
+
+  const frames: Frame[] = [];
+  const stations = Math.max(1, Math.ceil(reach / STATION));
+  for (let station = 1; station <= stations; station += 1) {
+    const fraction = station / stations;
+    const along = at + reach * fraction * step;
+    const out = scale(normal(path, bearingAt(path, along)), side);
+    const point = add(edgeAt(path, along, offset), scale(drift, Math.max(0, 1 - 2 * fraction)));
+    frames.push({ x: point[0], z: point[1], nx: out[0], nz: out[1] });
+  }
+  return frames;
+}
+
+/**
+ * Where a section offset lands on the ground, at one station along a route.
+ *
+ * Offset along the centreline's own normal, which stops a path widening through
+ * its bends. The same construction the ribbons are swept with, and it has to be
+ * — otherwise the fillet hands back to an edge the ribbon never drew.
+ */
+function edgeAt(path: Route, along: number, offset: number): Vec {
+  const on: Vec = path.axis === 'z' ? [path.centre(along), along] : [along, path.centre(along)];
+  return add(on, scale(normal(path, bearingAt(path, along)), offset));
+}
+
+/** Unit direction of a route at one station, in site coordinates. */
+function bearingAt(path: Route, along: number): Vec {
+  const slope = path.centre(along + 0.5) - path.centre(along - 0.5);
+  return unit(path.axis === 'z' ? [slope, 1] : [1, slope]);
 }
 
 /**

@@ -76,8 +76,17 @@ const FINISH: Record<Surface, { tint: number; roughness: number; bump: number }>
   gravel: { tint: 0x8b8272, roughness: 0.97, bump: 0.5 },
 };
 
-/** How far the paving floats above the terrain it follows. */
-const LIFT = 0.09;
+/**
+ * How far the paving floats above the terrain it follows.
+ *
+ * `surfaceAt` puts every vertex on the drawn ground exactly, but a span between
+ * two of them is still a flat chord and the terrain's own 2.5 m quads fold
+ * across it. Where a path crosses a crest — the riverside walk does, on the top
+ * of the river bank — the ground came through the middle of its own paving in
+ * patches a handspan across. Two centimetres over the kerb's own 5 cm covers the
+ * fold and is invisible against it.
+ */
+const LIFT = 0.11;
 
 /**
  * How much higher each route sits than the one below it in the table.
@@ -190,7 +199,7 @@ interface Node {
  * hides it at the cost of paving that hovers; splitting the span costs a few
  * hundred triangles and removes the cause.
  */
-const SPAN_WIDTH = 1.0;
+const SPAN_WIDTH = 0.8;
 
 function section(path: Path): Node[] {
   const e = path.halfWidth;
@@ -349,7 +358,7 @@ function reach(at: readonly [number, number], shape: Fillet): number {
  * meet, two full sections drive through one another — kerb and gutter across the
  * middle of the carriageway, and the two surfaces z-fighting.
  *
- * Two rules, and they are not the same rule:
+ * Three rules, and they are not the same rule:
  *
  * - **The minor route's carriageway stops inside the major one's own paving**,
  *   not inside its kerb. It always reaches the senior surface rather than
@@ -361,6 +370,12 @@ function reach(at: readonly [number, number], shape: Fillet): number {
  *   extent is the tangent point of the fillet arc, computed in `junctions.ts`
  *   from the two centrelines, so the kerb ends exactly where it stops being
  *   straight.
+ * - **No kerb ever crosses a carriageway**, whichever route owns which. A fillet
+ *   only exists where two routes *cross*; where one merges into another — the
+ *   riverside walk onto the promenade at both ends — nothing constructs a mouth,
+ *   and the kerbs drove over each other's paving. A raised kerb across a path is
+ *   wrong from either side, so this rule is symmetric where the two above are
+ *   not.
  *
  * The junction shape itself is the fillets' business; this function only has to
  * get out of their way.
@@ -372,10 +387,15 @@ function keep(path: Path, edge: boolean, offset: number, corners: readonly Corne
       for (const mouth of junction.mouths) {
         if (mouth.route !== path.route || mouth.side !== side) continue;
         // Any corner, not the middle: the ribbon can only stop on a quad
-        // boundary, so it gives way generously and the fillet's straight lead
-        // covers whatever gap that leaves.
+        // boundary, so it gives way generously and the fillet's lead covers
+        // whatever gap that leaves.
         if (corners.some(([x, z]) => inMouth(mouth, x, z))) return false;
       }
+    }
+
+    for (const other of PATHS) {
+      if (other.route === path.route) continue;
+      if (corners.some(([x, z]) => other.off(x, z) === 0)) return false;
     }
     return true;
   }

@@ -138,15 +138,18 @@ function valley(x: number): number {
  * factor is bounded below too: at 0.3 the gap closed to 4.7 m on the crossings,
  * inside the bank top, and the paving ran into the water.
  *
- * The west end turns for the promenade, eased with a smoothstep so it leaves the
- * meander tangentially rather than with a visible kink.
+ * Both ends turn onto the promenade, eased with a smoothstep so the walk leaves
+ * the meander tangentially rather than with a visible kink. The two turns are a
+ * maximum rather than a sum: they are two hundred metres apart, so only ever one
+ * of them is doing anything.
  */
 export function riversideAt(x: number): number {
   const { river } = LAND;
   const along = river.z - 15 + meander(x) * river.wander * 0.7 + valley(x) * river.wander * 0.55;
 
-  const { merge } = RIVERSIDE;
-  return along + (PROMENADE_Z - along) * smoothstep(merge.from, merge.to, x);
+  const { west, east } = RIVERSIDE.merge;
+  const onto = Math.max(smoothstep(west[0], west[1], x), smoothstep(east[0], east[1], x));
+  return along + (PROMENADE_Z - along) * onto;
 }
 
 /** The promenade's centreline — the mid-line of the band `REALM` describes. */
@@ -183,7 +186,12 @@ export const SPAN =
  * paving and the clearance rules cannot disagree about where the route runs.
  */
 export const AVENUE_RUN = {
-  from: AVENUE.from - 3,
+  // Through the promenade to the forecourt's edge, not up to it. A route that
+  // stops on the far kerb of the one it meets has no junction — nothing
+  // constructs a mouth, so the promenade's kerb ran straight across the head of
+  // the avenue. Crossing it makes the meeting a crossing, which `junctions.ts`
+  // already knows how to build.
+  from: REALM.forecourtFar,
   to: CROSSING.z + SPAN / 2 + 24,
 } as const;
 

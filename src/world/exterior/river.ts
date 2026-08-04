@@ -8,6 +8,7 @@ import {
 import { bankReach, riverAt, riverSlope, riverSurface, streamShare } from './paths';
 import { LAND } from './site';
 import { surfaceAt } from './terrain';
+import { createRippleTexture, RIPPLE_GLSL } from './water';
 
 export interface River {
   readonly object: Mesh;
@@ -42,6 +43,9 @@ const EXTINCTION = 0.34;
  * angle keeps both.
  */
 const SHEEN = 0.82;
+
+/** How much the shared wave field is compressed to suit a four-metre channel. */
+const CHANNEL_SCALE = 2.6;
 
 /**
  * Where the ribbon starts and stops. The east end reaches well inside the lake:
@@ -132,6 +136,8 @@ export function createRiver(): River {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
 
+  const ripples = createRippleTexture();
+
   const material = new MeshStandardMaterial({
     // The colour of the *water*, not of the stream: what reads as the stream's
     // colour is this laid over the bed at a thickness that varies across the
@@ -149,6 +155,7 @@ export function createRiver(): River {
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = time;
+    shader.uniforms.uRipple = { value: ripples };
 
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -173,23 +180,22 @@ export function createRiver(): River {
          uniform float uTime;
          varying float vDepth;
          varying float vMouth;
-         varying vec2 vChannel;`,
+         varying vec2 vChannel;
+         ${RIPPLE_GLSL}`,
       )
       .replace(
         '#include <normal_fragment_begin>',
         `#include <normal_fragment_begin>
-         // Travelling downstream rather than standing. Phased on distance along
-         // the channel rather than world x, so the ripples follow the meander
-         // round — keyed on x they march due west across a bend running north.
-         float run = vChannel.x + uTime * 1.9;
-         vec2 flow = vec2(0.0);
-         flow += vec2( 0.97,  0.24) * cos(run * 1.15 + vChannel.y * 0.9) * 0.085;
-         flow += vec2(-0.31,  0.95) * cos(run * 2.30 - vChannel.y * 2.1) * 0.052;
-         flow += vec2( 0.80, -0.60) * cos(run * 4.70 + vChannel.y * 3.4) * 0.026;
+         // Sampled in channel coordinates rather than world ones, so the surface
+         // follows the meander round instead of marching due west across a bend
+         // running north — and advected downstream, which is the whole read of
+         // moving water. Compressed, because the field is sized for a lake and
+         // this channel is under four metres wide.
+         vec2 flow = rippleAt(vec2(vChannel.x - uTime * 1.7, vChannel.y) * ${CHANNEL_SCALE.toFixed(2)}, uTime);
          // Broken hardest where it is shallowest, which is where a stream runs
          // over its own bed and the only white water appears.
          float shallow = 1.0 - smoothstep(0.05, 0.55, vDepth);
-         normal = normalize(normal + vec3(flow.x, 0.0, flow.y) * (0.55 + shallow * 1.6));
+         normal = normalize(normal + vec3(flow.x, 0.0, flow.y) * (0.20 + shallow * 0.55));
 
          // How much of the water column is in the way, by Beer's law. What says
          // "shallow" is seeing the actual ground through it; the bed underneath
@@ -248,6 +254,7 @@ export function createRiver(): River {
     dispose() {
       geometry.dispose();
       material.dispose();
+      ripples.dispose();
     },
   };
 }

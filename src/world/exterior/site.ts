@@ -148,18 +148,29 @@ export const PATH_EDGE = { kerb: 0.3, gutter: 0.55, rise: 0.05, dish: 0.03 } as 
 export const PATH_EDGE_WIDTH = PATH_EDGE.kerb + PATH_EDGE.gutter;
 
 /**
+ * Where each end of the riverside walk turns onto the promenade, in x.
+ *
+ * **Both ends turn.** The east end used to stop seventeen metres short of the
+ * lake with nothing beyond it, which reads as an unfinished drawing from every
+ * pose that sees the shore. Turning it south past the pavilion makes the two
+ * routes a circuit and the pavilion an overlook on the elbow.
+ *
+ * The east turn starts *after* the pavilion, so the building keeps the approach
+ * it was placed against, and stays far enough west that the deepest bay in
+ * `lakeReach` still leaves twenty metres of dry ground.
+ */
+const MERGE = { west: [-96, -134], east: [44, 84] } as const;
+
+/**
  * The riverside walk, as the reach it runs over. Its centreline is
- * `riversideAt`; what lives here is where it starts and stops, which every
- * scatter that has to keep clear of it needs.
+ * `riversideAt`; the ends are the merges' own rather than typed again beside
+ * them.
  */
 export const RIVERSIDE = {
-  /** The west end, deep inside the woodland belt — the connection is implied, not built. */
-  from: -134,
-  /** The east end, at the lake shore, where the pavilion gives the walk a destination. */
-  to: 62,
+  from: MERGE.west[1],
+  to: MERGE.east[1],
   halfWidth: 2.1,
-  /** Where the turn toward the promenade begins and ends, in x. Outside `WOODLAND.clear`. */
-  merge: { from: -96, to: -134 },
+  merge: MERGE,
 } as const;
 
 /**
@@ -304,8 +315,13 @@ export const REALM = {
   /** Pedestrian promenade. Nothing may be planted inside this band. */
   promenadeFar: 31.1,
   vergeFar: 34.1,
-  /** Paving stops inside the woodland belt, where a path ending is what a path does. */
-  run: 250.0,
+  /**
+   * Paving stops inside the woodland belt, where a path ending is what a path
+   * does. Long enough to take both ends of the riverside walk's merge inside
+   * it: a walk that finishes past the end of the route it is merging onto has
+   * nothing to hand its kerb over to, and leaves slivers of grass at the seam.
+   */
+  run: 290.0,
 } as const;
 
 /**
