@@ -4,7 +4,8 @@ import type { CameraPose, Vec3 } from '@/engine/camera/types';
 import type { SceneDefinition } from '@/engine/scene/types';
 import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { EXTERIOR_ASSETS, exteriorZone } from '@/world/exterior/ExteriorZone';
-import { ENTRANCE, REVIEW } from '@/world/exterior/site';
+import { CROSSING } from '@/world/exterior/paths';
+import { AVENUE, ENTRANCE, REVIEW } from '@/world/exterior/site';
 import { ExteriorScene } from './ExteriorScene';
 
 const CHAPTER = 'Act I — Exterior';
@@ -41,134 +42,186 @@ const scene = (
 });
 
 /**
- * Act I, walked. Eleven scenes, 8:35.
+ * How far down the avenue the approach beat stands, as a fraction of its run.
  *
- * The camera approaches the building down its −X flank so the massing sits in
- * the right half of the frame, clear of the text column and its scrim. The
- * `recessed` scenes turn away into open site: nothing to look at is the point,
- * and it is also where the frame budget is recovered before the next foreground
- * beat.
+ * Derived rather than typed: the avenue's far end is the bridge and the bridge
+ * is wherever the meander put it, so a literal z would drift the moment the
+ * river changes.
+ */
+const alongAvenue = (fraction: number): number =>
+  AVENUE.from + (CROSSING.z - AVENUE.from) * fraction;
+
+/** The face of the mass above the entrance — what the vista terminates on. */
+const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
+
+/**
+ * Act I, walked as a route through the site rather than as eleven framings of
+ * one elevation.
  *
- * Three scenes are framed on the specification slot — `leverage` first sees it,
- * `practice` closes on it while candidates hold beside it, `gaps` pulls back far
- * enough to carry six markers. They are the act's one built device and their
- * framing is derived from `SLOT`, not from numbers typed four times.
+ * **The eleven poses are one route, not eleven viewpoints.** Every move is
+ * short and continues the last one's heading, because the transition between
+ * scenes is a camera tween through open air: two poses a hundred metres apart
+ * facing opposite ways do not read as a move, they read as a cut, and the whole
+ * point of a continuous world is that there are none.
  *
- * Re-derived for the 33.6 × 16 × 17 m slab. It is wider and lower than the
- * massing these poses were first cut against, so every one is a fresh
- * derivation rather than a nudge: a wider building needs more standoff to stay
- * inside the frame, and a lower one needs the camera lower to keep the parapet
- * off the top edge.
+ * The route is a descent and a walk inland:
+ *
+ * 1. **overview** — high over the lake, looking back at the whole site.
+ * 2. **lake** — straight down onto the water on the same bearing, facing the
+ *    shore. The site is read from the water, as if off a boat.
+ * 3. **river** — west along the outlet, over the channel, following it.
+ * 4. **park** — off the water and turned inland: the riverside walk leading to
+ *    the building.
+ * 5. **construction** — in to the massing, scaffolded, from the east.
+ * 6. **scaffold** — closer, on the scaffold itself.
+ * 7. **alternatives** — the four options, on the promenade thirty metres east.
+ * 8. **gaps** — back out north-west into the park, facing away from everything.
+ * 9. **objectives** — the bridge, and the entrance centred down the avenue.
+ * 10. **method** — halfway down that avenue, same aim.
+ * 11. **entrance** — at the door. The hinge into Act II.
+ *
+ * Two composition rules run through every pose. The text column sits on the
+ * left, so the subject is aimed **right of centre** — which for a camera
+ * heading west means standing north of what it is looking at, and for one
+ * heading east means the opposite. And the three `recessed` beats (river, gaps,
+ * method) turn into open site, which is both where the argument stops needing a
+ * picture and where the frame budget is recovered.
  */
 export const act1Scenes: readonly SceneDefinition[] = [
-  // Provisional. The act is still cut to its old eleven-station order; the
-  // re-cut to the new walk (overview, lake, river, park, construction,
-  // scaffold, alternatives, park, avenue, approach, entrance) is outstanding.
-  // This one pose is moved because the old title stood where the lake now is.
+  // Forty-four metres up and out over the lake, looking back west-south-west at
+  // the whole site: water in the foreground, the shore, the park, the river and
+  // the building. **Over the water on purpose** — this is the only quarter of
+  // the site with nothing standing in it, so it is the only place a camera can
+  // be high without being inside the woodland belt, and the descent from here
+  // to the next pose is a straight line along one bearing.
+  scene(
+    'overview',
+    'The site',
+    'foreground',
+    pose([150, 44, 134], [18, 6, 54], 46),
+    act1Captions.overview,
+  ),
+
+  // The same bearing, twenty-five metres forward and thirty-eight down: the
+  // camera settles onto the water and reads the site off it. Nothing is built
+  // in the near half of this frame, which is the point — this beat is the
+  // reason the work exists, not yet the work.
+  scene(
+    'lake',
+    'Why this work exists',
+    'foreground',
+    pose([138, 6, 98], [26, 5, 66], 48, 6),
+    act1Captions.lake,
+  ),
+
+  // West along the outlet, still on the water, now over the channel itself and
+  // following it. Four metres up and aimed down its length, so the stream
+  // recedes through the frame rather than crossing it — the shot is the
+  // travelling, not the water.
   //
-  // Framings verified in the browser and waiting for the re-cut:
-  //   overview          pose([64, 34, 148], [0, 6, 44], 46)
-  //   from the bridge   pose([0, 2.3, 86], [0, 5, 8], 52)   <- scene 9/10
-  //   over the stream   pose([2, 4.2, 103], [6, -1.4, 82], 52)
-  // The bridge pose is the one that carries the terminated vista: the entrance
-  // sits dead centre at the end of the straight avenue, which is what the brief
-  // for scene 9 asks for.
-  scene('title', 'Title', 'foreground', pose([64, 34, 148], [0, 6, 44], 46), act1Captions.title),
-
+  // This pose and the lake's both sit **south of z = 98**, so the ninety metres
+  // of glide between them does too. That is a routing constraint rather than a
+  // framing one: `WOODLAND.bank` starts at 98, carries no corridor clearance
+  // and is the densest planting on the site, so a path a few metres north of
+  // here spends half the transition inside a hedge.
   scene(
-    'footprint',
-    'Footprint and targets',
+    'river',
+    'Environmental burden',
     'recessed',
-    pose([-36, 5, 84], [-70, 9, 38], 44, 1.5),
-    act1Captions.footprint,
+    pose([46, 5, 95], [0, -1.6, 89], 50, 5),
+    act1Captions.burden,
   ),
 
-  // Slot beat A. First sight of the unassigned bay, at a distance that still
-  // reads the whole massing behind it: the claim is that the building is
-  // decided and the envelope is not, so both have to be in frame.
+  // Sixteen metres off the river and turned inland. The riverside walk leads
+  // out of the near corner and the building closes the frame beyond it; heading
+  // west-south-west, so south — and therefore the building — falls on the right
+  // of frame and the river on the left, under the text.
   scene(
-    'leverage',
-    'Where leverage sits',
+    'park',
+    'Circularity and measurement',
     'foreground',
-    pose([-28, 6, 66], [-16, 9, 16], 42, 2),
-    act1Captions.leverage,
+    pose([40, 5, 78], [-16, 4, 40], 46, 2),
+    act1Captions.assessment,
   ),
 
+  // The massing whole, from the east three-quarter, which is the side the
+  // scaffold stands on. Aimed past the building's west corner so the elevation
+  // sits right of centre.
   scene(
-    'tools',
-    'The tools presuppose completeness',
-    'recessed',
-    pose([-44, 6, 62], [-76, 10, 32], 44, 2),
-    act1Captions.tools,
-  ),
-
-  scene(
-    'mismatch',
-    'Early design cannot supply it',
+    'construction',
+    'The building under construction',
     'foreground',
-    pose([-34, 5, 52], [-18, 11, 10], 44, 2),
-    act1Captions.mismatch,
+    pose([46, 9, 52], [-10, 8, 18], 44, 2.5),
+    act1Captions.data,
+  ),
+
+  // Close on the scaffold. This is the Blender preview framing, converted:
+  // Blender is Z-up facing -Y and glTF maps that to web +Z, so (x, y, z) there
+  // is (x, z, -y) here. Aimed a few metres west of the bays it wraps so the
+  // structure stands right of centre.
+  scene(
+    'scaffold',
+    'Early design',
+    'foreground',
+    pose([22, 7, 40], [5, 9, 12], 40, 1),
+    act1Captions.earlyDesign,
   ),
 
   // The options' own scene, and the only one that turns its back on the
-  // building entirely. Square to the row and close, aimed `lead` metres west so
-  // the four panels sit across the right of frame and the left stays clear for
-  // the caption.
+  // building entirely. Square to the row and close, aimed `lead` metres back
+  // toward the building so the four panels sit across the right of frame and
+  // the left stays clear for the caption.
+  //
+  // Thirty-five metres from the scaffold pose and on the same side of the site,
+  // so the two beats are one continuous move rather than a cut.
   //
   // Derived from `REVIEW`, never typed: the row's position decides where this
   // stands, so the two cannot drift apart.
   scene(
-    'practice',
+    'alternatives',
     'What decides in practice',
     'foreground',
     pose(
-      [REVIEW.centre[0], 4.2, REVIEW.centre[2] + REVIEW.standoff],
-      [REVIEW.centre[0] - REVIEW.lead, 3.5, REVIEW.centre[2]],
+      [REVIEW.centre[0], 3.6, REVIEW.centre[2] + REVIEW.standoff],
+      [REVIEW.centre[0] - REVIEW.lead, 3.2, REVIEW.centre[2]],
       40,
       0.6,
     ),
-    act1Captions.practice,
+    act1Captions.alternatives,
   ),
 
-  // Turned east rather than west. This pose used to look out over the west park
-  // and the review row now stands in that exact direction — with the options on
-  // site for this scene, a shot whose whole point is that there is nothing to
-  // look at had four panels dead centre.
-  //
-  // Far enough east that the building's own corner and the scaffold clear the
-  // frame too; what is left is open promenade and a tree, which is the whole
-  // job of a recessed beat.
-  scene(
-    'sota',
-    'State of the art',
-    'recessed',
-    pose([-8, 6, 62], [52, 10, 50], 44, 1.5),
-    act1Captions.sota,
-  ),
-
-  // Slot beat C. Pulled back from `practice` because six markers need room the
-  // close pose does not have.
+  // Back out north-west along the riverside walk, which puts the review row
+  // **behind the camera** while it walks itself off site during this scene. It
+  // also swings the building past the right edge, so what is left is grass, a
+  // path and the far bank — the whole job of a recessed beat.
   scene(
     'gaps',
-    'Six gaps',
-    'foreground',
-    pose([-30, 7, 62], [-17, 8, 16], 44, 1.5),
+    'Research gaps and open challenges',
+    'recessed',
+    pose([30, 5, 62], [-30, 2, 74], 48, 2),
     act1Captions.gaps,
   ),
 
+  // From the bridge, on the site axis. The one terminated vista in the act: the
+  // entrance sits dead centre at the end of fifty metres of avenue, with the
+  // tree rows converging on it. Derived from the crossing rather than typed, so
+  // meandering the river moves the bridge and this pose together.
   scene(
     'objectives',
     'Four objectives',
     'foreground',
-    pose([-28, 6, 52], [-15, 10, 10], 44, 1),
+    pose([CROSSING.x, 2.3, CROSSING.z], [0, 5, ENTRANCE_FACE], 52),
     act1Captions.objectives,
   ),
 
+  // Halfway down the same walk, aimed at the same point. Nothing changes but
+  // the distance, which is what makes the beat read as an approach rather than
+  // as a new place.
   scene(
     'method',
     'Method and structure',
     'recessed',
-    pose([-46, 5.5, 46], [-74, 9, 18], 44, 2),
+    pose([0, 2.2, alongAvenue(0.46)], [0, 5, ENTRANCE_FACE], 50, 1),
     act1Captions.method,
   ),
 
@@ -176,23 +229,22 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // the corridor threshold lines up with the same opening. Parallel to the
   // entrance axis rather than aimed at it: a straight one-point approach puts
   // the door right of centre, leaves the text column clear, and is already
-  // pointing where Act II continues. The only head-on shot in the act.
+  // pointing where Act II continues.
   //
   // Close. At the standoff the other poses use, a 34 m elevation fills the
   // frame and the opening is lost among eight identical bays — which is fatal
-  // for the one shot whose whole job is to say *this is the way in*. Twenty
-  // metres crops the parapet and buys a door the audience can see.
+  // for the one shot whose whole job is to say *this is the way in*.
   scene(
-    'structure',
+    'entrance',
     'Entering',
     'foreground',
     pose(
-      [ENTRANCE.position[0] - 5.5, 3.8, ENTRANCE.position[2] + 27],
-      [ENTRANCE.position[0] - 5.5, 2.8, ENTRANCE.position[2]],
-      40,
+      [ENTRANCE.position[0] - 5.5, 3.4, ENTRANCE.position[2] + 24],
+      [ENTRANCE.position[0] - 5.5, 2.6, ENTRANCE.position[2]],
+      44,
       1.5,
     ),
-    act1Captions.structure,
+    act1Captions.entrance,
   ),
 ];
 
@@ -200,7 +252,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
  * The review row's span is a pair of numbers in `site.ts`, and the deck's order
  * is what actually produces them. They must open one scene before the options
  * are looked at and close one scene after, because that is what puts the
- * panels' travel inside a scene that faces the building.
+ * panels' travel inside a scene that cannot see them.
  *
  * Reorder the act and the two disagree silently: the panels either stay parked
  * off frame while the scene arguing about them plays to an empty promenade, or
@@ -213,8 +265,8 @@ const progressOf = (id: string): number => {
 };
 
 for (const [id, expected, name] of [
-  ['mismatch', REVIEW.from, 'REVIEW.from'],
-  ['gaps', REVIEW.to, 'REVIEW.to'],
+  ['scaffold', REVIEW.from, 'REVIEW.from'],
+  ['objectives', REVIEW.to, 'REVIEW.to'],
 ] as const) {
   if (progressOf(id) !== expected) {
     throw new Error(

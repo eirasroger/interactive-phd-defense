@@ -20,12 +20,7 @@ const OCCLUSION = 0.65;
 /**
  * The exterior, lit here rather than painted in Blender.
  *
- * Everything used to arrive as one baked albedo drawn unlit — sun, shadow,
- * bounce and colour flattened into a single map per asset. That map was sharp
- * at exactly one distance, and because nothing was lit, the glazing, the brass
- * screens and the metal cheeks never caught the light.
- *
- * What arrives now is the material itself: tiling brick and concrete on a
+ * What arrives is the material itself: tiling brick and concrete on a
  * world-scale UV set, so surface detail is as sharp at the entrance as from the
  * establishing pose, plus one baked occlusion map on a second UV set carrying
  * what real-time light cannot work out — the soffit under the oversail, the
@@ -34,8 +29,8 @@ const OCCLUSION = 0.65;
  * **An exterior asset is a hierarchy, not a mesh.** Blender joins each asset
  * into one object carrying a material slot per palette entry, and glTF stores
  * that as one primitive per material, which `GLTFLoader` expands into one child
- * mesh per material. Anything here that reduces an asset to a single mesh keeps
- * one material and silently discards the rest. See `learnings.md` §7e.
+ * mesh per material. Reducing an asset to a single mesh keeps one material and
+ * silently discards the rest.
  */
 export function createBuilding(gltf: GLTF): Building {
   return createBakedPart(gltf.scene);

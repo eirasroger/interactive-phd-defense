@@ -9,19 +9,10 @@ import { Box3, Matrix4, Mesh, Vector3, type BufferGeometry, type Material, type 
  * them for its billboards. Everything on the site that needs a tree can be
  * pointed at the same meshes.
  *
- * That is worth stating because the alternative was tried and shipped. The park
- * had a second 25 MB asset of its own — a jacaranda trunk plus loose leaf
- * sprigs, and two Mediterranean olives — from which a canopy was reassembled at
- * runtime by scattering a hundred and ninety sprigs onto an ellipsoidal shell.
- * It cost a second download the size of the first, twelve thousand instances,
- * and it did not work: the shell never lines up with the branch structure it is
- * supposed to be growing from, so every tree read as a sawn-off trunk standing
- * inside a detached cloud of ferns. The olives, whose own sprigs were too small
- * to register at all, read as dead sticks.
- *
- * A modelled tree has its foliage attached to its branches because it grew
- * that way. There is no cheaper source of that than an artist who already did
- * it, and this project has four of them loaded.
+ * A modelled tree has its foliage attached to its branches. Reassembling a
+ * canopy at runtime by scattering leaf sprigs onto an ellipsoidal shell does
+ * not: the shell never lines up with the branch structure it is supposed to be
+ * growing from.
  */
 export interface TreeTemplate {
   readonly name: string;

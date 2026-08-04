@@ -14,6 +14,8 @@ import {
   type Object3D,
 } from 'three';
 import {
+  bankReach,
+  channelHalf,
   freeboardAt,
   offAvenue,
   offBuilt,
@@ -92,11 +94,9 @@ export function createBankside(source: Object3D): Bankside {
    * Place one plant, sized in **metres of finished height** rather than as a
    * multiple of whatever the asset happens to measure.
    *
-   * Scaling by a bare factor was the first version and it put 2468 plants on the
-   * site that were individually invisible: the templates come out of Poly Haven
-   * at their own scales, so a factor of one means a different size for every
-   * species. Normalising through the bounding box is what lets a reed bed be
-   * specified as "1.6 m tall" and actually be 1.6 m tall.
+   * The templates come out of Poly Haven at their own scales, so a bare factor
+   * means a different size for every species. Normalising through the bounding
+   * box is what lets a reed bed be specified as 1.6 m tall and be 1.6 m tall.
    */
   let refused = 0;
 
@@ -186,13 +186,16 @@ type Plant = (group: keyof typeof SPECIES, x: number, z: number, size: number) =
  * green stripe; one that thickens toward the water reads as a watercourse.
  */
 function scatterBanks(random: () => number, plant: Plant): void {
-  const { river, lake } = LAND;
-  const top = river.halfWidth + river.swale;
+  const { lake } = LAND;
 
   for (let x = lake.west + 6; x > -300; x -= 0.8) {
     const centre = riverAt(x);
     const slope = riverSlope(x);
     const across = 1 / Math.hypot(1, slope);
+    // Read from the channel rather than from `LAND`, so the mouth's flare
+    // carries the reeds out with it instead of leaving them standing in the
+    // middle of the widened water to be refused.
+    const top = bankReach(x);
 
     for (const side of [-1, 1]) {
       for (let i = 0; i < 4; i += 1) {
@@ -205,7 +208,7 @@ function scatterBanks(random: () => number, plant: Plant): void {
         // edge put nearly half its plants out in open water, where they are
         // refused, and the density that was meant to be thickest at the water
         // was thinnest there instead.
-        const shore = river.halfWidth * 1.6;
+        const shore = channelHalf(x) * 1.6;
         const t = random() ** 1.7;
         const offset = side * (shore + t * (top - shore));
         const jitter = (random() - 0.5) * 1.1;
@@ -277,7 +280,7 @@ function scatterVerges(random: () => number, plant: Plant): void {
  * 2.5 m terrain grid meets a swept ribbon.
  */
 function boulders(random: () => number): { object: InstancedMesh; dispose(): void } {
-  const { river, lake } = LAND;
+  const { lake } = LAND;
   const geometry = new IcosahedronGeometry(1, 1);
   const position = geometry.getAttribute('position');
   const lump = new Vector3();
@@ -313,7 +316,7 @@ function boulders(random: () => number): { object: InstancedMesh; dispose(): voi
     const side = random() < 0.5 ? -1 : 1;
     // Straddling the waterline — half in, half out, which is the only placement
     // that actually breaks the edge rather than sitting beside it.
-    const offset = side * river.halfWidth * (0.55 + random() * 0.95);
+    const offset = side * channelHalf(x) * (0.55 + random() * 0.95);
     const px = x - offset * slope * across + (random() - 0.5) * 1.4;
     const pz = centre + offset * across;
 
@@ -346,13 +349,11 @@ function boulders(random: () => number): { object: InstancedMesh; dispose(): voi
 /**
  * One usable template per species variant, keyed by node-name prefix.
  *
- * The geometry is **rebaked to the origin with its world rotation and scale**,
- * and skipping that step is what made the first version render nothing visible.
+ * The geometry is **rebaked to the origin with its world rotation and scale**.
  * A GLB node's geometry is in local space and its real size lives in the parent
- * chain's transform; take the geometry alone and you get a plant at whatever
- * arbitrary scale the authoring tool happened to use. Dropping only the
- * translation keeps the size and the orientation and discards the placement,
- * which is the one part this module is replacing.
+ * chain's transform, so taking the geometry alone gives a plant at whatever
+ * scale the authoring tool used. Dropping only the translation keeps size and
+ * orientation and discards the placement, which is what this module replaces.
  */
 function collect(source: Object3D): Map<string, Template[]> {
   const candidates = new Map<string, Mesh[]>();

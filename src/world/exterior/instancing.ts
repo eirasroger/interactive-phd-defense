@@ -60,30 +60,19 @@ const SAMPLES = 24;
 /**
  * Collapses a scattered asset into one draw call per distinct thing drawn.
  *
- * The planting arrives from Blender as 1396 separate nodes — every grass tuft,
- * fern and tree placed by `scatter_planting` is its own object. glTF stores
- * that honestly and `GLTFLoader` rebuilds it just as honestly, as ~1400 `Mesh`
- * objects, which is ~1400 draw calls for a site that still reads as empty.
- *
- * That is the whole reason density was unaffordable, and the diagnosis matters
- * because it is not the one the file size suggests. The payload was never the
- * constraint. Bucket the nodes by *what they draw* rather than by where they
- * stand and the same site costs a dozen draws, at which point ten thousand
- * plants cost no more than the fourteen hundred did.
+ * The planting arrives from Blender as ~1400 separate nodes, one per plant, and
+ * `GLTFLoader` rebuilds them as ~1400 draw calls. Bucketed by *what they draw*
+ * rather than by where they stand, the same site costs a dozen — at which point
+ * density is free.
  *
  * **Buckets are keyed on geometry content, not on `geometry.uuid`.** The
- * exporter shares mesh data for most of the site but duplicated it for the
- * nettles — `Plane.064` alone is written 29 times as 29 distinct meshes with
- * one node each. Keyed by identity those are 73 buckets of one instance and
- * the instancing silently does nothing for them; fingerprinted by content they
- * collapse to three. Duplicated geometry is an upstream fault worth fixing at
- * the source too, but the runtime should not be the thing that depends on it.
+ * exporter duplicates mesh data for some species (`Plane.064` is written 29
+ * times), so keyed by identity those become buckets of one and the instancing
+ * silently does nothing.
  *
- * **Everything is instanced, including buckets of one.** A one-instance
- * `InstancedMesh` saves no draw call by itself; what it buys is that every
- * plant reaches the vertex shader through `instanceMatrix`, so the wind has
- * exactly one path to handle rather than two. The trees are the smallest
- * buckets on the site and the most important things on it to move.
+ * **Everything is instanced, including buckets of one.** It saves no draw call
+ * by itself; it buys every plant reaching the vertex shader through
+ * `instanceMatrix`, so the wind has one path to handle rather than two.
  */
 export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
   root.updateMatrixWorld(true);
@@ -175,19 +164,12 @@ export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
  * measured in exactly the space the vertex shader sees. Cached per node
  * because every instance of a template asks the same question.
  *
- * The box rather than the height alone, because both callers need the width
- * too: the wind normalises sway against the plant's height, and the site needs
- * a crown radius to decide what a placement has to clear and how far the ground
- * under it is shaded.
+ * The box rather than the height alone: the wind normalises sway against the
+ * height, and the site needs a crown radius to decide what a placement clears.
  *
  * **The root is never the plant.** A single-primitive plant is exported as a
- * bare `Mesh` hanging directly off the scene, so "take the parent" reaches the
- * scene itself and measures the union of every geometry on the site — a plant
- * three hundred metres tall and two hundred wide, cached and handed to every
- * caller after it. That went unnoticed while the only consumer was the wind,
- * which normalises by it and so only made the sway wrong; the moment a crown
- * radius decided what a placement clears, it became a nine-hundred-metre
- * grass tuft.
+ * bare `Mesh` hanging off the scene, so taking the parent reaches the scene
+ * itself and measures the union of every geometry on the site.
  */
 function plantBounds(mesh: Mesh, root: Object3D, cache: Map<Object3D, Box3>): Box3 {
   const parent = mesh.parent;

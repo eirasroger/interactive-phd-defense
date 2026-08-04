@@ -7,11 +7,9 @@
  * mower's inability to get close all land in the same place, so one scalar
  * carries all four.
  *
- * It is a field rather than a texture because the trees are not authored — they
- * are scattered from a seeded plan at load, and painting a map to match would
- * be a second description of the same thing, drifting the moment the seed
- * changes. `learnings.md` §12 is exactly that failure one level up: two
- * independently authored descriptions of one tree never agree.
+ * A field rather than a texture because the trees are not authored — they are
+ * scattered from a seeded plan at load, and a painted map would be a second
+ * description of the same thing, drifting the moment the seed changes.
  *
  * Density is **additive and then saturated**, which is what makes a lone tree a
  * small patch and a group a single larger, darker one without either being

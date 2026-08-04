@@ -19,7 +19,21 @@ export const EASE = {
   standard: 'power2.inOut',
   enter: 'expo.out',
   exit: 'expo.in',
-  camera: 'power3.inOut',
+  /**
+   * The gentlest ease-in-out there is, and the camera's for that reason alone.
+   *
+   * An ease is a velocity profile, and `inOut` curves buy their soft ends by
+   * spending the difference in the middle: `power3.inOut` peaks at **four
+   * times** the average speed halfway through the move. On a UI element that
+   * reads as crisp. On a camera it is a lurch — the world barely moves, then
+   * whips, then stops — and it was most of why Act I's transitions were making
+   * viewers dizzy.
+   *
+   * `sine.inOut` peaks at 1.57×, still stops dead at both ends, and has no
+   * discontinuity in acceleration anywhere. It is the profile a camera
+   * operator's hand actually produces.
+   */
+  camera: 'sine.inOut',
 } as const;
 
 export const STAGGER = 0.07;

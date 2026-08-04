@@ -41,16 +41,12 @@ interface Band {
 /**
  * Three bands, deliberately not one.
  *
- * Amplitude is expressed as a fraction of each plant's height rather than in
- * metres, so it stays correct across a 0.3 m grass tuft and a 10 m pine
- * without either being tuned separately — the same reasoning as
- * `learnings.md` §7f, where a size in metres replaced a multiplier that
- * silently carried an assumption about the asset.
+ * Amplitude is a fraction of each plant's height rather than metres, so it stays
+ * correct across a 0.3 m grass tuft and a 10 m pine without either being tuned.
  *
- * The speeds matter as much as the amplitudes. Grass ripples visibly faster
- * than a canopy rolls, and driving every layer at one rate is the tell that
- * separates procedural foliage from filmed foliage — the eye reads the shared
- * frequency long before it can name it.
+ * The speeds matter as much: grass ripples visibly faster than a canopy rolls,
+ * and one rate for every layer is the tell that separates procedural foliage
+ * from filmed foliage.
  */
 const GROUND: Band = { name: 'ground', sway: 0.15, flutter: 0.03, speed: 1.9, rank: 0 };
 const SHRUB: Band = { name: 'shrub', sway: 0.08, flutter: 0.022, speed: 1.15, rank: 1 };

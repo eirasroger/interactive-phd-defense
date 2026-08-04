@@ -1,5 +1,7 @@
 import {
   BoxGeometry,
+  BufferGeometry,
+  Float32BufferAttribute,
   Group,
   InstancedMesh,
   Matrix4,
@@ -16,9 +18,13 @@ export interface Bridge {
   dispose(): void;
 }
 
-/** Boards across the deck, and bars in the parapet, per metre of span. */
+/** Boards across the deck, bars in the parapet, and bearers under it, per metre. */
 const BOARD = 0.22;
 const BAR = 0.3;
+const BEARER = 1.35;
+
+/** Stations along the span that a lofted member is described at. */
+const LOFT = 24;
 
 /**
  * The footbridge where the avenue crosses the stream.
@@ -32,17 +38,10 @@ const BAR = 0.3;
  * the moment either moves an exported mesh is in the wrong place. Everything
  * here derives from `CROSSING`.
  *
- * Cambered rather than flat. A level deck between two abutments reads as a
- * plank; the rise is also what lets the parapet clear the bank vegetation at
- * midspan, which is the whole reason you can see the water from it.
- *
- * **The deck is the path, at the path's level.** It used to take its height
- * from `heightAt` sampled at the abutments — which, once the span had been
- * shortened until both ends landed inside the swale, was a point part-way down
- * the bank. The deck therefore sat about a metre below the paving that ran onto
- * it, and the walk fell down a step into a gap. Both ends now stand on the bank
- * top the avenue arrives at, and the terrain is eased to that same bank top, so
- * paving and deck meet flush by construction rather than by coincidence.
+ * **The deck is the path, at the path's level.** Both ends stand on `bankAt` —
+ * the same bank top the avenue arrives at and the terrain is eased to — so
+ * paving and deck meet flush by construction. Taking the height from `heightAt`
+ * at the abutments instead samples a point part-way down the bank.
  */
 export function createBridge(): Bridge {
   const object = new Group();
@@ -78,15 +77,10 @@ export function createBridge(): Bridge {
   span.position.set(CROSSING.x, deck, CROSSING.z);
   object.add(span);
 
-  const geometries: BoxGeometry[] = [];
+  const geometries: BufferGeometry[] = [];
   const instanced: InstancedMesh[] = [];
-  const add = (
-    geometry: BoxGeometry,
-    material: MeshStandardMaterial,
-    x: number,
-    y: number,
-    z: number,
-  ): Mesh => {
+
+  const add = (geometry: BufferGeometry, material: MeshStandardMaterial, x = 0, y = 0, z = 0): Mesh => {
     geometries.push(geometry);
     const mesh = new Mesh(geometry, material);
     mesh.position.set(x, y, z);
@@ -96,75 +90,132 @@ export function createBridge(): Bridge {
     return mesh;
   };
 
-  /** Height of the deck above its abutments, at a position along the span. */
-  const camber = (t: number): number => Math.cos(t * Math.PI) * -BRIDGE.camber + BRIDGE.camber;
+  const instance = (
+    geometry: BufferGeometry,
+    material: MeshStandardMaterial,
+    seats: readonly Vector3[],
+  ): void => {
+    geometries.push(geometry);
+    const mesh = new InstancedMesh(geometry, material, seats.length);
+    const matrix = new Matrix4();
+    const identity = new Quaternion();
+    const one = new Vector3(1, 1, 1);
+    seats.forEach((seat, index) => mesh.setMatrixAt(index, matrix.compose(seat, identity, one)));
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    span.add(mesh);
+    instanced.push(mesh);
+  };
+
+  /**
+   * Height of the deck above its abutments, at a position along the span.
+   *
+   * **A hump, not a ramp.** This was `cos(t π) × −c + c`, which is zero at one
+   * abutment and `2c` at the other — a monotonic 0.7 m climb rather than a
+   * 0.35 m rise at midspan. Everything else on the structure was built straight,
+   * so the deck visibly lifted off its own edge beams and out through its own
+   * parapet as it went, and the boards read as planks hanging in mid-air over
+   * the water. Nothing about the modelling was wrong; the curve was.
+   */
+  const camber = (t: number): number => Math.sin(t * Math.PI) * BRIDGE.camber;
+
+  /**
+   * A rectangular-section member swept along the deck's own curve.
+   *
+   * Under a cambered deck a straight box is a chord — flush at the abutments
+   * and a third of a metre below the deck at midspan, which is the daylight that
+   * makes a deck look unsupported. Lofted at `LOFT` stations, one every 80 cm
+   * against a 3° maximum slope.
+   */
+  const loft = (width: number, depth: number, drop: number): BufferGeometry => {
+    const positions: number[] = [];
+    const indices: number[] = [];
+    const w = width / 2;
+
+    for (let station = 0; station <= LOFT; station += 1) {
+      const t = station / LOFT;
+      const top = camber(t) - drop;
+      const z = -half + t * SPAN;
+      // Corners in a consistent order round the section, so the side walls are
+      // one strip and the winding never depends on the sign of anything.
+      positions.push(-w, top, z, w, top, z, w, top - depth, z, -w, top - depth, z);
+    }
+
+    for (let station = 0; station < LOFT; station += 1) {
+      const near = station * 4;
+      const far = near + 4;
+      for (let corner = 0; corner < 4; corner += 1) {
+        const a = near + corner;
+        const b = near + ((corner + 1) % 4);
+        indices.push(a, b, far + corner, b, far + ((corner + 1) % 4), far + corner);
+      }
+    }
+
+    // Both ends capped: the beam is seen end-on from the paving that runs onto
+    // the deck, and an open tube there is a hole in the structure.
+    const last = LOFT * 4;
+    indices.push(0, 3, 2, 0, 2, 1);
+    indices.push(last, last + 1, last + 2, last, last + 2, last + 3);
+
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return geometry;
+  };
+
+  // Edge beams, cambered with the deck they carry. Deep enough to read as
+  // structure from the bank, which is the one view that asks the bridge to
+  // explain how it stands up.
+  for (const side of [-1, 1]) {
+    add(loft(0.14, 0.42, 0.06), materials.corten, side * (BRIDGE.halfWidth + 0.05));
+  }
+
+  // Transverse bearers between the beams. Boards spanning nothing read as
+  // floating; boards on joists read as a deck. Only ever seen from the bank and
+  // from the water.
+  const bearers = Math.round(SPAN / BEARER);
+  const bearerSeats: Vector3[] = [];
+  for (let i = 0; i < bearers; i += 1) {
+    const t = (i + 0.5) / bearers;
+    bearerSeats.push(new Vector3(0, camber(t) - 0.19, -half + t * SPAN));
+  }
+  instance(new BoxGeometry(BRIDGE.halfWidth * 2, 0.16, 0.12), materials.steel, bearerSeats);
 
   // Deck, as discrete boards. One cambered slab would need a curved mesh and
   // would still read as a ramp; boards step the camber and give the deck the
   // only fine-grained texture on the whole structure.
+  //
+  // Laid close. At 0.82 of the pitch the joints were 4 cm of open sky between
+  // every board — a grating rather than a deck, and from any pose below the
+  // parapet you could see the water through the walk you were standing on.
   const boards = Math.round(SPAN / BOARD);
-  const board = new BoxGeometry(BRIDGE.halfWidth * 2, 0.08, BOARD * 0.82);
-  const planks = new InstancedMesh(board, materials.timber, boards);
-  const matrix = new Matrix4();
-  const identity = new Quaternion();
-  const one = new Vector3(1, 1, 1);
-  const seat = new Vector3();
-
+  const boardSeats: Vector3[] = [];
   for (let i = 0; i < boards; i += 1) {
     const t = (i + 0.5) / boards;
-    seat.set(0, camber(t), -half + t * SPAN);
-    planks.setMatrixAt(i, matrix.compose(seat, identity, one));
+    // Sunk by half its own thickness so the *top* of the board is the deck
+    // level, which is what has to arrive flush with the paving.
+    boardSeats.push(new Vector3(0, camber(t) - 0.04, -half + t * SPAN));
   }
-  planks.instanceMatrix.needsUpdate = true;
-  planks.castShadow = true;
-  planks.receiveShadow = true;
-  span.add(planks);
-  instanced.push(planks);
-
-  // Edge beams, straight rather than cambered. A 0.4 m rise over 17 m is under
-  // 3%, which a straight beam of this depth absorbs without anyone reading it
-  // as wrong, and it saves two curved lofts.
-  for (const side of [-1, 1]) {
-    add(
-      new BoxGeometry(0.11, 0.38, SPAN),
-      materials.corten,
-      side * (BRIDGE.halfWidth + 0.05),
-      BRIDGE.camber * 0.5 - 0.24,
-      0,
-    );
-  }
+  instance(new BoxGeometry(BRIDGE.halfWidth * 2, 0.08, BOARD * 0.94), materials.timber, boardSeats);
 
   // Parapet. Bars carry it, the flat top rail is what the eye actually reads,
   // and the bottom rail keeps the bars from floating over the cambered deck.
   const bars = Math.round(SPAN / BAR);
   const bar = new BoxGeometry(0.02, BRIDGE.rail, 0.02);
   for (const side of [-1, 1]) {
-    const rank = new InstancedMesh(bar, materials.steel, bars);
+    const barSeats: Vector3[] = [];
     for (let i = 0; i < bars; i += 1) {
       const t = (i + 0.5) / bars;
-      seat.set(side * BRIDGE.halfWidth, camber(t) + BRIDGE.rail / 2, -half + t * SPAN);
-      rank.setMatrixAt(i, matrix.compose(seat, identity, one));
+      barSeats.push(new Vector3(side * BRIDGE.halfWidth, camber(t) + BRIDGE.rail / 2, -half + t * SPAN));
     }
-    rank.instanceMatrix.needsUpdate = true;
-    rank.castShadow = true;
-    span.add(rank);
-    instanced.push(rank);
+    instance(bar.clone(), materials.steel, barSeats);
 
-    add(
-      new BoxGeometry(0.1, 0.05, SPAN),
-      materials.steel,
-      side * BRIDGE.halfWidth,
-      BRIDGE.rail + BRIDGE.camber * 0.5,
-      0,
-    );
-    add(
-      new BoxGeometry(0.06, 0.04, SPAN),
-      materials.steel,
-      side * BRIDGE.halfWidth,
-      0.14 + BRIDGE.camber * 0.5,
-      0,
-    );
+    add(loft(0.1, 0.05, -BRIDGE.rail), materials.steel, side * BRIDGE.halfWidth);
+    add(loft(0.06, 0.04, -0.14), materials.steel, side * BRIDGE.halfWidth);
   }
+  bar.dispose();
 
   // Abutments, reaching from the deck down past the bed. Their depth is the
   // cut they stand in rather than a fixed 3.2 m block: the channel's level is
@@ -175,7 +226,7 @@ export function createBridge(): Bridge {
       new BoxGeometry(BRIDGE.halfWidth * 2 + 0.4, foot, 1.2),
       materials.corten,
       0,
-      -foot / 2 - 0.08,
+      -foot / 2 - 0.3,
       side * (half - 0.4),
     );
   }
@@ -190,7 +241,7 @@ export function createBridge(): Bridge {
   return {
     object,
     dispose() {
-      for (const geometry of [...geometries, board, bar]) geometry.dispose();
+      for (const geometry of geometries) geometry.dispose();
       for (const mesh of instanced) mesh.dispose();
       for (const material of Object.values(materials)) material.dispose();
     },

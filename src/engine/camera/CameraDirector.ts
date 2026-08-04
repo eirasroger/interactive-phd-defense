@@ -1,8 +1,8 @@
 import gsap from 'gsap';
-import { CAMERA_DEFAULTS } from '@/config/presentation';
+import { CAMERA_DEFAULTS, TRANSITION } from '@/config/presentation';
 import { EASE, seconds } from '@/animations/timing';
 import type { CameraRig } from './CameraRig';
-import type { CameraMoveOptions, CameraPose } from './types';
+import type { CameraMoveOptions, CameraPose, Vec3 } from './types';
 
 /**
  * Moves the camera between declared poses.
@@ -25,35 +25,35 @@ export class CameraDirector {
     this.rig.snapTo(pose);
   }
 
-  moveTo(pose: CameraPose, options: CameraMoveOptions): void {
+  moveTo(pose: CameraPose, options: CameraMoveOptions = {}): void {
     this.kill();
 
     const s = this.rig.state;
-    const duration = seconds(options.seconds);
+    const from = this.rig.currentPose();
+    const duration = seconds(options.seconds ?? paceOf(from, pose));
 
     if (duration <= 0) {
       this.rig.snapTo(pose);
       return;
     }
 
-    s.arcAmount = pose.arc ?? 0;
-    s.arcPhase = 0;
+    s.arc = pose.arc ?? 0;
+    this.rig.beginMove(pose);
 
+    // Only the position, the lens and the progress are tweened. The look
+    // target is the rig's own business for the length of the move — see
+    // `CameraRig` for why interpolating it here is what made the turns lurch.
     this.tween = gsap.to(s, {
       px: pose.position[0],
       py: pose.position[1],
       pz: pose.position[2],
-      tx: pose.target[0],
-      ty: pose.target[1],
-      tz: pose.target[2],
       fov: pose.fov ?? CAMERA_DEFAULTS.fov,
       roll: pose.roll ?? 0,
-      arcPhase: 1,
+      phase: 1,
       duration,
       ease: options.ease ?? EASE.camera,
       onComplete: () => {
-        s.arcAmount = 0;
-        s.arcPhase = 0;
+        this.rig.endMove();
         this.tween = null;
       },
     });
@@ -64,3 +64,33 @@ export class CameraDirector {
     this.tween = null;
   }
 }
+
+/**
+ * How long a move should take, from how far it travels and how far it turns.
+ *
+ * Two budgets rather than one, and the longer wins. They are not the same
+ * quantity: a hundred metres flown along a heading is a landscape passing, and
+ * a hundred degrees turned on the spot is the whole world sweeping across the
+ * frame. Rate-limiting only the distance leaves the turns as fast as the deck's
+ * shortest hop allows, which is exactly the move that reads as violent.
+ */
+function paceOf(from: CameraPose, to: CameraPose): number {
+  const { metresPerSecond, degreesPerSecond, minSeconds, maxSeconds } = TRANSITION.camera;
+
+  const travel = length(delta(from.position, to.position));
+  const swing = (Math.acos(dot(headingOf(from), headingOf(to))) * 180) / Math.PI;
+
+  const wanted = Math.max(travel / metresPerSecond, swing / degreesPerSecond);
+  return Math.min(maxSeconds, Math.max(minSeconds, wanted));
+}
+
+function headingOf(pose: CameraPose): Vec3 {
+  const heading = delta(pose.position, pose.target);
+  const reach = length(heading) || 1;
+  return [heading[0] / reach, heading[1] / reach, heading[2] / reach];
+}
+
+const delta = (a: Vec3, b: Vec3): Vec3 => [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+const length = (v: Vec3): number => Math.hypot(v[0], v[1], v[2]);
+const dot = (a: Vec3, b: Vec3): number =>
+  Math.min(Math.max(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], -1), 1);

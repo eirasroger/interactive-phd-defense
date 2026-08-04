@@ -14,13 +14,14 @@ import type { CanopyField } from './canopy';
 import {
   avenueAt,
   CROSSING,
+  inReviewShot,
   plantable,
   riverAt,
   riverSlope,
   riversideAt,
   SPAN,
 } from './paths';
-import { AVENUE, LAND, PARK, REALM, RIVERSIDE, WOODLAND } from './site';
+import { AVENUE, LAND, PARK, REALM, RIVERSIDE } from './site';
 import { seatAt } from './terrain';
 import { findTrees, type TreeTemplate } from './trees';
 import { applyWind, type Wind } from './wind';
@@ -39,16 +40,12 @@ export interface ParklandInputs {
 /**
  * The trees, lamps and benches that make the park a designed place.
  *
- * **Trees are the ones already on the site** — see `trees.ts` for why the park
- * no longer ships and reassembles a set of its own. What is left here is the
- * only thing this module should ever have been: a plan. Where a tree stands,
- * how big it is, and what it must not stand in.
+ * **Trees are the ones already on the site** — see `trees.ts`. What lives here
+ * is a plan: where a tree stands, how big it is, and what it must not stand in.
  *
- * That last one is now a single question asked of the path network rather than
- * three different hand-written boxes, and it is the fix for trees growing out
- * of the paving. Every placement clears every route by its own crown radius, so
- * a canopy overhangs a walk — which is what an avenue is for — while no trunk
- * ever stands in one.
+ * The last of those is one question asked of the path network. Every placement
+ * clears every route by its own crown radius, so a canopy overhangs a walk —
+ * which is what an avenue is for — while no trunk ever stands in one.
  */
 export function createParkland(
   planting: Object3D,
@@ -202,18 +199,12 @@ type Pick = (metres: number) => TreeTemplate | undefined;
 /**
  * Whether a tree of this crown radius can stand here.
  *
- * The general question — paving, the building's plate, the playground, water —
- * belongs to the path network and is asked there, so every scatter on the site
- * gets the same answer. What is left here is the one rule that is the park's
- * own: nothing in the wedge the review row's camera looks through. A tree there
- * is not a small defect, it is planted in front of an option the audience is
- * being asked to choose between.
+ * Both questions belong to the path network and are asked there, so every
+ * scatter gets the same answer: paving, the building's plate, the playground
+ * and water from `plantable`, the review row's sightline from `inReviewShot`.
  */
 function standable(x: number, z: number, radius: number): boolean {
-  if (!plantable(x, z, radius * 0.55)) return false;
-
-  const { clear } = WOODLAND;
-  return !(x > clear.x[0] && x < clear.x[1] && z > clear.z[0] && z < clear.z[1]);
+  return plantable(x, z, radius * 0.55) && !inReviewShot(x, z);
 }
 
 /**
@@ -312,10 +303,9 @@ interface Furniture {
 /**
  * Lamp posts and benches, from the props asset.
  *
- * All that is left of what used to be a 25 MB tree library. Furniture is the
- * one thing the planting genuinely does not contain, and it is also the single
- * strongest "this is designed" signal in `work/act1_photo_ideas/` — more than
- * any individual plant, because rhythm is what the eye reads as intent.
+ * Furniture is the one thing the planting asset does not contain, and it is the
+ * strongest "this is designed" signal in `work/act1_photo_ideas/` — rhythm is
+ * what the eye reads as intent.
  */
 function collectProps(source: Object3D): Map<string, Furniture> {
   const props = new Map<string, Furniture>();

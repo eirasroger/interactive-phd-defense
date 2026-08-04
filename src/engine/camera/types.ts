@@ -23,6 +23,14 @@ export interface CameraPose {
 }
 
 export interface CameraMoveOptions {
-  readonly seconds: number;
+  /**
+   * Overrides the paced duration.
+   *
+   * Left out for ordinary navigation, where the director works the length out
+   * from how far the move travels and how far it turns — see `paceOf`. A fixed
+   * number here is for moves that have to hit a mark regardless of their size,
+   * which in practice means the jump cut.
+   */
+  readonly seconds?: number;
   readonly ease?: string;
 }

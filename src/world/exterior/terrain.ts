@@ -12,6 +12,8 @@ import type { CanopyField } from './canopy';
 import {
   avenueAt,
   bankAt,
+  bankReach,
+  channelBed,
   freeboardAt,
   gradeAt,
   lakeDepth,
@@ -20,7 +22,6 @@ import {
   riverAcross,
   riverDepth,
   riverReach,
-  riverSurface,
   smoothstep,
   wave,
 } from './paths';
@@ -43,18 +44,12 @@ export interface TerrainInputs extends TerrainTextures {
 }
 
 /**
- * Quad size in metres.
+ * Quad size in metres, set by the tightest form the ground carries — the river
+ * swale, about 33 m bank to bank, so 13 quads across it.
  *
- * Set by the tightest form the ground has to carry, which is the river swale —
- * roughly 33 m from bank top to bank top, so 13 quads across it. The channel
- * bottom itself is deliberately under-resolved: the water ribbon sits over it
- * and boulders and reeds line it, so nothing ever sees the terrain down there.
- *
- * Note what this does *not* set any more. Every transition that used to be a
- * per-vertex colour was band-limited to this — the silt line at the water is
- * under a metre wide and simply could not exist on a 2.5 m grid. Those now live
- * in the fragment shader, keyed on interpolated *causes* rather than
- * interpolated effects, so their sharpness is independent of the mesh.
+ * It does not limit the bankside bands: those live in the fragment shader, keyed
+ * on interpolated *causes* rather than interpolated effects, so their sharpness
+ * is independent of the mesh.
  */
 const QUAD = 2.5;
 
@@ -62,24 +57,36 @@ const QUAD = 2.5;
 const TILE = { grass: 2.4, soil: 3.1, riverbed: 1.3 } as const;
 
 /**
- * The turf palette, which is now the only thing the vertex colours carry.
+ * A second, much longer tile of the *same* grass image, in metres.
  *
- * One green across 225 m reads as a carpet, and a lawn-to-meadow lerp is still
- * a single hue moving along a single axis. These are the tones a north-European
- * park actually holds in summer: mown amenity grass, unmown rough, and
- * sun-parched patches on the high ground.
+ * One 2.4 m image repeated across 900 m has exactly one period in it, and a
+ * single period reads as a lattice wherever it is resolvable and beats against
+ * the pixel grid everywhere it is not. A second, incommensurable scale costs one
+ * fetch and cannot line up with the first. Applied as a ratio against the
+ * image's own mean, so it modulates the tile rather than replacing it and the
+ * ground's level is unchanged.
+ */
+const MACRO = { metres: 17.3, depth: 0.55 } as const;
+
+/**
+ * Where tiled detail stops being detail, in metres from the camera. A 2.4 m tile
+ * is about three pixels across at 150 m, and what a three-pixel period draws is
+ * a moire of itself. Past `far` the texture gives way to its own average.
+ */
+const DETAIL = { near: 50, far: 210 } as const;
+
+/**
+ * The turf palette — the only thing the vertex colours carry. Mown amenity
+ * grass, unmown rough, and sun-parched patches on the high ground.
  */
 const LAWN = new Color('#9cb45f');
 const MEADOW = new Color('#869b4c');
 const PARCHED = new Color('#b3ac68');
 
 /**
- * The bankside sequence, evaluated per pixel from the freeboard.
- *
- * This is what a stream edge is made of, working up from the water: stone, a
- * pale silt line the water has washed and dropped, a band of deep wet green
- * where the water table is at root depth, and then ordinary grass. Four steps
- * over about three metres, which no per-vertex scheme on a 2.5 m grid can hold.
+ * The bankside sequence, evaluated per pixel from the freeboard: stone, a pale
+ * silt line, deep wet green where the water table is at root depth, then grass.
+ * Four steps over about three metres.
  */
 const BANKSIDE = new Color('#5c7a3c');
 const SILT = new Color('#9c9174');
@@ -88,12 +95,10 @@ const SILT = new Color('#9c9174');
 const DEEP = new Color('#2c3733');
 
 /**
- * Leaf litter and shade under a canopy.
- *
- * Deliberately close to the grass rather than a brown: the ask is for the
- * ground to *thicken* under a tree, not for a ring of mulch around every trunk.
- * Most of the read is the darkening, and the small shift off green is what
- * stops it looking like a shadow that failed to move with the sun.
+ * Leaf litter under a canopy. Close to the grass rather than a brown — the
+ * ground should *thicken* under a tree, not wear a ring of mulch. Most of the
+ * read is the darkening; the small shift off green is what stops it looking like
+ * a cloud shadow.
  */
 const DUFF = new Color('#69713f');
 
@@ -103,27 +108,13 @@ const SHADE = 0.7;
 /**
  * The ground, with landform.
  *
- * It was a perfectly flat 900 m plane, and a flat plane is a stage: there is no
- * distance in it, nothing occludes anything else, and the eye runs straight out
- * to wherever the world stops. Every plant added to it was a prop standing on a
- * table.
+ * Height is a pure function of position so the water, paving, planting and
+ * furniture can ask where the ground is rather than each carrying its own copy
+ * of the plan.
  *
- * The landform does three jobs that planting cannot. It **closes the sightline**
- * — the far ridge rises above eye level so there is no "past the site" to look
- * at. It gives the woodland **somewhere to stand** where the canopy mass sits
- * higher than the camera rather than fringing the horizon. And it puts ground
- * at different distances in the same frame, which is what the eye reads as
- * depth.
- *
- * Height is a pure function of position so the water, the paving, the planting
- * and the furniture can ask it where the ground is rather than each carrying
- * their own copy of the plan.
- *
- * The **planting is built before this**, which is a deliberate inversion. The
- * ground has to know what is standing on it — grass does not grow the same
- * under a tree — and the only honest way to know is to ask the trees that were
- * actually placed rather than to paint a second map that agrees with them until
- * the seed changes.
+ * The **planting is built before this**, deliberately: the ground has to know
+ * what is standing on it, and the only honest way to know is to ask the trees
+ * that were actually placed rather than paint a second map beside them.
  */
 export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs): Terrain {
   const segments = Math.round(LAND.size / QUAD);
@@ -163,6 +154,13 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
   const dirt = tiled(soil, TILE.soil);
   const stones = tiled(riverbed, TILE.riverbed);
 
+  // Measured, not chosen: the macro layer modulates around each image's own
+  // average so the level is unchanged, and the distance fade has to fade *to* it
+  // or the far ground shifts value as the detail leaves.
+  const grassMean = meanOf(base);
+  const soilMean = meanOf(dirt);
+  const bedMean = meanOf(stones);
+
   const material = new MeshStandardMaterial({
     map: base,
     roughness: 0.97,
@@ -171,13 +169,11 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
 
   // Three ground materials mixed per pixel rather than one tinted per vertex.
   //
-  // The mixing weights are the point. `aSoil` is the dry causes of bare ground —
-  // slope, wear, patchiness — which genuinely vary slowly and are happy being
-  // interpolated. Everything the water governs is derived here from `aWater`,
-  // the height above the surface, because the *cause* is near-linear across a
-  // bank while the *effect* is a sequence of bands under a metre wide. Storing
-  // the effect was why the stream met mown lawn at a hard edge: at 2.5 m the
-  // grid cannot hold a silt line, so there was never one to see.
+  // The mixing weights are the point. `aSoil` carries the dry causes of bare
+  // ground — slope, wear, patchiness — which vary slowly and interpolate happily.
+  // Everything the water governs is derived here from `aWater`, the height above
+  // the surface, because the *cause* is near-linear across a bank while the
+  // *effect* is a sequence of bands under a metre wide.
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uSoil = { value: dirt };
     shader.uniforms.uRiverbed = { value: stones };
@@ -221,21 +217,28 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
          vec3 soilTexel = texture2D( uSoil, vMapUv * ${(TILE.grass / TILE.soil).toFixed(4)} ).rgb;
          vec3 bedTexel = texture2D( uRiverbed, vMapUv * ${(TILE.grass / TILE.riverbed).toFixed(4)} ).rgb;
 
+         // The macro layer — see MACRO.
+         vec3 macro = texture2D( map, vMapUv * ${(TILE.grass / MACRO.metres).toFixed(4)} ).rgb;
+         turfTexel *= mix( vec3( 1.0 ), macro / ${rgb(grassMean)}, ${MACRO.depth.toFixed(3)} );
+
+         // Below the resolution of the pose there is no detail to carry, only
+         // its beat against the pixel grid.
+         float coarse = smoothstep( ${DETAIL.near.toFixed(1)}, ${DETAIL.far.toFixed(1)}, length( vViewPosition ) );
+         turfTexel = mix( turfTexel, ${rgb(grassMean)}, coarse );
+         soilTexel = mix( soilTexel, ${rgb(soilMean)}, coarse );
+         bedTexel = mix( bedTexel, ${rgb(bedMean)}, coarse );
+
          // The section, working up from the water. Each band is narrow on
-         // purpose: what the reference photographs show is a *line* of washed
-         // stone and silt at the water's edge, a handspan of it, and then
-         // vegetation. Widened to a metre it stops reading as a waterline and
-         // starts reading as a beach, which turned the stream into a dry gully
-         // and the lake into a desert.
+         // purpose: the reference shows a *line* of washed stone and silt at the
+         // water's edge, a handspan of it. Widened to a metre it stops reading as
+         // a waterline and starts reading as a beach.
          float stone = 1.0 - smoothstep( -0.30, 0.10, vWater );
          float silt = 1.0 - smoothstep( 0.02, 0.55, vWater );
          float damp = 1.0 - smoothstep( 0.25, 2.40, vWater );
 
-         // Bare ground under a canopy is what separates *shade* from *shadow*.
-         // A darker green in the same texture reads as a cloud passing; the
-         // ground under a tree is a different surface — litter and thin, rooty
-         // turf — and swapping some of the texture for it is most of what says
-         // the tree has been standing there.
+         // Bare ground under a canopy separates *shade* from *shadow*: a darker
+         // green reads as a cloud passing, a different surface reads as a tree
+         // that has been standing there.
          float duff = smoothstep( 0.2, 0.85, vShade );
          float bare = clamp( max( vSoil, max( silt * 0.8, duff * 0.5 ) ), 0.0, 1.0 );
 
@@ -245,10 +248,8 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
 
          vec3 grit = mix( turf, ${rgb(SILT)}, silt );
 
-         // Darkened by its own depth. A bed a metre under is not the same
-         // brightness as one at the waterline, and shading it as though it were
-         // is what makes shallow water look like a wet floor: the water gets
-         // its depth cue from what it is over, not only from what it is.
+         // Darkened by its own depth: the water gets its depth cue from what it
+         // is over, not only from what it is.
          vec3 bed = bedTexel * mix( vec3( 1.0 ), ${rgb(DEEP)} * 3.0, smoothstep( -0.05, -1.20, vWater ) );
 
          vec3 ground = mix( turfTexel * turf, soilTexel * grit, bare );
@@ -279,15 +280,12 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
 /**
  * Where the ground is, at any point on the site.
  *
- * Composed rather than sampled from a heightmap, because every feature here is
- * a designed one — the flat the building stands on, the swale, the ridge that
- * closes the view — and a painted heightmap would put all three beyond reach of
- * the constants that describe them.
+ * Composed rather than sampled from a heightmap, so every feature stays within
+ * reach of the constants that describe it.
  *
- * Order matters at the joins. Relief is laid down first, the stream is cut into
- * whatever grade it finds, and the lake is cut last — so where the two meet,
- * the basin wins and the channel reads as issuing from it rather than as a
- * trench running through it.
+ * **The order of the steps is load-bearing**: relief, then the stream's
+ * floodplain, then the lake's shore, then the basin, and the channel cut into
+ * the basin last.
  */
 export function heightAt(x: number, z: number): number {
   const { lake, river } = LAND;
@@ -295,53 +293,51 @@ export function heightAt(x: number, z: number): number {
   // Rolling park, knowing nothing about the water.
   let height = gradeAt(x, z);
 
-  // The stream's floodplain. **This is the step that was missing**, and its
-  // absence is why the channel read as a stripe painted on the lawn: the old
-  // version blended straight from free relief to the river bed, so wherever the
-  // relief happened to be near bed level there was no bank to see and the water
-  // surface came out above the ground either side of it.
-  //
-  // Easing the ground to a bank top a fixed freeboard above the water makes the
-  // valley a property of the construction rather than a coincidence of the
-  // noise. It works in both directions, which matters: a third of the corridor
-  // needed *raising* out of the water, not cutting into.
-  const bankTop = river.halfWidth + river.swale;
+  // The stream's floodplain, eased to a bank top a freeboard above the water so
+  // the valley is a property of the construction rather than a coincidence of
+  // the noise. It works in both directions — a third of the corridor needs
+  // *raising* out of the water, not cutting into.
+  const bankTop = bankReach(x);
   const plain = (1 - smoothstep(0, river.plain, riverAcross(x, z) - bankTop)) * riverReach(x);
   height += (bankAt(x) - height) * plain;
 
-  // The lake's shore, on the same principle and for the same failure: a basin
-  // cut to an absolute level into ground free to roll below it had a third of
-  // its shoreline under its own water.
-  const beach = 1 - smoothstep(0, lake.apron, lakeReach(x, z));
+  // The lake's shore, on the same principle. Held at full lift out to `beach`
+  // and only then eased away across the apron: the apron is a constraint on
+  // where the ground may go, the beach is a statement about what it looks like,
+  // and easing over the apron instead grades 0.75 m over 34 m.
+  const beach = 1 - smoothstep(lake.beach, lake.apron, lakeReach(x, z));
   height += (lake.surface + lake.shore - height) * beach;
 
-  const channel = riverDepth(x, z);
-  height = height * (1 - channel) + (riverSurface(x) - river.depth) * channel;
-
+  // The basin, cut as a bowl rather than as a pan. The water is read *through*
+  // where it is shallow, so the shallows have to be wide enough to be seen.
   const basin = lakeDepth(x, z);
-  return height * (1 - basin) + -lake.depth * basin;
+  if (basin > 0) {
+    const under = -lakeReach(x, z);
+    const bed =
+      lake.surface -
+      lake.depth * smoothstep(lake.shelf, lake.shelf + lake.slope, under) -
+      lake.margin * smoothstep(0, lake.shelf, under);
+    height = height * (1 - basin) + bed * basin;
+  }
+
+  // The channel, taking the **deeper** of itself and the bowl rather than a
+  // blend. The bowl is authored downward from the water surface and the channel
+  // from its own bed, so just inside the shore the bowl is shallower than the
+  // stream feeding it; averaging the two there is a bar across the mouth.
+  const channel = riverDepth(x, z);
+  return Math.min(height, height * (1 - channel) + channelBed(x) * channel);
 }
 
 /**
  * Where the ground is *drawn*, which is not quite where `heightAt` says it is.
  *
- * The mesh is a triangulated grid, so what the camera sees between two vertices
- * is a chord across the height function rather than the function itself. Over a
- * rise the chord runs below it, and anything seated on `heightAt` there stands
- * on nothing — which, at the finest octave of the relief, is a wavelength of
- * about nine metres against a 2.5 m quad and a good ten centimetres of daylight
- * under a plant.
+ * The mesh is a triangulated grid, so between two vertices the camera sees a
+ * chord across the height function. Over a rise the chord runs below it and
+ * anything seated on `heightAt` floats — about ten centimetres at the finest
+ * relief octave, which the eye reads as a shadow gap at any distance.
  *
- * Ten centimetres does not sound like much and is fatal, because the eye reads
- * contact rather than height: a shrub with a shadow gap under it is *floating*,
- * at any distance, and no amount of sinking things into the ground fixes it
- * everywhere at once — the same bias that closes a gap on a rise buries a plant
- * in a hollow.
- *
- * So this evaluates the drawn surface exactly, on the same two triangles
- * `PlaneGeometry` builds each quad from. Three samples instead of one, paid
- * once at load, and floating stops being possible rather than being tuned
- * against.
+ * Evaluated on the same two triangles `PlaneGeometry` builds each quad from, so
+ * floating stops being possible rather than being tuned against.
  */
 export function surfaceAt(x: number, z: number): number {
   const half = LAND.size / 2;
@@ -357,9 +353,9 @@ export function surfaceAt(x: number, z: number): number {
   const x1 = x0 + QUAD;
   const z1 = z0 + QUAD;
 
-  // The quad's diagonal runs from (x0, z1) to (x1, z0), which is the split
-  // `PlaneGeometry` writes. Getting the diagonal backwards would be invisible
-  // on gentle ground and wrong by the full sagitta on a ridge.
+  // The quad's diagonal runs from (x0, z1) to (x1, z0) — the split
+  // `PlaneGeometry` writes. Backwards it is invisible on gentle ground and wrong
+  // by the full sagitta on a ridge.
   if (fx + fz <= 1) {
     const corner = heightAt(x0, z0);
     return (
@@ -378,15 +374,14 @@ const BED = 0.05;
 /**
  * Where to stand something of this footprint radius so no part of it floats.
  *
- * The **lowest** ground under the footprint, not the ground under the origin.
- * A plant is a vertical object with a horizontal skirt, and on a slope the
- * skirt's downhill edge is what the eye checks: seat it on the centre height
- * and that edge hangs in the air by the radius times the gradient, which on the
- * river bank is a third of a metre. Seating on the minimum buries the uphill
- * side instead, which is what real planting does anyway.
+ * The **lowest** ground under the footprint, not the ground under the origin: on
+ * a slope the skirt's downhill edge is what the eye checks, and seated on the
+ * centre it hangs by the radius times the gradient — a third of a metre on the
+ * river bank. Seating on the minimum buries the uphill side, which is what real
+ * planting does anyway.
  *
- * `spread` of zero skips the sampling, because ground cover is small enough
- * that the centre is the whole footprint and there are thousands of them.
+ * `spread` of zero skips the sampling: ground cover is small enough that the
+ * centre is the whole footprint, and there are thousands of them.
  */
 export function seatAt(x: number, z: number, spread = 0): number {
   const centre = surfaceAt(x, z);
@@ -406,11 +401,10 @@ export function seatAt(x: number, z: number, spread = 0): number {
 /**
  * How much bare ground shows through the grass, for reasons that are not water.
  *
- * The wet margin used to live here too and no longer does: it is a band under a
- * metre wide and this is a per-vertex value on a 2.5 m grid, so storing it here
- * was storing it at a resolution that cannot represent it. What is left are the
- * three slow causes — slopes too steep to hold turf, the worn ground either
- * side of a path where people cut the corner, and patchiness on the steep parts.
+ * Three slow causes only — slopes too steep to hold turf, worn ground either
+ * side of a path, and patchiness on the steep parts. The wet margin is a band
+ * under a metre wide and cannot be represented on a 2.5 m grid, so it is derived
+ * per pixel from `aWater` instead.
  */
 function worn(x: number, z: number): number {
   const steep = slopeAt(x, z) * 2.2;
@@ -426,15 +420,11 @@ function worn(x: number, z: number): number {
 /**
  * The turf's own colour, before any texture and before any water.
  *
- * Built by asking what is true at the point rather than by blending toward a
- * distance. Mowing follows the building, roughness follows everything else and
- * parching follows the high dry ground — so the variation is *caused* and lands
- * where a groundsman would have put it.
- *
- * The last term is the one that actually kills the carpet read: a slow,
- * incoherent value drift at a wavelength longer than anything else here. Real
- * grass is never one value across a hundred metres, and no amount of hue
- * variation reads as natural while the lightness is constant.
+ * Built from what is true at the point rather than by blending toward a
+ * distance: mowing follows the building, roughness everything else, parching the
+ * high dry ground. The final drift term is what kills the carpet read — real
+ * grass is never one *value* across a hundred metres, and hue variation alone
+ * does not read as natural while the lightness is constant.
  */
 function turf(target: Color, x: number, z: number, y: number): void {
   const wild = smoothstep(34, 120, Math.hypot(x, z - 20));
@@ -444,16 +434,9 @@ function turf(target: Color, x: number, z: number, y: number): void {
   const dryness = Math.max(0, wave(x / 62 - 17.3, z / 62 + 6.8)) * smoothstep(0.4, 4.5, y);
   target.lerp(PARCHED, Math.min(0.75, dryness) * wild);
 
-  // A slow, incoherent drift in value — and each octave is sampled on its own
-  // rotated axes.
-  //
-  // `wave` is value noise on an integer lattice, so an octave read straight off
-  // x and z carries that lattice's squares. Three octaves all read the same way
-  // put their squares in register, and what came out was a visible quilt across
-  // the whole park at the coarsest wavelength — the one thing this term exists
-  // to prevent, arriving from its own construction. Turning each octave by an
-  // arbitrary angle costs two multiplies and leaves nothing for the eye to lock
-  // on to.
+  // A slow drift in value, each octave on its own rotated axes. `wave` is value
+  // noise on an integer lattice, so octaves read straight off x and z put their
+  // squares in register and draw a quilt at the coarsest wavelength.
   let drift = 1;
   drift += turn(x, z, 96, 0.7, 51.4, -23.9) * 0.17;
   drift += turn(x, z, 29, 2.1, -3.3, 11.2) * 0.07;
@@ -487,15 +470,44 @@ function slopeAt(x: number, z: number): number {
 export { avenueAt };
 
 /**
- * A palette entry as GLSL.
- *
- * `Color` holds working-space values, which is the space the shader mixes in,
- * so the constant a fragment sees and the constant a vertex colour carries are
- * the same number. Writing the hex into the shader instead would put one of the
- * two through the sRGB curve and not the other.
+ * A palette entry as GLSL. `Color` holds working-space values, which is the
+ * space the shader mixes in — writing the hex in directly would put the constant
+ * through the sRGB curve and the matching vertex colour not.
  */
 function rgb(color: Color): string {
   return `vec3( ${color.r.toFixed(4)}, ${color.g.toFixed(4)}, ${color.b.toFixed(4)} )`;
+}
+
+/**
+ * The average colour of a ground texture, in the space the shader mixes in.
+ *
+ * Drawn to an 8 × 8 and averaged rather than straight to 1 × 1: the 2D canvas
+ * picks its own downscaling filter, and reducing a 1024 to one pixel in one step
+ * is a point sample on some browsers.
+ */
+function meanOf(texture: Texture): Color {
+  const size = 8;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('A 2D context is required to measure a ground texture.');
+
+  context.drawImage(texture.image as CanvasImageSource, 0, 0, size, size);
+  const { data } = context.getImageData(0, 0, size, size);
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  for (let index = 0; index < data.length; index += 4) {
+    r += data[index]!;
+    g += data[index + 1]!;
+    b += data[index + 2]!;
+  }
+
+  const samples = size * size * 255;
+  return new Color().setRGB(r / samples, g / samples, b / samples, SRGBColorSpace);
 }
 
 function tiled(source: Texture, metres: number): Texture {

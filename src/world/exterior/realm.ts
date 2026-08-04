@@ -18,10 +18,12 @@ import {
   offAvenue,
   offPromenade,
   offRiverside,
+  PROMENADE_Z,
   riversideAt,
   SPAN,
 } from './paths';
-import { AVENUE, PATH_EDGE, PATH_EDGE_WIDTH, REALM, RIVERSIDE } from './site';
+import { crossings, inMouth, type Fillet, type Junction } from './junctions';
+import { AVENUE, PATH_EDGE, REALM, RIVERSIDE } from './site';
 import { surfaceAt } from './terrain';
 
 export interface Realm {
@@ -182,15 +184,11 @@ interface Node {
  * How wide a span of paving may be before it is broken into two.
  *
  * A span is a flat chord across ground that is not flat, and the paving only
- * clears the terrain by `LIFT`. The carriageway used to be **one span the full
- * width of the path** — 4.2 m on the avenue and 8.5 m on the promenade — so
- * wherever the route crossed a crest, the ground rose through the middle of its
- * own paving and came out as ragged patches of lawn lying in the road.
- *
- * The riverside walk runs along the top of the river bank, which is the
- * sharpest crest on the site, and that is where it was worst. Raising `LIFT`
- * would have hidden it at the cost of paving that visibly hovers; splitting the
- * span costs a few hundred triangles and removes the cause.
+ * clears the terrain by `LIFT`, so a span the full width of the path lets the
+ * ground rise through the middle of its own paving on any crest — worst on the
+ * riverside walk, which runs along the top of the river bank. Raising `LIFT`
+ * hides it at the cost of paving that hovers; splitting the span costs a few
+ * hundred triangles and removes the cause.
  */
 const SPAN_WIDTH = 1.0;
 
@@ -266,8 +264,6 @@ function sections(path: Path): Section[] {
   return out;
 }
 
-const PROMENADE_Z = (REALM.forecourtFar + REALM.promenadeFar) / 2;
-
 /**
  * Every paved route, **in priority order**.
  *
@@ -289,10 +285,8 @@ const PATHS: readonly Path[] = [
     off: offAvenue,
   },
   {
-    // The far side of the crossing. The walk used to simply stop at the bridge,
-    // so the deck's south end landed on open grass — which is most of why the
-    // structure read as dropped into the park rather than as carrying a route
-    // through it. A path has two ends.
+    // The far side of the crossing — a path has two ends, and a bridge whose
+    // deck lands on open grass reads as dropped into the park.
     name: 'avenue-far',
     route: 'avenue',
     surface: 'clay',
@@ -332,85 +326,82 @@ const PATHS: readonly Path[] = [
   },
 ];
 
-/** What happens to one quad of one path's section where two routes meet. */
-type Verdict = 'keep' | 'drop' | 'pave';
+/**
+ * Every crossing on the network, with the junction geometry that belongs there.
+ *
+ * Derived from `PATHS` rather than placed, so meandering the river moves the
+ * riverside walk, the crossing and its radii together.
+ */
+const JUNCTIONS: readonly Junction<Path>[] = crossings(PATHS);
+
+/** How far the furthest point of a fillet's boundary is from the crossing. */
+function reach(at: readonly [number, number], shape: Fillet): number {
+  return shape.frames.reduce(
+    (far, frame) => Math.max(far, Math.hypot(frame.x - at[0], frame.z - at[1])),
+    0,
+  );
+}
 
 /**
- * How a piece of one path behaves where another crosses it.
+ * Whether one quad of one path's section survives where two routes meet.
  *
- * Paths were being swept independently and laid on top of each other, which is
- * fine until two of them meet — and the riverside walk crosses the avenue at
- * exactly the point the camera stands for two scenes. What that produced was
- * two full sections driven through one another: a granite kerb and a cobble
- * gutter running straight across the middle of the avenue, the two carriageways
- * z-fighting where they overlapped, and no junction anywhere in it.
+ * Paths are swept independently and laid on top of each other, so where two
+ * meet, two full sections drive through one another — kerb and gutter across the
+ * middle of the carriageway, and the two surfaces z-fighting.
  *
- * A real junction is two rules, and they are not the same rule:
+ * Two rules, and they are not the same rule:
  *
- * - **The minor route stops at the major one's edge.** Its whole section ends
- *   where the avenue's gutter begins; the avenue carries through unbroken.
- * - **The major route pays the crossing across in its own surface.** Its kerb
- *   and gutter cannot run across the mouth — that walls the walk along the one
- *   stretch you have to step off — and they cannot simply be *deleted* either,
- *   which is what used to happen and is where the junction's bare grass came
- *   from: a strip of lawn 0.85 m wide and the full width of the crossing,
- *   sitting between two paved routes that visibly meant to join.
+ * - **The minor route's carriageway stops inside the major one's own paving**,
+ *   not inside its kerb. It always reaches the senior surface rather than
+ *   stopping short of it; what that costs is up to a step of overlap, which
+ *   `tier` makes free by putting the senior surface a few millimetres proud so
+ *   it wins the depth test outright. Stopping it at the senior's *built* width
+ *   instead leaves a bare strip the width of the kerb across the mouth.
+ * - **Both routes' kerbs stop where the junction's own radius takes over.** That
+ *   extent is the tangent point of the fillet arc, computed in `junctions.ts`
+ *   from the two centrelines, so the kerb ends exactly where it stops being
+ *   straight.
  *
- * The senior route therefore **widens through the junction** by exactly its own
- * edge, which is what a real one does. The band it widens over is the minor
- * route's whole built width rather than only its carriageway — the old test
- * asked for `distance === 0`, so the kerb was broken over the 4.2 m of paving
- * and left standing across the 0.85 m of kerb and gutter either side of it,
- * which is where the stubs at the ends of every junction came from.
- *
- * Both rules are asked of the path network rather than of hand-placed junction
- * boxes, so meandering the river moves the crossing and the treatment follows.
+ * The junction shape itself is the fillets' business; this function only has to
+ * get out of their way.
  */
-function verdict(path: Path, edge: boolean, corners: readonly Corner[]): Verdict {
-  const rank = PATHS.indexOf(path);
-  let call: Verdict = 'keep';
+function keep(path: Path, edge: boolean, offset: number, corners: readonly Corner[]): boolean {
+  if (edge) {
+    const side = Math.sign(offset);
+    for (const junction of JUNCTIONS) {
+      for (const mouth of junction.mouths) {
+        if (mouth.route !== path.route || mouth.side !== side) continue;
+        // Any corner, not the middle: the ribbon can only stop on a quad
+        // boundary, so it gives way generously and the fillet's straight lead
+        // covers whatever gap that leaves.
+        if (corners.some(([x, z]) => inMouth(mouth, x, z))) return false;
+      }
+    }
+    return true;
+  }
 
-  for (let other = 0; other < PATHS.length; other += 1) {
+  const rank = PATHS.indexOf(path);
+  for (let other = 0; other < rank; other += 1) {
     if (PATHS[other]!.route === path.route) continue;
 
-    // The whole quad, not its middle. A quad is 1.2 m of path and the routes
+    // The whole quad, not its middle. A quad is a metre of path and the routes
     // cross at an angle, so testing the centre decides a metre of ground on
     // where its midpoint happened to fall — which is exactly what left slivers
     // of lawn showing between two paved surfaces that plainly meant to meet.
-    let nearest = Infinity;
     let farthest = 0;
+    let outside = false;
     for (const [x, z] of corners) {
       const distance = PATHS[other]!.off(x, z);
       if (!Number.isFinite(distance)) {
-        nearest = Infinity;
+        outside = true;
         break;
       }
-      nearest = Math.min(nearest, distance);
       farthest = Math.max(farthest, distance);
     }
-    if (nearest > PATH_EDGE_WIDTH) continue;
-
-    if (other < rank) {
-      // Junior to it, and the two halves of the section want opposite answers.
-      //
-      // The **kerb and gutter** go as soon as any part of them reaches the
-      // mouth: they stand 5 cm proud, so a metre of overhang is a lip across
-      // the crossing you would trip on, and a kerb that stops short of the
-      // mouth is what a kerb does at a junction anyway.
-      //
-      // The **carriageway** stays until it is entirely inside, so it always
-      // reaches the senior route rather than stopping a fraction short of it.
-      // What that costs is up to a step of overlap, and the tier lift below is
-      // what makes the overlap free: the senior surface is a few millimetres
-      // proud, so it wins the depth test outright instead of z-fighting.
-      if (edge ? nearest <= PATH_EDGE_WIDTH : farthest <= PATH_EDGE_WIDTH) return 'drop';
-    } else if (edge) {
-      // Senior to it: carry the carriageway through, and pave the edge over.
-      call = 'pave';
-    }
+    if (!outside && farthest <= 0) return false;
   }
 
-  return call;
+  return true;
 }
 
 /**
@@ -467,24 +458,97 @@ export function createRealm(textures: RealmTextures): Realm {
     else buffer.indices.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
   };
 
-  /** One kerb or gutter quad re-laid as carriageway, across a junction mouth. */
-  const pave = (path: Path, near: Section, far: Section, a: Node, b: Node): void => {
-    const buffer = surfaceBuffer(path.surface);
-    const tile = TILE[path.surface];
-    const lift = tier(path);
-    const base = buffer.positions.length / 3;
+  /**
+   * One triangle of ground, wound so it faces up whatever order it arrives in.
+   *
+   * The fillets are fans and rings round an arc whose direction of travel
+   * depends on the skew of the crossing, so there is no fixed winding that is
+   * correct for all four quadrants. Deciding per triangle from its own plan
+   * area is two multiplies and cannot be got wrong — and getting it wrong is
+   * the failure that silently deleted the avenue's paving once already, because
+   * a backface-culled surface is indistinguishable from a missing one.
+   */
+  const face = (buffer: Buffer, a: number, b: number, c: number): void => {
+    const at = (index: number): [number, number] => [
+      buffer.positions[index * 3]!,
+      buffer.positions[index * 3 + 2]!,
+    ];
+    const [ax, az] = at(a);
+    const [bx, bz] = at(b);
+    const [cx, cz] = at(c);
+    const turn = (bx - ax) * (cz - az) - (bz - az) * (cx - ax);
+    if (turn > 0) buffer.indices.push(a, c, b);
+    else buffer.indices.push(a, b, c);
+  };
 
-    for (const cut of [near, far]) {
-      for (const node of [a, b]) {
-        const [x, z] = point(path, cut, node);
-        // Flat: the kerb's rise and the gutter's dish are exactly what must not
-        // survive here, or the crossing has a step across its mouth.
-        buffer.positions.push(x, surfaceAt(x, z) + lift, z);
-        buffer.uvs.push(cut.arc / tile, node.v / tile);
+  /**
+   * One quadrant of a junction: the paving that fills the corner, and the kerb
+   * and gutter that run round its radius.
+   *
+   * The section is the same table the ribbons use, read outward from the
+   * carriageway edge — so the band the arc carries and the band the straight
+   * kerb carries are the same construction, and they meet at the tangent point
+   * without anything having to be reconciled.
+   */
+  const fillet = (path: Path, at: readonly [number, number], shape: Fillet): void => {
+    const profile = section(path).filter((node) => node.offset <= -path.halfWidth + 1e-6);
+    const lift = tier(path) + TIER / 2;
+    const tile = TILE[path.surface];
+
+    // The mouth, swept from the crossing point out to the fillet's boundary.
+    //
+    // In rings rather than as one fan, for the reason every span of paving on
+    // this site is capped at a metre: a triangle reaching five metres across
+    // rolling ground is a chord, and the ground comes through the middle of it.
+    const surface = surfaceBuffer(path.surface);
+    const rings = Math.max(2, Math.ceil(reach(at, shape) / SPAN_WIDTH));
+    const base = surface.positions.length / 3;
+
+    for (let ring = 0; ring <= rings; ring += 1) {
+      const out = ring / rings;
+      for (const frame of shape.frames) {
+        const x = at[0] + (frame.x - at[0]) * out;
+        const z = at[1] + (frame.z - at[1]) * out;
+        surface.positions.push(x, surfaceAt(x, z) + lift, z);
+        surface.uvs.push(x / tile, z / tile);
       }
     }
 
-    quad(buffer, base, path.axis === 'z');
+    const span = shape.frames.length;
+    for (let ring = 0; ring < rings; ring += 1) {
+      for (let step = 0; step < span - 1; step += 1) {
+        const near = base + ring * span + step;
+        face(surface, near, near + 1, near + span);
+        face(surface, near + 1, near + span + 1, near + span);
+      }
+    }
+
+    // The kerb, its risers and the gutter, as rings offset along each frame's
+    // own normal. Tiled on world position rather than on distance round the
+    // arc: a junction is where four surfaces meet and the bond has to look
+    // continuous with all of them.
+    for (let node = 0; node < profile.length - 1; node += 1) {
+      const inner = profile[node]!;
+      const outer = profile[node + 1]!;
+      const buffer = surfaceBuffer(inner.surface);
+      const base = buffer.positions.length / 3;
+
+      for (const frame of shape.frames) {
+        for (const step of [inner, outer]) {
+          const reach = -(step.offset + path.halfWidth);
+          const x = frame.x + frame.nx * reach;
+          const z = frame.z + frame.nz * reach;
+          buffer.positions.push(x, surfaceAt(x, z) + lift + step.lift, z);
+          buffer.uvs.push(x / TILE[inner.surface], z / TILE[inner.surface]);
+        }
+      }
+
+      for (let step = 0; step < shape.frames.length - 1; step += 1) {
+        const near = base + step * 2;
+        face(buffer, near, near + 1, near + 2);
+        face(buffer, near + 1, near + 3, near + 2);
+      }
+    }
   };
 
   const strip = (path: Path, cuts: readonly Section[], a: Node, b: Node): void => {
@@ -511,19 +575,13 @@ export function createRealm(textures: RealmTextures): Realm {
       const near = cuts[step]!;
       const far = cuts[step + 1]!;
 
-      const call = verdict(path, edge, [
+      const survives = keep(path, edge, a.offset, [
         point(path, near, a),
         point(path, near, b),
         point(path, far, a),
         point(path, far, b),
       ]);
-      if (call === 'drop') continue;
-      if (call === 'pave') {
-        pave(path, near, far, a, b);
-        continue;
-      }
-
-      quad(buffer, base + step * 2, flip);
+      if (survives) quad(buffer, base + step * 2, flip);
     }
   };
 
@@ -534,6 +592,19 @@ export function createRealm(textures: RealmTextures): Realm {
       strip(path, cuts, profile[i]!, profile[i + 1]!);
     }
   }
+
+  for (const junction of JUNCTIONS) {
+    for (const shape of junction.fillets) fillet(junction.senior, junction.at, shape);
+  }
+
+  console.info(
+    `[exterior] realm: ${JUNCTIONS.length} junctions at ` +
+      JUNCTIONS.map(
+        ({ senior, minor, at }) =>
+          `${senior.route}/${minor.route} (${at[0].toFixed(0)}, ${at[1].toFixed(0)})`,
+      ).join(', ') +
+      '.',
+  );
 
   for (const [surface, buffer] of buffers) {
     const geometry = new BufferGeometry();

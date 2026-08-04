@@ -19,8 +19,29 @@ export const ORIGIN_POSE: CameraPose = {
 };
 
 export const TRANSITION = {
-  /** Camera travel between adjacent scenes. */
-  cameraSeconds: 1.9,
+  /**
+   * Camera travel between adjacent scenes, **paced by the move** rather than
+   * fixed.
+   *
+   * One duration for every transition is the reason the act made people
+   * queasy. Act I's moves range from a five-metre step down the avenue to a
+   * ninety-metre glide over the lake and a hundred-degree turn out of the
+   * park, so one fixed duration runs the long moves four times faster than the
+   * short ones. The eye tracks *angular* rate, so a fast pan is more
+   * disorienting than a fast dolly: the two are budgeted separately and
+   * whichever needs longer wins.
+   *
+   * Both rates are deliberately unhurried. 34 m/s is a low pass rather than a
+   * flight, and 24°/s is about as fast as a camera can turn before the scene
+   * smears rather than sweeps.
+   */
+  camera: {
+    metresPerSecond: 34,
+    degreesPerSecond: 24,
+    /** Nothing snaps and nothing outstays the presenter. */
+    minSeconds: 1.8,
+    maxSeconds: 4.5,
+  },
   /** Content dissolve, shorter so the world reads as continuous. */
   contentSeconds: 0.55,
   /** Direct navigation still eases, just fast enough to feel like a cut. */

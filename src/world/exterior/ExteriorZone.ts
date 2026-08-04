@@ -8,6 +8,7 @@ import { createBakedPart, createBuilding, findParts, sharpen, type Building } fr
 import { createCanopyField } from './canopy';
 import { createLake, type Lake } from './lake';
 import { createParkland, type Parkland } from './parkland';
+import { createPavilion, type Pavilion } from './pavilion';
 import { createPlanting, type Planting } from './planting';
 import { createRealm, type Realm } from './realm';
 import { createBankside, type Bankside } from './bankside';
@@ -65,17 +66,12 @@ const EXTERIOR_ATMOSPHERE: Atmosphere = {
   // `sky.ts`: distant ground fades to this and then gives way to the sky, and a
   // step between the two draws a line across the far field.
   fogColor: 0xcfe0ee,
-  // Sized to three things at once, which is why neither end is round. It has to
-  // start past the building so the subject is never hazed; it has to give the
-  // woodland belt between 96 m and 260 m a real depth gradient, or six ranks of
-  // billboards read as one cardboard wall; and it has to close *completely*
-  // before the ground plane ends at 450 m, or the edge of the world is visible
-  // as a band of unfogged green under the sky.
-  //
-  // The last of those was being missed. At 640 the far field only reached 79%
-  // opacity at the plane edge, which is exactly where an elevated pose looks.
-  fogNear: 160,
-  fogFar: 560,
+  // Aerial perspective, not a curtain. `LAND.ridge` and the woodland belt close
+  // the horizon by construction, so the fog does not have to hide anything — a
+  // ramp short enough to do that also washes the belt itself to a grey wall,
+  // which reads as weather rather than as distance.
+  fogNear: 110,
+  fogFar: 1400,
   skyColor: 0x9fc4ea,
   groundColor: 0x6a7a4e,
   // Lifted with the sun. A high sun leaves the north and east elevations taking
@@ -87,17 +83,17 @@ const EXTERIOR_ATMOSPHERE: Atmosphere = {
   // A Nordic summer midday: roughly 48° elevation, from the west of the
   // approach so the +Z entrance elevation is lit rather than in its own shade.
   //
-  // Free to choose. The only Blender bake is `type='AO'`, which is
-  // sun-independent by construction, so nothing in the exported textures
-  // carries a light direction to disagree with. The comment that used to sit
-  // here claimed this had to match `SUN_VECTOR` in the Blender script; it never
-  // did, and believing it held the whole zone at a 28° sun for no reason.
+  // Free to choose: the only Blender bake is `type='AO'`, which is
+  // sun-independent, so nothing in the exported textures carries a light
+  // direction this could disagree with.
   keyOffset: [-50, 90, 64],
-  // Raised with the sun for the same reason as the ambient, but this one lands
-  // as *colour* rather than as lift: at midday the shaded faces of a building
-  // are lit almost entirely by a deep blue sky, and that blue in the shadows is
-  // most of what separates real daylight from a flat white key.
-  environmentIntensity: 1.35,
+  // Lands as *colour* rather than as lift: at midday the shaded faces of a
+  // building are lit almost entirely by a deep blue sky, and that blue in the
+  // shadows is most of what separates daylight from a flat white key.
+  //
+  // Tuned against the panorama in `sky.ts` — the sun-to-sky *ratio* is the look,
+  // so changing the sky is a retune here rather than a swap.
+  environmentIntensity: 1.25,
   // Every asset bakes to p99 ≈ 0.57 specified with 0% clipped, so there is
   // headroom to spend here rather than in the bake, where it would clip.
   backgroundIntensity: 1,
@@ -116,13 +112,14 @@ const REVIEW_TRAVEL = 2.2;
  * where the row parks. Starting the travel on arrival rather than on the cut
  * keeps the whole journey off camera.
  */
-const REVIEW_HOLD = TRANSITION.cameraSeconds + 0.25;
+const REVIEW_HOLD = TRANSITION.camera.maxSeconds + 0.25;
 
 class Exterior implements ZoneInstance {
   private readonly terrain: Terrain;
   private readonly lake: Lake;
   private readonly river: River;
   private readonly bridge: Bridge;
+  private readonly pavilion: Pavilion;
   private readonly playground: Playground;
   private readonly woodland: Woodland;
   private readonly realm: Realm;
@@ -134,7 +131,9 @@ class Exterior implements ZoneInstance {
   private readonly slotFill: Building;
   private readonly candidates: readonly Building[];
   private readonly parts: readonly Building[];
-  private readonly sky: Texture = createSkyTexture();
+  // Built from the key's own direction, so the sun in the panorama and the light
+  // casting the shadows cannot disagree.
+  private readonly sky: Texture = createSkyTexture(EXTERIOR_ATMOSPHERE.keyOffset);
   private readonly environment: Texture;
   private presence = -1;
 
@@ -144,6 +143,7 @@ class Exterior implements ZoneInstance {
     this.lake = createLake();
     this.river = createRiver();
     this.bridge = createBridge();
+    this.pavilion = createPavilion();
     this.playground = createPlayground();
     this.realm = createRealm({
       clay: { map: assets.texture('clayTexture'), normal: assets.texture('clayNormal') },
@@ -190,6 +190,7 @@ class Exterior implements ZoneInstance {
       this.lake.object,
       this.river.object,
       this.bridge.object,
+      this.pavilion.object,
       this.playground.object,
       this.woodland.object,
       this.realm.object,
@@ -246,14 +247,20 @@ class Exterior implements ZoneInstance {
     this.presence = presence;
 
     const last = this.candidates.length - 1;
+    // Which way is away from the building, and therefore which way the row
+    // walks off. The panels are exported at `REVIEW.baked` and stand at
+    // `REVIEW.centre`, so every position here is that shift plus the travel.
+    const away = Math.sign(REVIEW.centre[0]);
+    const rest = REVIEW.centre[0] - REVIEW.baked;
 
     this.candidates.forEach((candidate, index) => {
       const { object } = candidate;
-      // Parked west, staggered east to west so the panel nearest the building
-      // arrives first and the row builds away from it. Reversed, the far panels
-      // would cross through the near ones on the way in.
-      const parked = -(REVIEW.offstage + (last - index) * REVIEW.stagger);
-      const x = parked * (1 - presence);
+      // Staggered from the building outward, so the panel nearest it arrives
+      // first and the row builds away. Reversed, the far panels would cross
+      // through the near ones on the way in.
+      const rank = away > 0 ? index : last - index;
+      const parked = away * (REVIEW.offstage + rank * REVIEW.stagger);
+      const x = rest + parked * (1 - presence);
 
       gsap.killTweensOf(object.position);
       if (!animate) {
@@ -296,6 +303,7 @@ class Exterior implements ZoneInstance {
     this.lake.dispose();
     this.river.dispose();
     this.bridge.dispose();
+    this.pavilion.dispose();
     this.playground.dispose();
     this.woodland.dispose();
     this.realm.dispose();

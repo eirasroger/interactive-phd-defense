@@ -13,7 +13,7 @@ import {
 } from 'three';
 import type { CanopyField } from './canopy';
 import { renderImpostors, type Impostor } from './impostors';
-import { offAvenue, offPromenade, pitch } from './paths';
+import { inReviewShot, offAvenue, offPavilion, offPromenade, offRiverside, pitch } from './paths';
 import { LAND, WOODLAND } from './site';
 import { surfaceAt } from './terrain';
 
@@ -37,23 +37,17 @@ const CROWN = 0.26;
 /**
  * The belt of woodland that closes the site.
  *
- * This is the piece that fixes the emptiness, and it fixes it by **bounding the
- * world rather than filling it**. Three hundred metres of open ground cannot be
- * populated at any price worth paying for a live presentation; it can be ended,
- * at 96 m, for eight hundred billboards and one draw call per species. Nothing
- * beyond the canopy line has to exist, because nothing beyond it can be seen —
- * which is the entire reason this is affordable.
+ * It **bounds the world rather than filling it**: three hundred metres of open
+ * ground cannot be populated at a price worth paying, but it can be ended, and
+ * nothing beyond the canopy line has to exist because nothing beyond it is seen.
  *
- * **Depth, not height, is what makes it read as a wood.** One rank of trees is
- * a row with a horizon behind it and fools nobody. Six ranks between 96 m and
- * 168 m, jittered, at graded heights, on ground that is itself rising, present
- * an interior that the eye cannot see through and therefore stops trying to.
- * The ranks cost nothing extra — the instance count is what it is regardless of
- * how deep the band it occupies is.
+ * **Depth, not height, makes it read as a wood.** One rank is a row with a
+ * horizon behind it; eight ranks jittered at graded heights on rising ground
+ * present an interior the eye cannot see through. The ranks cost nothing — the
+ * instance count is the same however deep the band.
  *
- * Cross-cards rather than camera-facing billboards. A quad that turns to face
- * the camera shears visibly whenever the camera moves, and Act I's camera moves
- * between every station; three fixed quads never do, and at this distance the
+ * Cross-cards rather than camera-facing billboards: a quad that turns to face
+ * the camera shears whenever the camera moves, and at this distance the
  * silhouette is the entire read.
  */
 export function createWoodland(
@@ -235,7 +229,13 @@ function plantable(x: number, z: number): boolean {
   // route. Asked of the path network rather than of a bounding rectangle: the
   // promenade runs 250 m and the avenue bends, and a box big enough to contain
   // both would exclude most of the site.
-  if (offPromenade(x, z) < 9 || offAvenue(x, z) < 9) return false;
+  //
+  // The riverside walk is in the list now because it runs *into* the belt: its
+  // west end turns for the promenade and ends among these trees, which is the
+  // whole point of ending it there and would read as a path driven through a
+  // wood if the wood did not stand aside for it.
+  if (offPromenade(x, z) < 9 || offAvenue(x, z) < 9 || offRiverside(x, z) < 7) return false;
+  if (offPavilion(x, z) < 4) return false;
 
   // Nothing stands in the playground, which is levelled ground with a fence
   // round it and the one place on site where a tree would be actively wrong.
@@ -244,8 +244,7 @@ function plantable(x: number, z: number): boolean {
   const { core } = LAND;
   if (Math.abs(x) < core.halfWidth + 10 && z > core.far - 10 && z < core.near + 10) return false;
 
-  const { clear } = WOODLAND;
-  return !(x > clear.x[0] && x < clear.x[1] && z > clear.z[0] && z < clear.z[1]);
+  return !inReviewShot(x, z);
 }
 
 /**

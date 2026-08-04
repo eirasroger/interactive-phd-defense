@@ -190,9 +190,12 @@ export class SceneDirector {
       return;
     }
 
-    this.deps.camera.moveTo(definition.pose, {
-      seconds: direction === 'jump' ? TRANSITION.jumpSeconds : TRANSITION.cameraSeconds,
-    });
+    // Sequential navigation is paced by the move itself; only the jump cut
+    // holds to a fixed length, because its whole job is to feel like one.
+    this.deps.camera.moveTo(
+      definition.pose,
+      direction === 'jump' ? { seconds: TRANSITION.jumpSeconds } : {},
+    );
   }
 
   /** Neighbours are warmed so ordinary next/previous never shows a loader. */

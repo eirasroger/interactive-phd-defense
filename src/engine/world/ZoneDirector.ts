@@ -48,7 +48,7 @@ export class ZoneDirector {
 
     const target = mode === 'recessed' ? recessed(definition.atmosphere) : definition.atmosphere;
     if (move) {
-      this.atmosphere.moveTo(target, TRANSITION.cameraSeconds);
+      this.atmosphere.moveTo(target, TRANSITION.camera.maxSeconds);
     } else {
       this.atmosphere.snapTo(target);
     }

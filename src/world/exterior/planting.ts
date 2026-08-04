@@ -11,7 +11,7 @@ import {
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { CanopyField } from './canopy';
 import { collapseToInstances } from './instancing';
-import { inBeds, plantable } from './paths';
+import { inBeds, inReviewShot, plantable } from './paths';
 import { BED_TOP } from './realm';
 import { seatAt } from './terrain';
 import { applyVariance } from './variance';
@@ -47,37 +47,21 @@ const BROAD = 0.4;
 /**
  * Trees, hedge and meadow grass, lit rather than baked.
  *
- * Everything else in the exterior arrives with its lighting in a texture. The
- * planting does not, and deliberately: unwrapping and lightmapping thousands of
- * alpha-mapped leaf cards would cost far more than lighting them in the browser,
- * and it would fix them to one sun while the whole point of the rest of the act
- * is that the building can change state.
- *
- * Their contribution to the building is already paid for. They stood in the
- * Blender scene while it baked, so the leaf shadow falling across the brick is
- * in the building's texture even though the leaves casting it are lit here.
+ * Lit rather than baked, unlike everything else in the exterior: lightmapping
+ * thousands of alpha-mapped leaf cards costs more than lighting them in the
+ * browser, and it would fix them to one sun. Their contribution to the building
+ * is already paid for — they stood in the Blender scene while it baked.
  *
  * **The asset's vertical is discarded on the way in.** `scatter_planting` sets
- * every plant at z = 0.05 on a level Blender floor, and the ground it arrives on
- * rolls between −4.6 m and +7.5 m — so the whole scatter was hanging at datum,
- * a metre in the air across half the park and buried to the crown across the
- * other half. It also knew nothing about the paving, the playground or the
- * building's plate, all of which are built here and none of which exist in the
- * Blender scene at all.
+ * every plant at z = 0.05 on a level Blender floor; the ground here rolls
+ * between −4.6 m and +7.5 m, and the paving, playground and building plate do
+ * not exist in the Blender scene at all. An exported scatter is a *plan* —
+ * which plant, where in x and z, how big, which way round — and everything that
+ * depends on the terrain is decided here against the terrain.
  *
- * That is not a bug in the asset. An exported scatter is a **plan**: which
- * plant, where in x and z, how big, which way round. Everything that depends on
- * the terrain has to be decided against the terrain, and the terrain lives here.
- * Duplicating `heightAt` into the Blender script so the export could seat itself
- * would be two descriptions of one landform, which is `learnings.md` §7f in the
- * vertical.
- *
- * Three things then happen, in an order that matters. The kept nodes are
- * collapsed into instanced draws, which is what makes density affordable at all;
- * each instance is tinted, which stops a species reading as one plant reprinted;
- * and the wind is patched onto the materials, which is what makes the site read
- * as alive. The tint and the wind both need the instances to exist first, so
- * nothing here reorders.
+ * Then, **in this order**: nodes are collapsed into instanced draws, each
+ * instance is tinted, and the wind is patched onto the materials. The tint and
+ * the wind both need the instances to exist first.
  */
 export function createPlanting(gltf: GLTF, { canopy }: PlantingInputs): Planting {
   const position = new Vector3();
@@ -93,6 +77,10 @@ export function createPlanting(gltf: GLTF, { canopy }: PlantingInputs): Planting
       Math.max(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z) * 0.5 * scale.x;
 
     if (!plantable(x, z, radius * CLEAR)) return false;
+    // The exported scatter cleared the wedge the review row's camera looks
+    // through at the position the row stood in when the asset was baked. The
+    // row has moved since; the corridor that matters is the current one.
+    if (inReviewShot(x, z)) return false;
 
     // The entrance beds are built ground, so their planting stands on the bed
     // rather than on the terrain 14 cm below the forecourt it is cut into.
@@ -107,9 +95,8 @@ export function createPlanting(gltf: GLTF, { canopy }: PlantingInputs): Planting
 
   for (const mesh of instanced.meshes) {
     mesh.castShadow = true;
-    // Planting used to receive nothing, which lit every plant identically
-    // whatever stood over it. A shrub under a canopy is in shade, and without
-    // that it reads as pasted onto the ground rather than growing out of it.
+    // A shrub under a canopy is in shade; without that it reads as pasted onto
+    // the ground rather than growing out of it.
     mesh.receiveShadow = true;
 
     for (const material of materialsOf(mesh)) {
