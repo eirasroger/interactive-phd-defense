@@ -28,15 +28,111 @@ import {
 export function gradeAt(x: number, z: number): number {
   const { lake, ridge } = LAND;
 
-  const lifted =
+  const lifted = Math.max(
     Math.max(
       smoothstep(ridge.side, ridge.side - 90, x),
       smoothstep(ridge.far, ridge.far - 90, z),
       smoothstep(ridge.beyond, ridge.beyond + 80, z),
       smoothstep(lake.east, lake.east + 90, x),
-    ) * ridge.height;
+    ) * ridge.height,
+    knollAt(x, z),
+  );
 
   return (1 - pinned(x, z)) * (relief(x, z) + lifted);
+}
+
+/**
+ * How high the knoll stands above the park here, in metres.
+ *
+ * Two masses taken as a **maximum rather than a sum**. Added, they put a bulge
+ * in the saddle where they overlap, which is the one place a landform must not
+ * have one — the same argument `heightAt` makes about the channel and the basin.
+ */
+export function knollAt(x: number, z: number): number {
+  const { knoll } = LAND;
+  return Math.max(
+    dome(x, z, knoll.centre, knoll.radius, knoll.height),
+    dome(x, z, knoll.shoulder.centre, knoll.shoulder.radius, knoll.shoulder.height),
+  );
+}
+
+/** How far up the knoll a point stands: 0 off it, 1 at the summit. */
+export function knollShare(x: number, z: number): number {
+  return knollAt(x, z) / LAND.knoll.height;
+}
+
+/**
+ * How much bedrock shows on the knoll: 0 turf, 1 bare rock.
+ *
+ * A threshold on **how thin the soil is** — thin high on the form, thin where it
+ * is steep, and drifting over a few metres — rather than a shape painted on the
+ * hill. Cross that one quantity against a fixed pair of edges and the result is
+ * a bare crown, turf in the hollows and a ragged boundary nobody had to author;
+ * retune the hill and the rock follows it.
+ *
+ * **Three modules read this and none of them owns it.** The ground shades from
+ * it, the outcrop slabs are scattered by it, and the knoll's trees are refused
+ * by it — so the treeline, the rock and the stones are one edge rather than
+ * three descriptions that have to be kept in step by hand.
+ *
+ * The steepness is the *knoll's own*, differenced from `knollAt` rather than
+ * read off the finished ground. Cheaper, and more correct: the ground is also
+ * steep at a river bank, and a river bank is not where bedrock belongs.
+ */
+export function outcropAt(x: number, z: number): number {
+  const { knoll } = LAND;
+  const rise = knollAt(x, z);
+  if (rise <= knoll.height * 0.02) return 0;
+
+  const step = 3;
+  const grade =
+    Math.hypot(
+      knollAt(x + step, z) - knollAt(x - step, z),
+      knollAt(x, z + step) - knollAt(x, z - step),
+    ) /
+    (2 * step);
+
+  const thin = (rise / knoll.height) * 1.15 + grade * 0.7 + wave(x / 11 - 3.4, z / 11 + 8.1) * 0.45;
+  return smoothstep(knoll.outcrop.from, knoll.outcrop.to, thin);
+}
+
+/**
+ * One mass of the knoll.
+ *
+ * An ellipse turned off the axes so the contours are not a circle, its outline
+ * displaced by noise at a wavelength longer than the ground quad so the skirt is
+ * ragged, and a smootherstep profile — zero gradient at both ends, so the summit
+ * is domed and the skirt meets the park without a crease to catch the light.
+ *
+ * The bounding-box reject is not an optimisation detail: `gradeAt` is evaluated
+ * something like a million times while the zone builds, and off the knoll this
+ * costs two comparisons.
+ */
+function dome(
+  x: number,
+  z: number,
+  [cx, cz]: readonly [number, number],
+  radius: number,
+  height: number,
+): number {
+  const { ragged, aspect, yaw } = LAND.knoll;
+  const dx = x - cx;
+  const dz = z - cz;
+  const reach = radius + ragged.broad + ragged.fine;
+  if (Math.abs(dx) > reach || Math.abs(dz) > reach) return 0;
+
+  const cos = Math.cos(yaw);
+  const sin = Math.sin(yaw);
+  const along = dx * cos - dz * sin;
+  const across = (dx * sin + dz * cos) / aspect;
+
+  const distance =
+    Math.hypot(along, across) +
+    wave(x / 31 + 4.7, z / 31 - 2.9) * ragged.broad +
+    wave(x / 9.5 - 6.2, z / 9.5 + 1.4) * ragged.fine;
+
+  const t = 1 - clamp01(distance / radius);
+  return t * t * t * (t * (t * 6 - 15) + 10) * height;
 }
 
 /**

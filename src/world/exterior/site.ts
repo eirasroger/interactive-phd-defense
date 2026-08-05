@@ -94,6 +94,49 @@ export const LAND = {
   /** Where the ground lifts to close a sightline. `beyond` is the far bank of the river. */
   ridge: { side: -118, far: -60, beyond: 104, height: 7.5 },
   /**
+   * The knoll — rising ground east of the building, in the one quadrant of the
+   * plan that had nothing in it.
+   *
+   * `ridge` closes the horizon west, north and south. Between the forecourt and
+   * the lake's west shore it does not, so the overview pose looks across seventy
+   * metres of dead-level lawn with a treeline behind it. A landform is the
+   * cheapest thing that fills it: no asset, no draw call, and the woodland belt
+   * standing on it lifts with it, which is what actually closes the frame.
+   *
+   * **Sited north of z = −10 on purpose.** Everything south of that is the level
+   * plate the forecourt and the review row are pinned to, so a dome centred any
+   * nearer would be flattened by its own skirt — see `pinned` in `paths.ts`.
+   */
+  knoll: {
+    centre: [64, -36] as const,
+    /** How far the dome reaches, and how high its summit stands over the park. */
+    radius: 50,
+    height: 13.5,
+    /** Squashed and turned, so the contours are not a circle drawn on the plan. */
+    aspect: 0.74,
+    yaw: -0.6,
+    /**
+     * A second, lower mass out toward the belt. One dome is a cone; two give the
+     * form a saddle and a shoulder, which is what reads as ground rather than as
+     * a mound.
+     */
+    shoulder: { centre: [110, -54] as const, radius: 38, height: 7.5 },
+    /**
+     * How far noise displaces the outline, in metres, at the long wavelength and
+     * again at a short one. Both are needed: the long octave decides the plan
+     * shape, the short one is what stops the crest reading as a drawn arc against
+     * the treeline. The short one stays well above the 2.5 m ground quad — below
+     * that it is not relief, it is noise (§17).
+     */
+    ragged: { broad: 14, fine: 4.5 },
+    /**
+     * Where the bedrock shows through, as a threshold on how *thin the soil is*
+     * — high on the form and steep — rather than as a shape painted on the hill.
+     * The patchiness then comes out of the noise the threshold is crossed by.
+     */
+    outcrop: { from: 0.62, to: 1.2 },
+  },
+  /**
    * Amplitude and wavelength of the undulation that stops the rest reading as a
    * stage. Relief only works when a near rise hides a far hollow, which needs
    * metres — at 0.75 m it was invisible on a projector.
@@ -238,6 +281,25 @@ export const PARK = {
 } as const;
 
 /**
+ * The bedrock breaking the surface of the knoll: slabs rather than boulders, and
+ * mostly buried, because what is being drawn is the top of the rock the hill is
+ * made of and not stones lying on it.
+ *
+ * An attempt count, weighted the same way the trees are — the summit is where
+ * the soil is thinnest, so it is where the rock shows.
+ */
+export const OUTCROP = {
+  attempts: 900,
+  /** Slab size in metres, and how flat. */
+  size: [0.8, 3.0] as const,
+  squat: 0.34,
+  /** How far the slab's centre sits below the ground, as a fraction of its size. */
+  sink: 0.3,
+  /** Darker than the bank's boulders: this is shaded rock in a wood, not a stone in the sun. */
+  tone: '#565550',
+} as const;
+
+/**
  * The woodland belt, as radial distance from the site centre. Deep rather than
  * tall: eight ranks read as a wood you cannot see into, one rank reads as a row
  * of trees with a horizon behind it.
@@ -260,6 +322,17 @@ export const WOODLAND = {
    * radius the belt's annulus is barely into its first rank, so it comes out thin.
    */
   bank: { count: 1100, z: [98, 156] as const, x: [-240, 64] as const },
+  /**
+   * The knoll's stand.
+   *
+   * **Impostors rather than modelled trees, and the distance is the reason.**
+   * Nothing in the act comes within sixty metres of the wooded part of the hill,
+   * which is further out than the belt's own front rank — so a card carries it,
+   * and four hundred of them cost about the same as one 20 m spruce. Planted as
+   * real trees this stand alone was four million triangles, which is `§11`
+   * arriving by way of a landform instead of a shrub.
+   */
+  knoll: { count: 210, height: { min: 7, max: 17 } },
 } as const;
 
 /** Overall height of the massing, parapet cap included. */
@@ -369,3 +442,18 @@ export const REVIEW = {
   from: 0.5,
   to: 0.8,
 } as const;
+
+/**
+ * When the scaffold and its hoarding come down.
+ *
+ * The strike is the one state change Act I makes to the building itself, and it
+ * has to happen where the building cannot be seen — `gaps` (7/10) is the only
+ * beat in the act that turns its back on it, which is why the number is that one
+ * and not a matter of taste. `act1/index.ts` asserts the deck still agrees.
+ *
+ * **The vacant bay is not filled here.** Striking the scaffold says the building
+ * is built; the empty specification slot is the thesis's own question and it
+ * stays open until Act IV answers it. Two reveals on one elevation would spend
+ * the second one for nothing.
+ */
+export const CONSTRUCTION = { struck: 0.7 } as const;

@@ -1,12 +1,8 @@
 import {
-  Color,
-  FrontSide,
   Group,
-  IcosahedronGeometry,
   InstancedMesh,
   Matrix4,
   Mesh,
-  MeshStandardMaterial,
   type Material,
   Quaternion,
   Vector3,
@@ -25,7 +21,8 @@ import {
   riversideAt,
 } from './paths';
 import { AVENUE, LAND, REALM } from './site';
-import { seatAt, surfaceAt } from './terrain';
+import { createStones, type StoneField } from './stones';
+import { seatAt } from './terrain';
 
 export interface Bankside {
   readonly object: Group;
@@ -270,80 +267,30 @@ function scatterVerges(random: () => number, plant: Plant): void {
 /**
  * Granite boulders, along the waterline and scattered through the swale.
  *
- * Procedural rather than scanned. A boulder is a convex lump, and a jittered
- * icosahedron at 20 triangles is indistinguishable from a 40 000-triangle
- * photogrammetry scan at every distance this is ever seen from — while the scan
- * that was rejected for the asset list was 96 MB on its own.
- *
  * They do two jobs. They furnish the bank the way the photograph's do, and they
  * break the waterline, which is otherwise the clean mathematical curve where a
  * 2.5 m terrain grid meets a swept ribbon.
  */
-function boulders(random: () => number): { object: InstancedMesh; dispose(): void } {
+function boulders(random: () => number): StoneField {
   const { lake } = LAND;
-  const geometry = new IcosahedronGeometry(1, 1);
-  const position = geometry.getAttribute('position');
-  const lump = new Vector3();
 
-  for (let i = 0; i < position.count; i += 1) {
-    lump.fromBufferAttribute(position, i);
-    lump.multiplyScalar(0.74 + random() * 0.5);
-    lump.y *= 0.72;
-    position.setXYZ(i, lump.x, lump.y, lump.z);
-  }
-  geometry.computeVertexNormals();
+  return createStones('boulders', '#66645d', random, (place) => {
+    for (let x = lake.west + 4; x > -300; x -= 2.2) {
+      if (random() > 0.55) continue;
+      const centre = riverAt(x);
+      const slope = riverSlope(x);
+      const across = 1 / Math.hypot(1, slope);
 
-  const material = new MeshStandardMaterial({
-    color: new Color('#6f6d66'),
-    roughness: 0.92,
-    metalness: 0,
-    side: FrontSide,
+      const side = random() < 0.5 ? -1 : 1;
+      // Straddling the waterline — half in, half out, which is the only
+      // placement that actually breaks the edge rather than sitting beside it.
+      const offset = side * channelHalf(x) * (0.55 + random() * 0.95);
+      const px = x - offset * slope * across + (random() - 0.5) * 1.4;
+      const pz = centre + offset * across;
+
+      place(px, pz, 0.22 + random() ** 2 * 0.42, 1, 0.22);
+    }
   });
-
-  const transforms: Matrix4[] = [];
-  const matrix = new Matrix4();
-  const spin = new Quaternion();
-  const axis = new Vector3();
-  const scale = new Vector3();
-  const seat = new Vector3();
-
-  for (let x = lake.west + 4; x > -300; x -= 2.2) {
-    if (random() > 0.55) continue;
-    const centre = riverAt(x);
-    const slope = riverSlope(x);
-    const across = 1 / Math.hypot(1, slope);
-
-    const side = random() < 0.5 ? -1 : 1;
-    // Straddling the waterline — half in, half out, which is the only placement
-    // that actually breaks the edge rather than sitting beside it.
-    const offset = side * channelHalf(x) * (0.55 + random() * 0.95);
-    const px = x - offset * slope * across + (random() - 0.5) * 1.4;
-    const pz = centre + offset * across;
-
-    const size = 0.22 + random() ** 2 * 0.42;
-    axis.set(random() - 0.5, random() - 0.5, random() - 0.5).normalize();
-    spin.setFromAxisAngle(axis, random() * Math.PI);
-    scale.set(size, size * (0.6 + random() * 0.5), size * (0.8 + random() * 0.5));
-    seat.set(px, surfaceAt(px, pz) + size * 0.22, pz);
-    transforms.push(matrix.clone().compose(seat, spin, scale));
-  }
-
-  const mesh = new InstancedMesh(geometry, material, transforms.length);
-  transforms.forEach((transform, i) => mesh.setMatrixAt(i, transform));
-  mesh.instanceMatrix.needsUpdate = true;
-  mesh.computeBoundingSphere();
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.name = 'boulders';
-
-  return {
-    object: mesh,
-    dispose() {
-      geometry.dispose();
-      material.dispose();
-      mesh.dispose();
-    },
-  };
 }
 
 /**

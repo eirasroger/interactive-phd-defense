@@ -13,7 +13,17 @@ import {
 } from 'three';
 import type { CanopyField } from './canopy';
 import { renderImpostors, type Impostor } from './impostors';
-import { inReviewShot, offAvenue, offPavilion, offPromenade, offRiverside, pitch } from './paths';
+import {
+  inReviewShot,
+  knollShare,
+  offAvenue,
+  offPavilion,
+  offPromenade,
+  offRiverside,
+  outcropAt,
+  pitch,
+  smoothstep,
+} from './paths';
 import { LAND, WOODLAND } from './site';
 import { surfaceAt } from './terrain';
 
@@ -166,8 +176,13 @@ function scatter(): Placement[] {
     return seed / 0x100000000;
   };
 
-  const admit = (x: number, z: number, rank: number): void => {
-    if (!plantable(x, z)) return;
+  const admit = (
+    x: number,
+    z: number,
+    rank: number,
+    range: { min: number; max: number } = WOODLAND.height,
+  ): boolean => {
+    if (!plantable(x, z)) return false;
     placements.push({
       x,
       y: surfaceAt(x, z),
@@ -175,10 +190,9 @@ function scatter(): Placement[] {
       yaw: random() * Math.PI * 2,
       // Taller at the back, so the belt builds upward away from the viewer and
       // the front rank never hides the depth behind it.
-      height:
-        WOODLAND.height.min +
-        (WOODLAND.height.max - WOODLAND.height.min) * rank * (0.55 + random() * 0.75),
+      height: range.min + (range.max - range.min) * rank * (0.55 + random() * 0.75),
     });
+    return true;
   };
 
   const belt = WOODLAND.count;
@@ -209,7 +223,50 @@ function scatter(): Placement[] {
     admit(x, z, (z - bank.z[0]) / (bank.z[1] - bank.z[0]));
   }
 
+  scatterKnoll(random, admit);
   return placements;
+}
+
+type Admit = (
+  x: number,
+  z: number,
+  rank: number,
+  range?: { min: number; max: number },
+) => boolean;
+
+/**
+ * The knoll's stand.
+ *
+ * **Thinned at both ends of the slope, and that is the whole shape of it.** A
+ * Nordic knoll is mown grass at the foot, pine on the flanks and bare rock on
+ * the crown, so the acceptance peaks around two thirds of the way up and falls
+ * away either side. Below, the park's own planting takes over; above, the ground
+ * shading has already given the soil up as too thin to root in — and because
+ * both read `knollShare`, the treeline and the outcrop are one edge rather than
+ * two that have to be kept in step by hand.
+ *
+ * Sampled to a target rather than over a fixed number of attempts: most of the
+ * square this draws from is not on the hill at all, so an attempt count would
+ * hide the density behind the geometry of a bounding box.
+ */
+function scatterKnoll(random: () => number, admit: Admit): void {
+  const { knoll } = LAND;
+  const [cx, cz] = knoll.centre;
+  const reach = knoll.radius + knoll.ragged.broad;
+
+  let grown = 0;
+  for (let tries = 0; grown < WOODLAND.knoll.count && tries < WOODLAND.knoll.count * 24; tries += 1) {
+    const x = cx + (random() * 2 - 1) * reach;
+    const z = cz + (random() * 2 - 1) * reach;
+
+    const rise = knollShare(x, z);
+    if (rise <= 0.06) continue;
+    // Nothing roots in the bedrock, and the foot of the hill still belongs to
+    // the park. Between the two the stand is open rather than closed: a solid
+    // canopy hides the landform, and the landform is the whole point of it.
+    if (random() > (1 - outcropAt(x, z)) * smoothstep(0.06, 0.32, rise)) continue;
+    if (admit(x, z, 0.3 + random() * 0.6, WOODLAND.knoll.height)) grown += 1;
+  }
 }
 
 /**

@@ -16,9 +16,11 @@ import {
   channelBed,
   freeboardAt,
   gradeAt,
+  knollShare,
   lakeDepth,
   lakeReach,
   offAvenue,
+  outcropAt,
   riverAcross,
   riverDepth,
   riverReach,
@@ -95,6 +97,17 @@ const SILT = new Color('#9c9174');
 const DEEP = new Color('#2c3733');
 
 /**
+ * The knoll's bedrock, as what separates dry granite from the wet river stone
+ * the same image draws: a little paler, a little warmer, lichen rather than silt.
+ *
+ * Drawn from the riverbed and the soil maps *mixed*, which is not only thrift.
+ * Those tile at 1.3 m and 3.1 m — incommensurable, so the pair has no period to
+ * find, which is exactly what §19 asks of any surface repeated this many times.
+ * A dedicated rock texture would ship a fourth map and bring back the lattice.
+ */
+const BEDROCK = new Color('#918f88');
+
+/**
  * Leaf litter under a canopy. Close to the grass rather than a brown — the
  * ground should *thicken* under a tree, not wear a ring of mulch. Most of the
  * read is the darkening; the small shift off green is what stops it looking like
@@ -125,6 +138,7 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
   const bare = new Float32Array(position.count);
   const water = new Float32Array(position.count);
   const shade = new Float32Array(position.count);
+  const rock = new Float32Array(position.count);
   const tint = new Float32Array(position.count * 3);
   const color = new Color();
 
@@ -137,6 +151,7 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
     bare[index] = worn(x, z);
     water[index] = freeboardAt(x, z, y);
     shade[index] = canopy.sample(x, z);
+    rock[index] = outcropAt(x, z);
     turf(color, x, z, y);
 
     tint[index * 3] = color.r;
@@ -147,6 +162,7 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
   geometry.setAttribute('aSoil', new BufferAttribute(bare, 1));
   geometry.setAttribute('aWater', new BufferAttribute(water, 1));
   geometry.setAttribute('aShade', new BufferAttribute(shade, 1));
+  geometry.setAttribute('aRock', new BufferAttribute(rock, 1));
   geometry.setAttribute('aTint', new BufferAttribute(tint, 3));
   geometry.computeVertexNormals();
 
@@ -185,10 +201,12 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
          attribute float aSoil;
          attribute float aWater;
          attribute float aShade;
+         attribute float aRock;
          attribute vec3 aTint;
          varying float vSoil;
          varying float vWater;
          varying float vShade;
+         varying float vRock;
          varying vec3 vTint;`,
       )
       .replace(
@@ -197,6 +215,7 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
          vSoil = aSoil;
          vWater = aWater;
          vShade = aShade;
+         vRock = aRock;
          vTint = aTint;`,
       );
 
@@ -209,6 +228,7 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
          varying float vSoil;
          varying float vWater;
          varying float vShade;
+         varying float vRock;
          varying vec3 vTint;`,
       )
       .replace(
@@ -252,7 +272,22 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
          // is over, not only from what it is.
          vec3 bed = bedTexel * mix( vec3( 1.0 ), ${rgb(DEEP)} * 3.0, smoothstep( -0.05, -1.20, vWater ) );
 
+         // The knoll's bedrock, over the turf and the soil and under the water:
+         // rock is what the hill is made of, so it wins against what grows on
+         // it, and loses to anything a waterline governs.
+         //
+         // Modulated by the macro layer at more than twice the turf's depth, and
+         // that is what makes it read as rock at all. Both detail maps are
+         // faded to their own averages by the time the hill is a hundred metres
+         // off, so without a scale that survives the fade the crown is a flat
+         // patch of colour — which is exactly what sand looks like. The macro
+         // sample is already fetched and tiles at 17.3 m, which is still forty
+         // pixels across from the establishing pose.
+         vec3 crag = mix( bedTexel, soilTexel, 0.14 ) * ${rgb(BEDROCK)};
+         crag *= mix( vec3( 1.0 ), macro / ${rgb(grassMean)}, 1.25 );
+
          vec3 ground = mix( turfTexel * turf, soilTexel * grit, bare );
+         ground = mix( ground, crag, vRock );
          ground = mix( ground, bed, stone );
          diffuseColor.rgb *= mix( ground, ground * ${rgb(DUFF)} * 2.4, vShade * 0.35 );`,
       );
@@ -407,7 +442,11 @@ export function seatAt(x: number, z: number, spread = 0): number {
  * per pixel from `aWater` instead.
  */
 function worn(x: number, z: number): number {
-  const steep = slopeAt(x, z) * 2.2;
+  // Not on the knoll. A steep slope exposes bare earth because there is earth
+  // under it, and on a bedrock hill there is not — what is not outcrop up there
+  // is thin turf and heath. Left in, the flanks came out as a brown spoil bank
+  // with grey rock lying on it.
+  const steep = slopeAt(x, z) * 2.2 * (1 - smoothstep(0.05, 0.35, knollShare(x, z)));
 
   const off = offAvenue(x, z);
   const scuffed = Number.isFinite(off) ? (1 - smoothstep(0.4, 4.5, off)) * 0.55 : 0;

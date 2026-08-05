@@ -5,7 +5,7 @@ import type { SceneDefinition } from '@/engine/scene/types';
 import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { EXTERIOR_ASSETS, exteriorZone } from '@/world/exterior/ExteriorZone';
 import { CROSSING } from '@/world/exterior/paths';
-import { AVENUE, ENTRANCE, REVIEW } from '@/world/exterior/site';
+import { AVENUE, CONSTRUCTION, ENTRANCE, REVIEW } from '@/world/exterior/site';
 import { ExteriorScene } from './ExteriorScene';
 
 const CHAPTER = 'Act I — Exterior';
@@ -249,14 +249,18 @@ export const act1Scenes: readonly SceneDefinition[] = [
 ];
 
 /**
- * The review row's span is a pair of numbers in `site.ts`, and the deck's order
- * is what actually produces them. They must open one scene before the options
- * are looked at and close one scene after, because that is what puts the
- * panels' travel inside a scene that cannot see them.
+ * Two spans in `site.ts` are really statements about *this* file's order, and
+ * the deck is what actually produces them.
  *
- * Reorder the act and the two disagree silently: the panels either stay parked
- * off frame while the scene arguing about them plays to an empty promenade, or
- * they walk across the middle of a shot.
+ * The review row must open one scene before the options are looked at and close
+ * one scene after, because that is what puts the panels' travel inside a scene
+ * that cannot see them. The scaffold comes down on `gaps`, because that is the
+ * one beat in the act facing away from the building.
+ *
+ * Reorder the act and they disagree silently, which is the worst way for this to
+ * fail: the panels either stay parked off frame while the scene arguing about
+ * them plays to an empty promenade, or they walk across the middle of a shot —
+ * and a scaffold vanishing on camera is a bug the audience watches happen.
  */
 const progressOf = (id: string): number => {
   const index = act1Scenes.findIndex((entry) => entry.id === id);
@@ -267,6 +271,7 @@ const progressOf = (id: string): number => {
 for (const [id, expected, name] of [
   ['scaffold', REVIEW.from, 'REVIEW.from'],
   ['objectives', REVIEW.to, 'REVIEW.to'],
+  ['gaps', CONSTRUCTION.struck, 'CONSTRUCTION.struck'],
 ] as const) {
   if (progressOf(id) !== expected) {
     throw new Error(

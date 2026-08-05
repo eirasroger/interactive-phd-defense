@@ -15,8 +15,9 @@ import { createBankside, type Bankside } from './bankside';
 import { createBridge, type Bridge } from './bridge';
 import { createPlayground, type Playground } from './playground';
 import { createRiver, type River } from './river';
-import { BUILDING_HEIGHT, REVIEW } from './site';
+import { BUILDING_HEIGHT, CONSTRUCTION, REVIEW } from './site';
 import { createSkyTexture } from './sky';
+import { createOutcrop, type StoneField } from './stones';
 import { createTerrain, type Terrain } from './terrain';
 import { createWoodland, type Woodland } from './woodland';
 
@@ -126,6 +127,7 @@ class Exterior implements ZoneInstance {
   private readonly planting: Planting;
   private readonly bankside: Bankside;
   private readonly parkland: Parkland;
+  private readonly outcrop: StoneField;
   private readonly building: Building;
   private readonly construction: Building;
   private readonly slotFill: Building;
@@ -136,6 +138,8 @@ class Exterior implements ZoneInstance {
   private readonly sky: Texture = createSkyTexture(EXTERIOR_ATMOSPHERE.keyOffset);
   private readonly environment: Texture;
   private presence = -1;
+  private scaffolded = true;
+  private strike: gsap.core.Tween | null = null;
 
   constructor(private readonly context: ZoneContext) {
     const { assets, stage } = context;
@@ -185,6 +189,10 @@ class Exterior implements ZoneInstance {
       canopy,
     });
 
+    // After the terrain, because the slabs are seated on the drawn surface and
+    // the surface is where the knoll's own shading has already given way to rock.
+    this.outcrop = createOutcrop();
+
     stage.add(
       this.terrain.object,
       this.lake.object,
@@ -197,6 +205,7 @@ class Exterior implements ZoneInstance {
       this.planting.object,
       this.bankside.object,
       this.parkland.object,
+      this.outcrop.object,
     );
 
     for (const id of [EXTERIOR_ASSET, CONSTRUCTION_ASSET, SLOT_FILL_ASSET, CANDIDATES_ASSET]) {
@@ -282,9 +291,42 @@ class Exterior implements ZoneInstance {
     });
   }
 
+  /**
+   * Strikes the scaffold, or puts it back.
+   *
+   * **The timing is asymmetric, and it has to be.** The strike is never watched
+   * — `gaps` is the one beat that turns its back on the building — but the beat
+   * before it, `alternatives`, has the scaffolded elevation at frame left. So
+   * going forward the change waits out the camera's move and happens on arrival,
+   * where nothing can see it; going back it happens immediately, on departure
+   * from `gaps`, for the same reason read the other way round. Either rule
+   * applied in both directions pops the scaffold in shot at one end.
+   *
+   * A cut rather than a fade: the construction asset is one joined object
+   * carrying several opaque materials, and making it transparent to dissolve it
+   * would buy a transition nobody is present to see.
+   */
+  private setScaffold(standing: boolean, animate: boolean): void {
+    if (standing === this.scaffolded) return;
+    this.scaffolded = standing;
+
+    this.strike?.kill();
+    this.strike = null;
+
+    if (!animate || standing) {
+      this.construction.object.visible = standing;
+      return;
+    }
+
+    this.strike = gsap.delayedCall(REVIEW_HOLD, () => {
+      this.construction.object.visible = this.scaffolded;
+    });
+  }
+
   setProgress(progress: number, animate: boolean): void {
     const onStage = progress >= REVIEW.from && progress <= REVIEW.to;
     this.setReview(onStage ? 1 : 0, animate);
+    this.setScaffold(progress < CONSTRUCTION.struck, animate);
   }
 
   update(dt: number): void {
@@ -297,6 +339,7 @@ class Exterior implements ZoneInstance {
 
   dispose(): void {
     for (const candidate of this.candidates) gsap.killTweensOf(candidate.object.position);
+    this.strike?.kill();
     this.context.world.setBackground(null);
     this.context.world.setEnvironment(null);
     this.terrain.dispose();
@@ -310,6 +353,7 @@ class Exterior implements ZoneInstance {
     this.planting.dispose();
     this.bankside.dispose();
     this.parkland.dispose();
+    this.outcrop.dispose();
     for (const part of this.parts) part.dispose();
     this.environment.dispose();
     this.sky.dispose();
