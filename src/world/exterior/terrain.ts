@@ -16,7 +16,7 @@ import {
   channelBed,
   freeboardAt,
   gradeAt,
-  knollShare,
+  hillShare,
   lakeDepth,
   lakeReach,
   offAvenue,
@@ -97,7 +97,7 @@ const SILT = new Color('#9c9174');
 const DEEP = new Color('#2c3733');
 
 /**
- * The knoll's bedrock, as what separates dry granite from the wet river stone
+ * The hills' bedrock, as what separates dry granite from the wet river stone
  * the same image draws: a little paler, a little warmer, lichen rather than silt.
  *
  * Drawn from the riverbed and the soil maps *mixed*, which is not only thrift.
@@ -272,7 +272,7 @@ export function createTerrain({ grass, soil, riverbed, canopy }: TerrainInputs):
          // is over, not only from what it is.
          vec3 bed = bedTexel * mix( vec3( 1.0 ), ${rgb(DEEP)} * 3.0, smoothstep( -0.05, -1.20, vWater ) );
 
-         // The knoll's bedrock, over the turf and the soil and under the water:
+         // The hills' bedrock, over the turf and the soil and under the water:
          // rock is what the hill is made of, so it wins against what grows on
          // it, and loses to anything a waterline governs.
          //
@@ -442,11 +442,11 @@ export function seatAt(x: number, z: number, spread = 0): number {
  * per pixel from `aWater` instead.
  */
 function worn(x: number, z: number): number {
-  // Not on the knoll. A steep slope exposes bare earth because there is earth
+  // Not on the hills. A steep slope exposes bare earth because there is earth
   // under it, and on a bedrock hill there is not — what is not outcrop up there
   // is thin turf and heath. Left in, the flanks came out as a brown spoil bank
   // with grey rock lying on it.
-  const steep = slopeAt(x, z) * 2.2 * (1 - smoothstep(0.05, 0.35, knollShare(x, z)));
+  const steep = slopeAt(x, z) * 2.2 * (1 - smoothstep(0.05, 0.35, hillShare(x, z)));
 
   const off = offAvenue(x, z);
   const scuffed = Number.isFinite(off) ? (1 - smoothstep(0.4, 4.5, off)) * 0.55 : 0;

@@ -8,8 +8,8 @@ import {
   Quaternion,
   Vector3,
 } from 'three';
-import { outcropAt } from './paths';
-import { LAND, OUTCROP } from './site';
+import { HILL_PLOTS, outcropAt } from './paths';
+import { OUTCROP } from './site';
 import { surfaceAt } from './terrain';
 
 export interface StoneField {
@@ -112,7 +112,7 @@ export function createStones(
 }
 
 /**
- * The knoll's bedrock, where it breaks the surface.
+ * The hills' bedrock, where it breaks the surface.
  *
  * Scattered by `outcropAt`, which is the same function the ground shades from —
  * so a slab can only stand where the turf has already given way, and the two
@@ -123,10 +123,6 @@ export function createStones(
  * of, and a boulder shape standing proud reads as something that rolled there.
  */
 export function createOutcrop(): StoneField {
-  const { knoll } = LAND;
-  const [cx, cz] = knoll.centre;
-  const reach = knoll.radius + knoll.ragged.broad;
-
   let seed = 0x5cd21b;
   const random = (): number => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -134,15 +130,20 @@ export function createOutcrop(): StoneField {
   };
 
   return createStones('outcrop', OUTCROP.tone, random, (place) => {
-    for (let attempt = 0; attempt < OUTCROP.attempts; attempt += 1) {
-      const x = cx + (random() * 2 - 1) * reach;
-      const z = cz + (random() * 2 - 1) * reach;
+    for (const plot of HILL_PLOTS) {
+      const [cx, cz] = plot.centre;
+      const attempts = Math.round((plot.area / 10000) * OUTCROP.perHectare);
 
-      if (random() > outcropAt(x, z)) continue;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const x = cx + (random() * 2 - 1) * plot.reach;
+        const z = cz + (random() * 2 - 1) * plot.reach;
 
-      const [min, max] = OUTCROP.size;
-      const size = min + random() ** 2 * (max - min);
-      place(x, z, size, OUTCROP.squat, -OUTCROP.sink);
+        if (random() > outcropAt(x, z)) continue;
+
+        const [min, max] = OUTCROP.size;
+        const size = min + random() ** 2 * (max - min);
+        place(x, z, size, OUTCROP.squat, -OUTCROP.sink);
+      }
     }
   });
 }

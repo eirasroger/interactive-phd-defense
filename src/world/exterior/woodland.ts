@@ -14,8 +14,9 @@ import {
 import type { CanopyField } from './canopy';
 import { renderImpostors, type Impostor } from './impostors';
 import {
+  HILL_PLOTS,
+  hillShare,
   inReviewShot,
-  knollShare,
   offAvenue,
   offPavilion,
   offPromenade,
@@ -183,6 +184,13 @@ function scatter(): Placement[] {
     range: { min: number; max: number } = WOODLAND.height,
   ): boolean => {
     if (!plantable(x, z)) return false;
+    // Nothing roots in bare bedrock. Asked here rather than at the hills' own
+    // scatter because the belt and the far bank both run across them, and a
+    // billboard standing on an outcrop is the one thing that hides it. Sampled
+    // rather than thresholded, so the treeline thins into the rock instead of
+    // stopping on a contour line.
+    if (random() < outcropAt(x, z)) return false;
+
     placements.push({
       x,
       y: surfaceAt(x, z),
@@ -223,7 +231,7 @@ function scatter(): Placement[] {
     admit(x, z, (z - bank.z[0]) / (bank.z[1] - bank.z[0]));
   }
 
-  scatterKnoll(random, admit);
+  scatterHills(random, admit);
   return placements;
 }
 
@@ -235,37 +243,34 @@ type Admit = (
 ) => boolean;
 
 /**
- * The knoll's stand.
+ * The stands on the hills, one mass at a time.
  *
- * **Thinned at both ends of the slope, and that is the whole shape of it.** A
- * Nordic knoll is mown grass at the foot, pine on the flanks and bare rock on
- * the crown, so the acceptance peaks around two thirds of the way up and falls
- * away either side. Below, the park's own planting takes over; above, the ground
- * shading has already given the soil up as too thin to root in — and because
- * both read `knollShare`, the treeline and the outcrop are one edge rather than
- * two that have to be kept in step by hand.
+ * **Thinned at both ends of the slope, and that is the whole shape of them.** A
+ * Nordic hill is mown grass at the foot, pine on the flanks and bare rock at the
+ * top, so the acceptance ramps in off the skirt and `admit` takes the rock out
+ * at the crest. The stand stays open rather than closing over: a solid canopy
+ * hides the landform, and the landform is the whole point of planting it.
  *
- * Sampled to a target rather than over a fixed number of attempts: most of the
- * square this draws from is not on the hill at all, so an attempt count would
- * hide the density behind the geometry of a bounding box.
+ * Each mass gets a count from its own plan area, so a hill twice the size is
+ * twice as wooded and a third one needs no number chosen for it. The target is
+ * a count of *placements* rather than of attempts, because most of the square
+ * this samples is not on the mass at all — an attempt count would hide the
+ * density behind the geometry of a bounding box.
  */
-function scatterKnoll(random: () => number, admit: Admit): void {
-  const { knoll } = LAND;
-  const [cx, cz] = knoll.centre;
-  const reach = knoll.radius + knoll.ragged.broad;
+function scatterHills(random: () => number, admit: Admit): void {
+  for (const plot of HILL_PLOTS) {
+    const [cx, cz] = plot.centre;
+    const target = Math.round((plot.area / 10000) * WOODLAND.hills.perHectare);
 
-  let grown = 0;
-  for (let tries = 0; grown < WOODLAND.knoll.count && tries < WOODLAND.knoll.count * 24; tries += 1) {
-    const x = cx + (random() * 2 - 1) * reach;
-    const z = cz + (random() * 2 - 1) * reach;
+    let grown = 0;
+    for (let tries = 0; grown < target && tries < target * 24; tries += 1) {
+      const x = cx + (random() * 2 - 1) * plot.reach;
+      const z = cz + (random() * 2 - 1) * plot.reach;
 
-    const rise = knollShare(x, z);
-    if (rise <= 0.06) continue;
-    // Nothing roots in the bedrock, and the foot of the hill still belongs to
-    // the park. Between the two the stand is open rather than closed: a solid
-    // canopy hides the landform, and the landform is the whole point of it.
-    if (random() > (1 - outcropAt(x, z)) * smoothstep(0.06, 0.32, rise)) continue;
-    if (admit(x, z, 0.3 + random() * 0.6, WOODLAND.knoll.height)) grown += 1;
+      const rise = hillShare(x, z);
+      if (rise <= 0.06 || random() > smoothstep(0.06, 0.32, rise)) continue;
+      if (admit(x, z, 0.3 + random() * 0.6, WOODLAND.hills.height)) grown += 1;
+    }
   }
 }
 

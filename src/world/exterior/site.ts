@@ -94,54 +94,104 @@ export const LAND = {
   /** Where the ground lifts to close a sightline. `beyond` is the far bank of the river. */
   ridge: { side: -118, far: -60, beyond: 104, height: 7.5 },
   /**
-   * The knoll — rising ground east of the building, in the one quadrant of the
-   * plan that had nothing in it.
-   *
-   * `ridge` closes the horizon west, north and south. Between the forecourt and
-   * the lake's west shore it does not, so the overview pose looks across seventy
-   * metres of dead-level lawn with a treeline behind it. A landform is the
-   * cheapest thing that fills it: no asset, no draw call, and the woodland belt
-   * standing on it lifts with it, which is what actually closes the frame.
-   *
-   * **Sited north of z = −10 on purpose.** Everything south of that is the level
-   * plate the forecourt and the review row are pinned to, so a dome centred any
-   * nearer would be flattened by its own skirt — see `pinned` in `paths.ts`.
-   */
-  knoll: {
-    centre: [64, -36] as const,
-    /** How far the dome reaches, and how high its summit stands over the park. */
-    radius: 50,
-    height: 13.5,
-    /** Squashed and turned, so the contours are not a circle drawn on the plan. */
-    aspect: 0.74,
-    yaw: -0.6,
-    /**
-     * A second, lower mass out toward the belt. One dome is a cone; two give the
-     * form a saddle and a shoulder, which is what reads as ground rather than as
-     * a mound.
-     */
-    shoulder: { centre: [110, -54] as const, radius: 38, height: 7.5 },
-    /**
-     * How far noise displaces the outline, in metres, at the long wavelength and
-     * again at a short one. Both are needed: the long octave decides the plan
-     * shape, the short one is what stops the crest reading as a drawn arc against
-     * the treeline. The short one stays well above the 2.5 m ground quad — below
-     * that it is not relief, it is noise (§17).
-     */
-    ragged: { broad: 14, fine: 4.5 },
-    /**
-     * Where the bedrock shows through, as a threshold on how *thin the soil is*
-     * — high on the form and steep — rather than as a shape painted on the hill.
-     * The patchiness then comes out of the noise the threshold is crossed by.
-     */
-    outcrop: { from: 0.62, to: 1.2 },
-  },
-  /**
    * Amplitude and wavelength of the undulation that stops the rest reading as a
    * stage. Relief only works when a near rise hides a far hollow, which needs
    * metres — at 0.75 m it was invisible on a projector.
    */
   swell: { height: 1.2, metres: 52 },
+} as const;
+
+/**
+ * One mass of rising ground: an ellipse in plan, turned off the axes, with a
+ * domed profile on it.
+ *
+ * A landform is composed from these rather than being one shape each, because a
+ * single dome is a cone however it is tuned, and two of them give a form a
+ * saddle and a shoulder — which is the difference between ground and a mound.
+ */
+export interface Hill {
+  /** Where its summit stands. */
+  readonly centre: readonly [number, number];
+  /** How far it reaches along its long axis, and how high the summit stands. */
+  readonly radius: number;
+  readonly height: number;
+  /** How much narrower it is across than along, and which way the long axis runs. */
+  readonly aspect: number;
+  readonly yaw: number;
+}
+
+/**
+ * The rising ground that fills the two quarters `LAND.ridge` leaves flat.
+ *
+ * `ridge` closes the horizon by lifting whole edges of the world, which works
+ * where nothing is looked at directly and fails where something is: from the
+ * overview the east quarter was seventy metres of dead-level lawn and the west
+ * was a treeline ruled with a straight edge. A landform is the cheapest thing
+ * that fixes either — no asset, no draw call — and the woodland standing on it
+ * lifts with it, which is what actually closes a frame.
+ *
+ * **Two landforms, deliberately not alike.** The knoll is a compact bedrock dome
+ * read at 165 m across open grass; the esker is a long glacial ridge read at
+ * 250 m through the trees already standing on it. Same rock, same turf, same
+ * treatment — different masses, so neither reads as the other's copy.
+ */
+export const HILLS = {
+  masses: [
+    // The knoll, east of the building. Sited north of z = −10 on purpose:
+    // everything south is the level plate the forecourt and the review row are
+    // pinned to, so a dome centred nearer would be flattened by its own skirt.
+    { centre: [64, -36], radius: 50, height: 13.5, aspect: 0.74, yaw: -0.6 },
+    { centre: [110, -54], radius: 38, height: 7.5, aspect: 0.74, yaw: -0.6 },
+
+    // The esker: a long glacial ridge running north–south out at x ≈ −200, and
+    // the answer to a different problem from the knoll's.
+    //
+    // **The left of frame is not open ground, it is the treeline.** Ray-cast
+    // against the terrain, the whole left third of the overview lands on the
+    // woodland belt between 250 m and 400 m, in an arc from z = −80 round to
+    // z = 190 — which `ridge.side` was already lifting by a flat 7.5 m, and a
+    // flat lift under a canopy is exactly the ruled-straight horizon the shot
+    // had. So this is sited on that arc and works through the trees standing on
+    // it: taller than the knoll, longer, narrower, and read at twice the range.
+    //
+    // **Two limbs with the stream's breach between them.** The water profile is
+    // scanned off `gradeAt` along `riverAt`, so ground raised over the channel
+    // raises the stream with it — a ridge crossing the river is not available.
+    // Cutting the gap where the river runs is the reading the landscape wants
+    // anyway: the stream has breached the ridge, which is what a stream does.
+    //
+    // The yaw is doing more than it looks: at 1.5 rad the *long* axis runs
+    // almost due north–south, so `radius` is that limb's reach in z and its
+    // clearance to the channel is set by it rather than by the aspect.
+    //
+    // The two flanking masses run the other way — long in x, thin in z —
+    // because either side of the breach there is only about forty-five metres
+    // of room between the channel and the next thing, and a mass wider than
+    // that has nowhere to be. Between them they cover the arc the treeline
+    // occupies from the left edge of frame round to the summit.
+    { centre: [-196, -46], radius: 84, height: 24, aspect: 0.36, yaw: 1.5 },
+    { centre: [-200, 42], radius: 74, height: 19, aspect: 0.28, yaw: 0.1 },
+    { centre: [-192, 140], radius: 70, height: 16, aspect: 0.34, yaw: -0.1 },
+    // The near shoulder, on the far bank inside the belt. The rest of the esker
+    // is 250 m out and reads as a skyline; this one is at 150 m and is what
+    // gives the near woodland on the left of frame a top that is not a ruled
+    // line. Same forty-five metre corridor between the channel and the belt.
+    { centre: [-70, 150], radius: 62, height: 15, aspect: 0.36, yaw: -0.15 },
+  ] as readonly Hill[],
+  /**
+   * How far noise displaces every outline, in metres, at the long wavelength and
+   * again at a short one. Both are needed: the long octave decides the plan
+   * shape, the short one is what stops a crest reading as a drawn arc against
+   * the treeline. The short one stays well above the 2.5 m ground quad — below
+   * that it is not relief, it is noise (§17).
+   */
+  ragged: { broad: 14, fine: 4.5 },
+  /**
+   * Where the bedrock shows through, as a threshold on how *thin the soil is* —
+   * high on the form and steep — rather than as a shape painted on a hill. The
+   * patchiness comes out of the noise the threshold is crossed by.
+   */
+  outcrop: { from: 0.62, to: 1.2 },
 } as const;
 
 /**
@@ -281,15 +331,15 @@ export const PARK = {
 } as const;
 
 /**
- * The bedrock breaking the surface of the knoll: slabs rather than boulders, and
- * mostly buried, because what is being drawn is the top of the rock the hill is
+ * The bedrock breaking the surface of the hills: slabs rather than boulders, and
+ * mostly buried, because what is being drawn is the top of the rock a hill is
  * made of and not stones lying on it.
  *
- * An attempt count, weighted the same way the trees are — the summit is where
- * the soil is thinnest, so it is where the rock shows.
+ * Attempts per hectare of plan area, thinned by `outcropAt` — so slabs appear
+ * only where the ground shading has already given the turf up.
  */
 export const OUTCROP = {
-  attempts: 900,
+  perHectare: 1400,
   /** Slab size in metres, and how flat. */
   size: [0.8, 3.0] as const,
   squat: 0.34,
@@ -323,16 +373,19 @@ export const WOODLAND = {
    */
   bank: { count: 1100, z: [98, 156] as const, x: [-240, 64] as const },
   /**
-   * The knoll's stand.
+   * The stands on the hills, as trees per hectare of the mass's own plan area.
+   *
+   * **A density rather than a count**, because the two landforms differ by a
+   * factor of two in area and a third one would need a number picked by hand.
    *
    * **Impostors rather than modelled trees, and the distance is the reason.**
-   * Nothing in the act comes within sixty metres of the wooded part of the hill,
-   * which is further out than the belt's own front rank — so a card carries it,
-   * and four hundred of them cost about the same as one 20 m spruce. Planted as
-   * real trees this stand alone was four million triangles, which is `§11`
-   * arriving by way of a landform instead of a shrub.
+   * Nothing in the act comes within sixty metres of the wooded part of either
+   * hill, which is further out than the belt's own front rank — so a card
+   * carries it, and four hundred of them cost about the same as one 20 m spruce.
+   * Planted as real trees the knoll's stand alone was four million triangles,
+   * which is `§11` arriving by way of a landform instead of a shrub.
    */
-  knoll: { count: 210, height: { min: 7, max: 17 } },
+  hills: { perHectare: 230, height: { min: 7, max: 17 } },
 } as const;
 
 /** Overall height of the massing, parapet cap included. */

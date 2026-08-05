@@ -1,6 +1,7 @@
 import {
   AVENUE,
   BRIDGE,
+  HILLS,
   LAND,
   PATH_EDGE_WIDTH,
   PAVILION,
@@ -35,104 +36,138 @@ export function gradeAt(x: number, z: number): number {
       smoothstep(ridge.beyond, ridge.beyond + 80, z),
       smoothstep(lake.east, lake.east + 90, x),
     ) * ridge.height,
-    knollAt(x, z),
+    hillAt(x, z),
   );
 
   return (1 - pinned(x, z)) * (relief(x, z) + lifted);
 }
 
 /**
- * How high the knoll stands above the park here, in metres.
+ * The hills, with the trigonometry and the bounds each one implies worked out
+ * once. `dome` runs a few million times while the zone builds, and `Math.cos`
+ * of a constant is not free at that count.
  *
- * Two masses taken as a **maximum rather than a sum**. Added, they put a bulge
- * in the saddle where they overlap, which is the one place a landform must not
- * have one — the same argument `heightAt` makes about the channel and the basin.
+ * `area` is the mass's plan ellipse, which is what the scatters apply a density
+ * to; `reach` is how far from the centre it can disturb the ground at all.
  */
-export function knollAt(x: number, z: number): number {
-  const { knoll } = LAND;
-  return Math.max(
-    dome(x, z, knoll.centre, knoll.radius, knoll.height),
-    dome(x, z, knoll.shoulder.centre, knoll.shoulder.radius, knoll.shoulder.height),
-  );
-}
+export const HILL_PLOTS = HILLS.masses.map((mass) => ({
+  ...mass,
+  cos: Math.cos(mass.yaw),
+  sin: Math.sin(mass.yaw),
+  reach: mass.radius + HILLS.ragged.broad + HILLS.ragged.fine,
+  area: Math.PI * mass.radius * mass.radius * mass.aspect,
+}));
 
-/** How far up the knoll a point stands: 0 off it, 1 at the summit. */
-export function knollShare(x: number, z: number): number {
-  return knollAt(x, z) / LAND.knoll.height;
+type Plot = (typeof HILL_PLOTS)[number];
+
+/**
+ * No mass may stand over the stream.
+ *
+ * `buildProfile` scans `gradeAt` along the channel to derive the water level, so
+ * ground raised over the centreline lifts the stream with it — silently, and for
+ * a long way either side of the mistake. Nothing downstream complains: the banks
+ * are derived from the same ground, so the freeboard still checks out and the
+ * only symptom is a brook running through a wood at the wrong height.
+ *
+ * One scan, once, at module load. It turns a landform sited twenty metres wrong
+ * into a message naming the place instead of an afternoon.
+ */
+for (let x = LAND.lake.west; x > -320; x -= 2) {
+  const z = riverAt(x);
+  for (const [index, plot] of HILL_PLOTS.entries()) {
+    // A tolerance rather than zero, because a smootherstep skirt is
+    // asymptotically small rather than exactly absent — this is how much the
+    // water may be lifted before anyone could see it, not a fudge factor.
+    const over = dome(x, z, plot) * plot.height;
+    if (over > 0.05) {
+      throw new Error(
+        `HILLS: mass ${index} at [${plot.centre}] stands ${over.toFixed(2)} m over the channel ` +
+          `at x = ${x}, z = ${z.toFixed(0)}. Move it clear of the centreline — the water profile ` +
+          'is derived from the ground it runs through.',
+      );
+    }
+  }
 }
 
 /**
- * How much bedrock shows on the knoll: 0 turf, 1 bare rock.
+ * How high the hills stand above the park here, in metres.
+ *
+ * Masses taken as a **maximum rather than a sum**. Added, they put a bulge in
+ * every saddle where two overlap, which is the one place a landform must not
+ * have one — the same argument `heightAt` makes about the channel and the basin.
+ */
+export function hillAt(x: number, z: number): number {
+  let height = 0;
+  for (const plot of HILL_PLOTS) height = Math.max(height, dome(x, z, plot) * plot.height);
+  return height;
+}
+
+/** How far up a hill a point stands: 0 off them all, 1 at a summit. */
+export function hillShare(x: number, z: number): number {
+  let share = 0;
+  for (const plot of HILL_PLOTS) share = Math.max(share, dome(x, z, plot));
+  return share;
+}
+
+/**
+ * How much bedrock shows on the hills: 0 turf, 1 bare rock.
  *
  * A threshold on **how thin the soil is** — thin high on the form, thin where it
- * is steep, and drifting over a few metres — rather than a shape painted on the
+ * is steep, and drifting over a few metres — rather than a shape painted on a
  * hill. Cross that one quantity against a fixed pair of edges and the result is
- * a bare crown, turf in the hollows and a ragged boundary nobody had to author;
- * retune the hill and the rock follows it.
+ * a bare crest, turf in the hollows and a ragged boundary nobody had to author;
+ * retune a hill and the rock follows it.
  *
  * **Three modules read this and none of them owns it.** The ground shades from
- * it, the outcrop slabs are scattered by it, and the knoll's trees are refused
- * by it — so the treeline, the rock and the stones are one edge rather than
- * three descriptions that have to be kept in step by hand.
+ * it, the outcrop slabs are scattered by it, and every woodland scatter is
+ * refused by it — so the treeline, the rock and the stones are one edge rather
+ * than three descriptions that have to be kept in step by hand.
  *
- * The steepness is the *knoll's own*, differenced from `knollAt` rather than
- * read off the finished ground. Cheaper, and more correct: the ground is also
- * steep at a river bank, and a river bank is not where bedrock belongs.
+ * The steepness is the *hills' own*, differenced from `hillAt` rather than read
+ * off the finished ground. Cheaper, and more correct: the ground is also steep
+ * at a river bank, and a river bank is not where bedrock belongs.
  */
 export function outcropAt(x: number, z: number): number {
-  const { knoll } = LAND;
-  const rise = knollAt(x, z);
-  if (rise <= knoll.height * 0.02) return 0;
+  const share = hillShare(x, z);
+  if (share <= 0.02) return 0;
 
   const step = 3;
   const grade =
-    Math.hypot(
-      knollAt(x + step, z) - knollAt(x - step, z),
-      knollAt(x, z + step) - knollAt(x, z - step),
-    ) /
+    Math.hypot(hillAt(x + step, z) - hillAt(x - step, z), hillAt(x, z + step) - hillAt(x, z - step)) /
     (2 * step);
 
-  const thin = (rise / knoll.height) * 1.15 + grade * 0.7 + wave(x / 11 - 3.4, z / 11 + 8.1) * 0.45;
-  return smoothstep(knoll.outcrop.from, knoll.outcrop.to, thin);
+  const thin = share * 1.15 + grade * 0.7 + wave(x / 11 - 3.4, z / 11 + 8.1) * 0.45;
+  return smoothstep(HILLS.outcrop.from, HILLS.outcrop.to, thin);
 }
 
 /**
- * One mass of the knoll.
+ * One mass's profile: 0 off it, 1 at its summit.
  *
  * An ellipse turned off the axes so the contours are not a circle, its outline
- * displaced by noise at a wavelength longer than the ground quad so the skirt is
+ * displaced by noise at two wavelengths so the skirt and the crest are both
  * ragged, and a smootherstep profile — zero gradient at both ends, so the summit
  * is domed and the skirt meets the park without a crease to catch the light.
  *
  * The bounding-box reject is not an optimisation detail: `gradeAt` is evaluated
- * something like a million times while the zone builds, and off the knoll this
- * costs two comparisons.
+ * something like a million times while the zone builds, and off the hills this
+ * costs two comparisons per mass.
  */
-function dome(
-  x: number,
-  z: number,
-  [cx, cz]: readonly [number, number],
-  radius: number,
-  height: number,
-): number {
-  const { ragged, aspect, yaw } = LAND.knoll;
+function dome(x: number, z: number, plot: Plot): number {
+  const [cx, cz] = plot.centre;
   const dx = x - cx;
   const dz = z - cz;
-  const reach = radius + ragged.broad + ragged.fine;
-  if (Math.abs(dx) > reach || Math.abs(dz) > reach) return 0;
+  if (Math.abs(dx) > plot.reach || Math.abs(dz) > plot.reach) return 0;
 
-  const cos = Math.cos(yaw);
-  const sin = Math.sin(yaw);
-  const along = dx * cos - dz * sin;
-  const across = (dx * sin + dz * cos) / aspect;
+  const along = dx * plot.cos - dz * plot.sin;
+  const across = (dx * plot.sin + dz * plot.cos) / plot.aspect;
 
   const distance =
     Math.hypot(along, across) +
-    wave(x / 31 + 4.7, z / 31 - 2.9) * ragged.broad +
-    wave(x / 9.5 - 6.2, z / 9.5 + 1.4) * ragged.fine;
+    wave(x / 31 + 4.7, z / 31 - 2.9) * HILLS.ragged.broad +
+    wave(x / 9.5 - 6.2, z / 9.5 + 1.4) * HILLS.ragged.fine;
 
-  const t = 1 - clamp01(distance / radius);
-  return t * t * t * (t * (t * 6 - 15) + 10) * height;
+  const t = 1 - clamp01(distance / plot.radius);
+  return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
 /**
