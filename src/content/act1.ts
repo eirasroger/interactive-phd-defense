@@ -25,8 +25,8 @@ export const act1Captions = {
   /** 1 · Connective · 0:30 — the establishing shot, and the title card. */
   overview: {
     eyebrow: 'Universitat Politècnica de Catalunya',
-    heading: 'TO WRITE · thesis title',
-    body: ['TO WRITE · author, supervisors, department, date.'],
+    heading: 'Artificial Intelligence for Circular and Sustainable Product Decision-Support in Construction',
+    body: ['Author: Roger Vergés Eiras · Supervisors: Núria Forcada, Kàtia Gaspar'],
     accent: 'circular',
     align: 'center',
   },

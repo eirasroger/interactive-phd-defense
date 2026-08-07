@@ -26,7 +26,7 @@ export const LAND = {
     far: 58,
     surface: -1.15,
     /**
-     * The basin, as a bowl rather than a pan. `shelf` is the shallow margin the
+     * The basin. `shelf` is the shallow margin the
      * river's gravel runs out into, `slope` how far past it the bed takes to
      * reach `depth`, `margin` the depth where the shelf ends.
      */
