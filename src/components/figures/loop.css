@@ -1,0 +1,100 @@
+.loop {
+  width: 100%;
+}
+
+.loop-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ---- The chain ------------------------------------------------------- */
+/* Neutral on purpose. The linear flow is what already happens; the colour
+   belongs to the returns, which are the thing being argued for. */
+
+.loop-node rect {
+  fill: color-mix(in srgb, var(--c-void) 55%, transparent);
+  stroke: var(--c-border-strong);
+  stroke-width: 1.5;
+}
+
+.loop-node text {
+  fill: var(--c-text);
+  font-family: var(--font-label);
+  font-size: 15px;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.loop-step line {
+  stroke: var(--c-border-strong);
+  stroke-width: 2;
+}
+
+.loop-step path {
+  fill: var(--c-border-strong);
+}
+
+/* ---- The returns ----------------------------------------------------- */
+/* One custom property per depth carries colour and weight together, so a
+   return cannot end up bright and thin, or dim and thick. */
+
+.loop-return {
+  --arc: var(--c-circular);
+  --arc-weight: 3.2;
+}
+
+.loop-return[data-depth='1'] {
+  --arc: color-mix(in srgb, var(--c-circular) 55%, var(--c-text-faint));
+  --arc-weight: 2.4;
+}
+
+.loop-return[data-depth='2'] {
+  --arc: var(--c-circular-dim);
+  --arc-weight: 1.8;
+}
+
+.loop-return-line {
+  fill: none;
+  stroke: var(--arc);
+  stroke-width: var(--arc-weight);
+  stroke-linecap: butt;
+}
+
+.loop-return-head {
+  fill: var(--arc);
+}
+
+.loop-return-name {
+  fill: var(--arc);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+/* ---- The marks ------------------------------------------------------- */
+/* Held back for the second beat, and amber throughout: these are the only
+   things on the figure that are a problem rather than a mechanism. */
+
+.loop-mark {
+  opacity: 0;
+}
+
+.loop-mark-ring {
+  fill: none;
+  stroke: var(--c-emphasis);
+  stroke-width: 1.5;
+}
+
+.loop-mark-label {
+  fill: var(--c-emphasis);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}

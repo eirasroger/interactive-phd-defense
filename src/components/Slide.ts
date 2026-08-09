@@ -13,6 +13,11 @@ export interface SlideSpec {
 export interface Statement {
   readonly element: HTMLElement;
   play(settle?: boolean): gsap.core.Timeline;
+  /**
+   * Takes it back off. Instant, and only for beats reached backwards — a
+   * statement that fades out on the way back is a statement being made twice.
+   */
+  hide(): void;
 }
 
 /**
@@ -156,6 +161,12 @@ export function createSlide(spec: SlideSpec): Slide {
 
       return {
         element: node,
+
+        hide() {
+          gsap.killTweensOf([node, rule, body]);
+          gsap.set(node, { opacity: 0 });
+        },
+
         play(settle = false) {
           const timeline = gsap.timeline();
           if (settle) {

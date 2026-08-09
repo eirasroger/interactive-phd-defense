@@ -6,6 +6,7 @@ import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { EXTERIOR_ASSETS, exteriorZone } from '@/world/exterior/ExteriorZone';
 import { CROSSING } from '@/world/exterior/paths';
 import { AVENUE, CONSTRUCTION, ENTRANCE, REVIEW } from '@/world/exterior/site';
+import { CircularEconomyScene } from './CircularEconomyScene';
 import { ExteriorScene } from './ExteriorScene';
 import { MotivationScene } from './MotivationScene';
 
@@ -70,7 +71,9 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * 1. **overview** — high over the lake, looking back at the whole site.
  * 2. **lake** — straight down onto the water on the same bearing, facing the
  *    shore. The site is read from the water, as if off a boat.
- * 3. **river** — west along the outlet, over the channel, following it.
+ * 3. **river** — west along the outlet, over the channel, following it. Its
+ *    own composition, not a caption: circular economy, as the value-retention
+ *    hierarchy.
  * 4. **park** — off the water and turned inland: the riverside walk leading to
  *    the building.
  * 5. **construction** — in to the massing, scaffolded, from the east.
@@ -132,13 +135,20 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // framing one: `WOODLAND.bank` starts at 98, carries no corridor clearance
   // and is the densest planting on the site, so a path a few metres north of
   // here spends half the transition inside a hedge.
-  scene(
-    'river',
-    'Environmental burden',
-    'recessed',
-    pose([46, 5, 95], [0, -1.6, 89], 50, 5),
-    act1Captions.burden,
-  ),
+  //
+  // `recessed`, and its own composition rather than a caption, like `lake`:
+  // the argument is the value-retention hierarchy, so the world steps back and
+  // becomes the surface it is read against.
+  {
+    id: 'river',
+    title: 'Circular economy',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'recessed',
+    pose: pose([46, 5, 95], [0, -1.6, 89], 50, 5),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new CircularEconomyScene(),
+  },
 
   // Sixteen metres off the river and turned inland. The riverside walk leads
   // out of the near corner and the building closes the frame beyond it; heading
@@ -146,7 +156,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // of frame and the river on the left, under the text.
   scene(
     'park',
-    'Circularity and measurement',
+    'Sustainability assessment',
     'foreground',
     pose([40, 5, 78], [-16, 4, 40], 46, 2),
     act1Captions.assessment,

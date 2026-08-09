@@ -78,8 +78,10 @@ export class MotivationScene implements SceneInstance {
     this.built.add(panel.slot);
 
     // A build still counting when its panel is swapped away finishes out of
-    // order, and clicking twice quickly is normal.
-    this.build?.kill();
+    // order, and clicking twice quickly is normal. Run it to its end before
+    // killing it: a `from` tween killed part-way leaves its target stranded at
+    // the value it was animating *out of*, which here is invisible.
+    this.build?.progress(1).kill();
 
     const timeline = slide.evidence.show(panel.slot, settle);
     this.build = panel.play(replay);

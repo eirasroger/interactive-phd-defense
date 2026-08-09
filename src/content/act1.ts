@@ -13,10 +13,15 @@ import type { CaptionContent } from '@/components/Caption';
  * that reads as plausible is how a draft sentence survives into a defence.
  *
  * The six state-of-the-art streams are **distributed across five scenes** —
- * burden, circularity and assessment, EPDs, early design, artificial
+ * circular economy, sustainability assessment, EPDs, early design, artificial
  * intelligence — each with the piece of the site that argues it. One caption
  * listing all six asks a single frame to carry a literature review. See
  * `scenes/act1/index.ts` for the walk.
+ *
+ * The environmental burden itself is not one of the five: it is made in the
+ * motivation beat (`content/motivation.ts`) and would be repetition here, so
+ * stream 1's slot went to circularity instead — see `content/circularEconomy.ts`
+ * and `scenes/act1/CircularEconomyScene.ts`.
  */
 
 const TO_WRITE = (words: number): string =>
@@ -37,23 +42,15 @@ export const act1Captions = {
 
   /* Scene 2 is a composition, not a caption — see `content/motivation.ts`. */
 
-  /** 3 · Supporting · recessed · 0:50 — stream 1. */
-  burden: {
-    eyebrow: 'State of the art · 01',
-    heading: 'The environmental burden of the construction sector.',
-    body: [TO_WRITE(30)],
-    accent: 'circular',
-  },
+  /* Scene 3 (stream 1's slot) is a composition, not a caption — circular
+   * economy, built as the value-retention hierarchy. See
+   * `content/circularEconomy.ts` and `scenes/act1/CircularEconomyScene.ts`. */
 
-  /** 4 · Supporting · 1:00 — streams 2 and 3, argued over the same ground. */
+  /** 4 · Supporting · 0:50 — stream 3. */
   assessment: {
     eyebrow: 'State of the art · 02',
-    heading: 'Circularity, and how construction measures sustainability.',
-    body: [
-      'Circular economy in construction.',
-      'Sustainability assessment frameworks — LCA, levels of assessment.',
-      TO_WRITE(24),
-    ],
+    heading: 'How construction measures its environmental impact.',
+    body: ['Sustainability assessment frameworks — LCA, levels of assessment.', TO_WRITE(24)],
     accent: 'circular',
   },
 
