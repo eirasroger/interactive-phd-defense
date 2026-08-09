@@ -46,13 +46,9 @@ export const act1Captions = {
    * economy, built as the value-retention hierarchy. See
    * `content/circularEconomy.ts` and `scenes/act1/CircularEconomyScene.ts`. */
 
-  /** 4 · Supporting · 0:50 — stream 3. */
-  assessment: {
-    eyebrow: 'State of the art · 02',
-    heading: 'How construction measures its environmental impact.',
-    body: ['Sustainability assessment frameworks — LCA, levels of assessment.', TO_WRITE(24)],
-    accent: 'circular',
-  },
+  /* Scene 4 (stream 3) is a composition, not a caption — sustainability
+   * assessment, built as the life-cycle band that widens across five beats.
+   * See `content/assessment.ts` and `scenes/act1/AssessmentScene.ts`. */
 
   /** 5 · Supporting · 0:50 — stream 4, on the building it would describe. */
   data: {
@@ -62,13 +58,9 @@ export const act1Captions = {
     accent: 'emphasis',
   },
 
-  /** 6 · Hero · 0:50 — stream 5, at the one place the building is still open. */
-  earlyDesign: {
-    eyebrow: 'State of the art · 04',
-    heading: 'The decisions that determine a building are taken before it exists.',
-    body: [TO_WRITE(26)],
-    accent: 'emphasis',
-  },
+  /* Scene 6 (stream 5) is a composition, not a caption — the influence /
+   * information crossing. See `content/earlyDesign.ts` and
+   * `scenes/act1/EarlyDesignScene.ts`. */
 
   /** 7 · Hero · 0:55 — stream 6, standing in front of the four options. */
   alternatives: {

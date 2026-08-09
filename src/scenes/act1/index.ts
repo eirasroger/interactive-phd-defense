@@ -6,7 +6,9 @@ import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { EXTERIOR_ASSETS, exteriorZone } from '@/world/exterior/ExteriorZone';
 import { CROSSING } from '@/world/exterior/paths';
 import { AVENUE, CONSTRUCTION, ENTRANCE, REVIEW } from '@/world/exterior/site';
+import { AssessmentScene } from './AssessmentScene';
 import { CircularEconomyScene } from './CircularEconomyScene';
+import { EarlyDesignScene } from './EarlyDesignScene';
 import { ExteriorScene } from './ExteriorScene';
 import { MotivationScene } from './MotivationScene';
 
@@ -154,13 +156,22 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // out of the near corner and the building closes the frame beyond it; heading
   // west-south-west, so south — and therefore the building — falls on the right
   // of frame and the river on the left, under the text.
-  scene(
-    'park',
-    'Sustainability assessment',
-    'foreground',
-    pose([40, 5, 78], [-16, 4, 40], 46, 2),
-    act1Captions.assessment,
-  ),
+  //
+  // Its own composition rather than a caption — the life-cycle band, built
+  // across five beats. Left `foreground` even so: `lake` and `river` are both
+  // recessed and a third in a row is two and a half minutes of dimmed world,
+  // which is where a continuous world starts reading as a slide deck again.
+  // The `wide` veil the composition sets is what carries legibility here.
+  {
+    id: 'park',
+    title: 'Sustainability assessment',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'foreground',
+    pose: pose([40, 5, 78], [-16, 4, 40], 46, 2),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new AssessmentScene(),
+  },
 
   // The massing whole, from the east three-quarter, which is the side the
   // scaffold stands on. Aimed past the building's west corner so the elevation
@@ -177,13 +188,19 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // Blender is Z-up facing -Y and glTF maps that to web +Z, so (x, y, z) there
   // is (x, z, -y) here. Aimed a few metres west of the bays it wraps so the
   // structure stands right of centre.
-  scene(
-    'scaffold',
-    'Early design',
-    'foreground',
-    pose([22, 7, 40], [5, 9, 12], 40, 1),
-    act1Captions.earlyDesign,
-  ),
+  // Its own composition rather than a caption: the influence / information
+  // crossing, which is stream 5's device and belongs on the one beat standing
+  // where the building is still open.
+  {
+    id: 'scaffold',
+    title: 'Early design',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'foreground',
+    pose: pose([22, 7, 40], [5, 9, 12], 40, 1),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new EarlyDesignScene(),
+  },
 
   // The options' own scene, and the only one that turns its back on the
   // building entirely. Square to the row and close, aimed `lead` metres back

@@ -1,0 +1,107 @@
+.impact-method {
+  width: 100%;
+}
+
+.method-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ---- What the method needs -------------------------------------------- */
+/*
+ * An input is drawn as two rects, not one: a fill that can drain and a frame
+ * that stays. The second beat empties the first and dissolves the second's
+ * stroke into dashes — both of which interpolate, which a change of class
+ * does not.
+ */
+
+.method-input-fill {
+  fill: color-mix(in srgb, var(--c-void) 55%, transparent);
+  stroke: none;
+}
+
+.method-input-frame {
+  fill: none;
+  stroke: var(--c-border-strong);
+  stroke-width: 1.25;
+  /* Gap zero is a solid line, and the start of a tween to a dashed one. */
+  stroke-dasharray: 40 0;
+}
+
+.method-input-label {
+  fill: var(--c-text);
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.method-missing-rule {
+  fill: var(--c-emphasis);
+  transform-origin: 0 50%;
+}
+
+.method-missing-note {
+  fill: var(--c-emphasis);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.method-feed {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c-text-faint) 60%, transparent);
+  stroke-width: 1.25;
+}
+
+.method-arrow {
+  fill: color-mix(in srgb, var(--c-text-faint) 75%, transparent);
+}
+
+/* ---- The methods ------------------------------------------------------- */
+/* LCA carries the accent; the two that complete LCSA are drawn as the same
+   object at lower weight, because that is what they are. */
+
+.method-band rect {
+  fill: color-mix(in srgb, var(--c-circular) 40%, transparent);
+  stroke: var(--c-circular);
+  stroke-width: 1.5;
+}
+
+.method-band[data-rank='secondary'] rect {
+  fill: color-mix(in srgb, var(--c-circular) 14%, transparent);
+  stroke: var(--c-circular-dim);
+}
+
+.method-band-code {
+  fill: var(--c-text);
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+}
+
+.method-band-name {
+  fill: var(--c-text-muted);
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.method-sum-rule {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c-text-faint) 70%, transparent);
+  stroke-width: 1.25;
+}
+
+.method-sum-label {
+  fill: var(--c-text-muted);
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.04em;
+}
