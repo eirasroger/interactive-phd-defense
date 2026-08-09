@@ -72,6 +72,18 @@ export class Renderer {
     this.events.onResize?.(this.width, this.height);
   }
 
+  /**
+   * Re-reads the container after the stage has been rescaled.
+   *
+   * `measure` uses `getBoundingClientRect`, which is post-transform, so the
+   * drawing buffer always matches the pixels actually painted. But scaling the
+   * stage does not change any layout box inside it, so `ResizeObserver` stays
+   * silent and this has to be called by hand.
+   */
+  refresh(): void {
+    if (this.measure()) this.events.onResize?.(this.width, this.height);
+  }
+
   get size(): { width: number; height: number } {
     return { width: this.width, height: this.height };
   }

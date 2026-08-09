@@ -29,7 +29,7 @@
 }
 
 .loading-track {
-  width: min(18rem, 40vw);
+  width: 18rem;
   height: 1px;
   background-color: var(--c-border);
   overflow: hidden;

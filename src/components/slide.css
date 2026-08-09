@@ -1,0 +1,116 @@
+/* 5:7, not even: the claim needs a measure and stops, the evidence takes the rest. */
+.slide {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  align-items: center;
+  gap: 7rem;
+  width: 100%;
+}
+
+.slide-head {
+  display: grid;
+  gap: var(--s-8);
+  align-content: center;
+}
+
+.slide-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.slide-eyebrow::before {
+  content: '';
+  width: var(--s-8);
+  height: 1px;
+  background-color: currentColor;
+  opacity: 0.5;
+}
+
+.slide[data-accent='circular'] .slide-eyebrow {
+  color: var(--c-circular);
+}
+.slide[data-accent='ai'] .slide-eyebrow {
+  color: var(--c-ai);
+}
+.slide[data-accent='emphasis'] .slide-eyebrow {
+  color: var(--c-emphasis);
+}
+.slide[data-accent='neutral'] .slide-eyebrow {
+  color: var(--c-text-faint);
+}
+
+.slide-heading {
+  font-family: var(--font-display);
+  font-size: var(--t-title);
+  font-weight: var(--display-weight);
+  line-height: var(--display-line);
+  letter-spacing: var(--display-tracking);
+  text-wrap: balance;
+}
+
+.slide-statements {
+  display: grid;
+  gap: var(--s-6);
+}
+
+/* Empty until a beat fills it, and contributing no gap while it is. */
+.slide-statements:empty {
+  display: none;
+}
+
+.slide-statement {
+  display: grid;
+  grid-template-columns: 2px 1fr;
+  gap: var(--s-6);
+  align-items: start;
+
+  font-size: var(--t-body);
+  line-height: var(--lh-normal);
+  color: var(--c-text-muted);
+  max-width: var(--measure);
+}
+
+.slide-statement-rule {
+  align-self: stretch;
+  min-height: 100%;
+  border-radius: 999px;
+  transform-origin: top center;
+  background-color: currentColor;
+}
+
+.slide-statement[data-accent='circular'] .slide-statement-rule {
+  color: var(--c-circular);
+}
+.slide-statement[data-accent='ai'] .slide-statement-rule {
+  color: var(--c-ai);
+}
+.slide-statement[data-accent='emphasis'] .slide-statement-rule {
+  color: var(--c-emphasis);
+}
+.slide-statement[data-accent='neutral'] .slide-statement-rule {
+  color: var(--c-border-strong);
+}
+
+/* Panels share one cell, so a swap cannot reflow the column. */
+.slide-evidence {
+  display: grid;
+  align-items: center;
+}
+
+.slide-panel {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+/*
+ * No responsive fallback. The stage is always 1920x1080 and letterboxes on
+ * anything else, so a viewport media query here would fire on a small window
+ * and restack a composition that has not actually changed size.
+ */

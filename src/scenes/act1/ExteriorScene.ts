@@ -19,6 +19,6 @@ export class ExteriorScene implements SceneInstance {
 
     const caption = createCaption(this.content);
     context.root.appendChild(caption.element);
-    caption.reveal(0.15);
+    caption.reveal(context.entryDelay + 0.15);
   }
 }

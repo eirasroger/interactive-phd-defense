@@ -1,0 +1,48 @@
+.ledger {
+  display: grid;
+  gap: var(--s-8);
+}
+
+.ledger-body {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s-16);
+}
+
+.ledger-group {
+  display: grid;
+  gap: var(--s-6);
+  align-content: start;
+}
+
+.ledger-label {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+}
+
+.ledger-stats {
+  display: grid;
+  gap: var(--s-12);
+}
+
+.ledger-divider {
+  flex: 0 0 1px;
+  align-self: stretch;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--c-border-strong) 18%,
+    var(--c-border-strong) 82%,
+    transparent 100%
+  );
+}
+
+.ledger-source {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  color: var(--c-text-faint);
+}

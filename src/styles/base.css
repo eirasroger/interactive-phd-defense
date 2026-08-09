@@ -1,3 +1,4 @@
+@import './fonts.css';
 @import './tokens.css';
 
 *,
@@ -13,7 +14,11 @@ body {
 }
 
 html {
-  background-color: var(--c-base);
+  /* Pinned, not inherited: every length below is in rem and the stage is a
+     fixed pixel surface, so a browser with a non-default base size would
+     rescale the type inside a box that does not move. */
+  font-size: 16px;
+  background-color: var(--c-void);
   color-scheme: dark;
 }
 
@@ -24,7 +29,7 @@ body {
   line-height: var(--lh-normal);
   letter-spacing: var(--ls-body);
   color: var(--c-text);
-  background-color: var(--c-base);
+  background-color: var(--c-void);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 
@@ -50,9 +55,4 @@ body[data-pointer='idle'] {
   cursor: none;
 }
 
-#stage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  isolation: isolate;
-}
+/* #stage and #viewport are laid out in stage.css. */

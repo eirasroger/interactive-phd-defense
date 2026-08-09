@@ -11,10 +11,18 @@
     <title>PhD Defense</title>
   </head>
   <body>
-    <main id="stage">
-      <div id="canvas-layer"></div>
-      <div id="overlay-layer"></div>
-    </main>
+    <!--
+      The stage is a fixed 1920x1080 surface scaled to fit whatever it is shown
+      on, so the composition a scene is authored against is the composition that
+      is projected. Everything the audience sees lives inside it; the viewport
+      only supplies the letterbox.
+    -->
+    <div id="viewport">
+      <main id="stage">
+        <div id="canvas-layer"></div>
+        <div id="overlay-layer"></div>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

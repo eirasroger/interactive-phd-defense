@@ -25,6 +25,9 @@ export interface SceneState {
   readonly definition: SceneDefinition;
   /** How the scene was reached. `jump` means direct navigation, so no easing. */
   readonly direction: NavDirection;
+  /** Which beat of this scene is showing, and how many it has. */
+  readonly beat: number;
+  readonly beats: number;
 }
 
 export interface SceneDirectorDeps {
@@ -48,6 +51,7 @@ export class SceneDirector {
   private readonly listeners = new Set<(state: SceneState) => void>();
   private active: ActiveScene | null = null;
   private index = -1;
+  private beat = 0;
   private token = 0;
   private direction: NavDirection = 'jump';
 
@@ -68,6 +72,31 @@ export class SceneDirector {
 
   indexOf(id: string): number {
     return this.scenes.findIndex((scene) => scene.id === id);
+  }
+
+  /**
+   * Plays the next beat, or returns false when there is none left so the
+   * caller moves on. Beats are not in the URL: a jump arrives complete.
+   */
+  advanceBeat(): boolean {
+    const active = this.active;
+    if (!active) return false;
+    if (this.beat >= (active.instance.beats ?? 1) - 1) return false;
+
+    this.beat += 1;
+    active.instance.beat?.(this.beat, false);
+    this.emit();
+    return true;
+  }
+
+  retreatBeat(): boolean {
+    const active = this.active;
+    if (!active || this.beat <= 0) return false;
+
+    this.beat -= 1;
+    active.instance.beat?.(this.beat, false);
+    this.emit();
+    return true;
   }
 
   definitionAt(index: number): SceneDefinition | undefined {
@@ -98,12 +127,14 @@ export class SceneDirector {
     await this.ensureAssets(definition, requestToken);
     if (requestToken !== this.token) return;
 
+    // Camera first, so the scene can be paced against a measured move.
+    const previous = this.index;
     this.teardown(direction);
-    this.mount(definition, direction);
+    const travel = this.moveCamera(definition, direction, previous);
+    this.mount(definition, direction, travel);
     this.index = clamped;
     this.direction = direction;
 
-    this.moveCamera(definition, direction);
     this.emit();
     this.prefetchNeighbours(clamped);
   }
@@ -127,12 +158,18 @@ export class SceneDirector {
     }
   }
 
-  private mount(definition: SceneDefinition, direction: NavDirection): void {
+  private mount(definition: SceneDefinition, direction: NavDirection, travel: number): void {
+    const entryDelay =
+      travel > 0
+        ? Math.max(travel * TRANSITION.content.lead, TRANSITION.content.minLeadSeconds)
+        : 0;
+
     const layer = document.createElement('section');
     layer.className = 'scene-layer';
     layer.dataset['scene'] = definition.id;
     layer.dataset['direction'] = direction;
     layer.setAttribute('aria-label', definition.title);
+    layer.style.setProperty('--entry-delay', `${entryDelay}s`);
     this.deps.overlay.appendChild(layer);
 
     const group = new Group();
@@ -149,6 +186,7 @@ export class SceneDirector {
       world: this.deps.world,
       assets: this.deps.assets,
       quality: this.deps.quality,
+      entryDelay,
       signal: controller.signal,
       onFrame: (handler: FrameHandler) => {
         disposers.push(this.deps.clock.add(handler));
@@ -160,6 +198,13 @@ export class SceneDirector {
 
     this.active = { instance, layer, group, controller, disposers };
     instance.enter(context, direction);
+
+    // Entering backwards lands on the last beat, already built.
+    const total = instance.beats ?? 1;
+    this.beat = direction === 'backward' ? total - 1 : 0;
+    for (let index = 1; index <= this.beat; index += 1) {
+      instance.beat?.(index, true);
+    }
 
     requestAnimationFrame(() => layer.classList.add('is-active'));
     document.title = `${definition.title} — PhD Defense`;
@@ -184,15 +229,22 @@ export class SceneDirector {
     }, EXIT_REMOVAL_MS);
   }
 
-  private moveCamera(definition: SceneDefinition, direction: NavDirection): void {
-    if (direction === 'jump' && this.index === -1) {
+  /** Starts the move and returns its length in seconds. */
+  private moveCamera(
+    definition: SceneDefinition,
+    direction: NavDirection,
+    previousIndex: number,
+  ): number {
+    // The first scene is arrived at, not travelled to. `previousIndex` rather
+    // than `this.index`, which is already the scene being entered.
+    if (direction === 'jump' && previousIndex === -1) {
       this.deps.camera.snapTo(definition.pose);
-      return;
+      return 0;
     }
 
     // Sequential navigation is paced by the move itself; only the jump cut
     // holds to a fixed length, because its whole job is to feel like one.
-    this.deps.camera.moveTo(
+    return this.deps.camera.moveTo(
       definition.pose,
       direction === 'jump' ? { seconds: TRANSITION.jumpSeconds } : {},
     );
@@ -214,6 +266,8 @@ export class SceneDirector {
       total: this.scenes.length,
       definition,
       direction: this.direction,
+      beat: this.beat,
+      beats: this.active?.instance.beats ?? 1,
     };
   }
 

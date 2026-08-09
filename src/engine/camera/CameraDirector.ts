@@ -25,7 +25,8 @@ export class CameraDirector {
     this.rig.snapTo(pose);
   }
 
-  moveTo(pose: CameraPose, options: CameraMoveOptions = {}): void {
+  /** Moves to a pose and returns the duration, which the deck paces content against. */
+  moveTo(pose: CameraPose, options: CameraMoveOptions = {}): number {
     this.kill();
 
     const s = this.rig.state;
@@ -34,7 +35,7 @@ export class CameraDirector {
 
     if (duration <= 0) {
       this.rig.snapTo(pose);
-      return;
+      return 0;
     }
 
     s.arc = pose.arc ?? 0;
@@ -57,6 +58,8 @@ export class CameraDirector {
         this.tween = null;
       },
     });
+
+    return duration;
   }
 
   kill(): void {

@@ -7,6 +7,37 @@
  * space rather than as pages being swapped.
  */
 
+/*
+ * The letterbox. Only ever shows the bars.
+ */
+#viewport {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--c-void);
+}
+
+/*
+ * The design surface, at the exact pixel size scenes are composed against and
+ * scaled to fit. `--stage-scale` is written by `StageFit`.
+ *
+ * The transform makes this the containing block for its `position: fixed`
+ * descendants, which is why the progress bar and the system overlays scale
+ * with the composition instead of clinging to the window edges.
+ */
+#stage {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  width: var(--stage-w);
+  height: var(--stage-h);
+  overflow: hidden;
+  isolation: isolate;
+
+  transform: translate(-50%, -50%) scale(var(--stage-scale, 1));
+  transform-origin: center center;
+}
+
 #canvas-layer,
 #overlay-layer {
   position: absolute;
@@ -38,9 +69,13 @@
   /* A scene that outgrows the stage is a design error, never a scrollbar. */
   overflow: hidden;
 
+  /* `--entry-delay` is written per scene from the camera move's length. */
   opacity: 0;
-  transition: opacity var(--d-normal) var(--e-enter);
-  will-change: opacity;
+  transition:
+    opacity var(--d-content) var(--e-enter) var(--entry-delay, 0s),
+    transform var(--d-content) var(--e-enter) var(--entry-delay, 0s);
+  transform: translate3d(0, 1.4rem, 0);
+  will-change: opacity, transform;
 }
 
 /*
@@ -65,11 +100,26 @@
   );
 }
 
+/* Full-width compositions veil the whole frame, but softly: the world stays
+   readable as a depth field rather than being switched off. */
+.scene-layer[data-align='wide']::before {
+  background: linear-gradient(
+    175deg,
+    color-mix(in srgb, var(--c-base) 90%, transparent) 0%,
+    color-mix(in srgb, var(--c-base) 76%, transparent) 45%,
+    color-mix(in srgb, var(--c-base) 88%, transparent) 100%
+  );
+}
+
+/* The dark stop is held across the middle before falling away: a radial
+   gradient fading from 0% reaches its stated opacity at one point only. */
 .scene-layer[data-align='center']::before {
   background: radial-gradient(
-    ellipse at center,
-    color-mix(in srgb, var(--c-base) 85%, transparent) 0%,
-    transparent 70%
+    ellipse 95% 85% at 50% 48%,
+    color-mix(in srgb, var(--c-void) 88%, transparent) 0%,
+    color-mix(in srgb, var(--c-void) 80%, transparent) 42%,
+    color-mix(in srgb, var(--c-void) 42%, transparent) 76%,
+    color-mix(in srgb, var(--c-void) 18%, transparent) 100%
   );
 }
 
@@ -80,10 +130,15 @@
 
 .scene-layer.is-active {
   opacity: 1;
+  transform: translate3d(0, 0, 0);
 }
 
+/* The outgoing composition leaves at once, giving the camera move an empty frame. */
 .scene-layer.is-exiting {
   opacity: 0;
+  transform: translate3d(0, -1rem, 0);
   pointer-events: none;
-  transition: opacity var(--d-quick) var(--e-exit);
+  transition:
+    opacity var(--d-content) var(--e-exit),
+    transform var(--d-content) var(--e-exit);
 }

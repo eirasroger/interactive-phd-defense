@@ -1,0 +1,22 @@
+/*
+ * Self-hosted and bundled. There is no network at the lectern.
+ */
+
+@import '@fontsource-variable/instrument-sans';
+
+:root {
+  --font-sans: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Roles. One family throughout; only weight and tracking distinguish them. */
+  --font-display: var(--font-sans);
+  --font-label: var(--font-sans);
+  --font-figure: var(--font-sans);
+
+  /* Diagnostics overlay only. Not bundled — it never reaches the audience. */
+  --font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', monospace;
+
+  --display-weight: 300;
+  --display-tracking: -0.028em;
+  --display-line: 1.18;
+  --label-tracking: 0.09em;
+}

@@ -10,6 +10,8 @@ export interface CaptionContent {
   /** Semantic accent for the eyebrow rule. */
   readonly accent?: 'circular' | 'ai' | 'emphasis';
   readonly align?: 'start' | 'center';
+  /** Institutional mark above the composition. Title card only; `src` must be an import. */
+  readonly logo?: { readonly src: string; readonly alt: string };
 }
 
 export interface Caption {
@@ -27,6 +29,19 @@ export interface Caption {
  */
 export function createCaption(content: CaptionContent): Caption {
   const parts: HTMLElement[] = [];
+
+  const logo = content.logo
+    ? el('img', {
+        className: 'caption-logo',
+        attrs: {
+          src: content.logo.src,
+          alt: content.logo.alt,
+          decoding: 'sync',
+          draggable: 'false',
+        },
+      })
+    : null;
+  if (logo) parts.push(logo);
 
   const eyebrow = content.eyebrow
     ? el('p', { className: 'caption-eyebrow', text: content.eyebrow })
@@ -55,7 +70,7 @@ export function createCaption(content: CaptionContent): Caption {
     element,
     reveal(delay = 0) {
       return gsap.timeline().from(
-        [...(eyebrow ? [eyebrow] : []), heading, ...paragraphs],
+        [...(logo ? [logo] : []), ...(eyebrow ? [eyebrow] : []), heading, ...paragraphs],
         {
           y: 26,
           opacity: 0,

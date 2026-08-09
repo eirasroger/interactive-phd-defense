@@ -28,8 +28,11 @@ export function createProgressIndicator(): ProgressIndicator {
     update(state) {
       chapter.textContent = state.definition.chapter;
       position.textContent = `${state.index + 1} / ${state.total}`;
-      const ratio = state.total > 1 ? state.index / (state.total - 1) : 1;
-      fill.style.transform = `scaleX(${ratio})`;
+
+      // Beats advance the bar within the scene's own span.
+      const within = state.beats > 1 ? state.beat / state.beats : 0;
+      const ratio = state.total > 1 ? (state.index + within) / (state.total - 1) : 1;
+      fill.style.transform = `scaleX(${Math.min(ratio, 1)})`;
     },
   };
 }

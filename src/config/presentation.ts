@@ -5,6 +5,19 @@ import type { CameraPose } from '@/engine/camera/types';
  * live here rather than being restated per scene.
  */
 
+/**
+ * The design surface. Every scene is composed against exactly these pixels and
+ * the whole stage is scaled to fit the display, so a hall's resolution and
+ * aspect change the size of the presentation and nothing else about it.
+ *
+ * 16:9. A 16:10 or 4:3 projector letterboxes, which costs some screen and buys
+ * the guarantee that nothing reflows between rehearsal and the defence.
+ */
+export const STAGE = {
+  width: 1920,
+  height: 1080,
+} as const;
+
 export const CAMERA_DEFAULTS = {
   fov: 42,
   near: 0.1,
@@ -42,8 +55,17 @@ export const TRANSITION = {
     minSeconds: 1.8,
     maxSeconds: 4.5,
   },
-  /** Content dissolve, shorter so the world reads as continuous. */
-  contentSeconds: 0.55,
+  /**
+   * The composition brackets the camera move: the old scene leaves at once,
+   * the camera travels through an empty frame, the new one arrives as it
+   * settles. Mirrored by `--d-content` in tokens.css.
+   */
+  content: {
+    seconds: 0.55,
+    /** Share of the camera move that passes before the new composition appears. */
+    lead: 0.55,
+    minLeadSeconds: 0.2,
+  },
   /** Direct navigation still eases, just fast enough to feel like a cut. */
   jumpSeconds: 0.7,
 } as const;

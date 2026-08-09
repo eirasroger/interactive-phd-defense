@@ -7,6 +7,7 @@ import { EXTERIOR_ASSETS, exteriorZone } from '@/world/exterior/ExteriorZone';
 import { CROSSING } from '@/world/exterior/paths';
 import { AVENUE, CONSTRUCTION, ENTRANCE, REVIEW } from '@/world/exterior/site';
 import { ExteriorScene } from './ExteriorScene';
+import { MotivationScene } from './MotivationScene';
 
 const CHAPTER = 'Act I — Exterior';
 
@@ -106,13 +107,20 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // camera settles onto the water and reads the site off it. Nothing is built
   // in the near half of this frame, which is the point — this beat is the
   // reason the work exists, not yet the work.
-  scene(
-    'lake',
-    'Why this work exists',
-    'foreground',
-    pose([138, 6, 98], [26, 5, 66], 48, 6),
-    act1Captions.lake,
-  ),
+  //
+  // `recessed`, and the only scene in the act with its own composition rather
+  // than a caption: the argument is four numbers, so the world steps back and
+  // becomes the surface they are read against.
+  {
+    id: 'lake',
+    title: 'Motivation and research context',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'recessed',
+    pose: pose([138, 6, 98], [26, 5, 66], 48, 6),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new MotivationScene(),
+  },
 
   // West along the outlet, still on the water, now over the channel itself and
   // following it. Four metres up and aimed down its length, so the stream

@@ -1,0 +1,45 @@
+.stat {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.06em;
+
+  font-family: var(--font-figure);
+  font-size: var(--t-figure);
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-display);
+
+  /* Without tabular figures the count-up jitters sideways as digits change width. */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.stat-unit {
+  font-size: 0.42em;
+  font-weight: var(--fw-regular);
+  letter-spacing: 0;
+  color: var(--c-text-muted);
+}
+
+.stat-label {
+  max-width: 26ch;
+  font-size: var(--t-caption);
+  line-height: var(--lh-snug);
+  color: var(--c-text-muted);
+  text-wrap: balance;
+}
+
+.stat[data-accent='circular'] .stat-number {
+  color: var(--c-circular);
+}
+.stat[data-accent='ai'] .stat-number {
+  color: var(--c-ai);
+}
+.stat[data-accent='emphasis'] .stat-number {
+  color: var(--c-emphasis);
+}

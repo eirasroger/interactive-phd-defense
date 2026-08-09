@@ -1,3 +1,4 @@
+import logoUpc from '@/assets/presentation/logoupc.png';
 import type { CaptionContent } from '@/components/Caption';
 
 /**
@@ -24,20 +25,17 @@ const TO_WRITE = (words: number): string =>
 export const act1Captions = {
   /** 1 · Connective · 0:30 — the establishing shot, and the title card. */
   overview: {
-    eyebrow: 'Universitat Politècnica de Catalunya',
+    logo: { src: logoUpc, alt: 'Universitat Politècnica de Catalunya · BarcelonaTech' },
+    // The mark already says the institution, so the eyebrow says what the
+    // document is instead of repeating it.
+    eyebrow: 'Doctoral thesis · Defence',
     heading: 'Artificial Intelligence for Circular and Sustainable Product Decision-Support in Construction',
     body: ['Author: Roger Vergés Eiras · Supervisors: Núria Forcada, Kàtia Gaspar'],
     accent: 'circular',
     align: 'center',
   },
 
-  /** 2 · Supporting · 0:50 — why this work, before any literature. */
-  lake: {
-    eyebrow: 'Context',
-    heading: 'TO WRITE · the motivation, stated once and in plain terms.',
-    body: [TO_WRITE(32), TO_WRITE(20)],
-    accent: 'circular',
-  },
+  /* Scene 2 is a composition, not a caption — see `content/motivation.ts`. */
 
   /** 3 · Supporting · recessed · 0:50 — stream 1. */
   burden: {

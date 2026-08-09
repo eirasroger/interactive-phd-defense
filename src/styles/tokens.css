@@ -34,20 +34,20 @@
   --c-focus: var(--c-ai);
 
   /* ---- Typography ----------------------------------------------------- */
-  /* Fonts must be self-hosted before the defense: no network at runtime. */
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+  /* Faces and role assignments live in `fonts.css`, imported first. */
 
-  /* Fluid scale, tuned so the smallest step stays legible from the back of
-     a lecture room at 1920x1080.
-     Headings track height as well as width: lecture projectors are often
-     4:3 or short-16:10, and a width-only scale overflows on them. */
-  --t-display: clamp(3rem, min(7vw, 11vh), 6.5rem);
-  --t-title: clamp(2.25rem, min(4.5vw, 7vh), 4rem);
-  --t-heading: clamp(1.5rem, min(2.4vw, 3.6vh), 2.25rem);
-  --t-body: clamp(1.05rem, 1.35vw, 1.375rem);
-  --t-caption: clamp(0.875rem, 1vw, 1rem);
-  --t-micro: clamp(0.75rem, 0.8vw, 0.8125rem);
+  /* Fixed, because the stage is. These were fluid clamps against the viewport;
+     inside a scaled stage `vw`/`vh` still resolve against the window, which
+     would reintroduce exactly the reflow the fixed surface exists to remove.
+     The values are what those clamps produced at 1920x1080. */
+  --t-display: 6.5rem;
+  --t-title: 4rem;
+  --t-heading: 2.25rem;
+  /* Standalone quantities: must beat the heading beside them without becoming it. */
+  --t-figure: 4.75rem;
+  --t-body: 1.375rem;
+  --t-caption: 1rem;
+  --t-micro: 0.8125rem;
 
   --lh-tight: 1.05;
   --lh-snug: 1.25;
@@ -75,14 +75,17 @@
   --s-24: 6rem;
   --s-32: 8rem;
 
+  /* `--stage-w`, `--stage-h` and `--stage-scale` are written by `StageFit`
+     from the `STAGE` constant, so the surface has one definition. */
+
   /* Safe area for content: keeps text off projector edges. */
-  --stage-inline: clamp(var(--s-8), 7vw, var(--s-32));
-  --stage-block: clamp(var(--s-8), 6vh, var(--s-24));
+  --stage-inline: var(--s-32);
+  --stage-block: 4rem;
   /* Body copy: ch is correct here, the block and its text share a font size. */
   --measure: 62ch;
   /* Headings: rem-based, because `ch` on a container resolves against the
      container's font size and silently mis-sizes large child type. */
-  --measure-hero: clamp(20rem, 48vw, 54rem);
+  --measure-hero: 54rem;
 
   /* ---- Motion --------------------------------------------------------- */
   /* Cinematic easing: slow-out dominant, minimal overshoot. */
@@ -96,6 +99,8 @@
   --d-normal: 480ms;
   --d-slow: 900ms;
   --d-cinematic: 1600ms;
+  /* Scene-to-scene content dissolve. Mirrors `TRANSITION.content.seconds`. */
+  --d-content: 550ms;
 
   /* Stagger unit for sequenced reveals. */
   --stagger: 70ms;
@@ -121,6 +126,7 @@
     --d-normal: 1ms;
     --d-slow: 1ms;
     --d-cinematic: 1ms;
+    --d-content: 1ms;
     --stagger: 0ms;
   }
 }

@@ -1,0 +1,123 @@
+.rate {
+  display: grid;
+  gap: var(--s-6);
+  width: 100%;
+}
+
+.rate-title {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+}
+
+/* Reserves the band the absolutely positioned readouts and chip occupy. */
+.rate-plot {
+  position: relative;
+  padding-block: calc(var(--t-heading) * 2.2) var(--s-16);
+}
+
+.rate-track {
+  position: relative;
+  height: var(--s-4);
+  isolation: isolate;
+}
+
+.rate-rail,
+.rate-fill,
+.rate-shortfall {
+  position: absolute;
+  inset-block: 0;
+  border-radius: 999px;
+}
+
+.rate-rail {
+  inset-inline: 0;
+  background-color: color-mix(in srgb, var(--c-void) 70%, transparent);
+  border: 1px solid var(--c-border);
+  transform-origin: left center;
+}
+
+.rate-fill {
+  left: 0;
+  background-color: var(--c-circular);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--c-circular) 50%, transparent);
+}
+
+/* The shortfall is drawn, not left as whitespace: it is the subject. */
+.rate-shortfall {
+  transform-origin: left center;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--c-emphasis) 55%, transparent) 0 2px,
+    transparent 2px 8px
+  );
+}
+
+.rate-tick {
+  position: absolute;
+  inset-block: calc(var(--s-2) * -1);
+  width: 2px;
+  margin-inline-start: -1px;
+  background-color: var(--c-emphasis);
+}
+
+.rate-readout {
+  position: absolute;
+  bottom: calc(100% + var(--s-4));
+  transform: translateX(-50%);
+  display: grid;
+  gap: var(--s-1);
+  justify-items: center;
+  white-space: nowrap;
+}
+
+.rate-readout-value {
+  font-family: var(--font-figure);
+  font-size: var(--t-heading);
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+  font-variant-numeric: tabular-nums;
+}
+
+.rate-readout[data-kind='current'] .rate-readout-value {
+  color: var(--c-circular);
+}
+.rate-readout[data-kind='target'] .rate-readout-value {
+  color: var(--c-emphasis);
+}
+
+.rate-readout-caption {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+}
+
+.rate-delta {
+  position: absolute;
+  top: calc(100% + var(--s-6));
+  transform: translateX(-50%);
+  padding: var(--s-1) var(--s-4);
+  border: 1px solid color-mix(in srgb, var(--c-emphasis) 40%, transparent);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--c-void) 65%, transparent);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-emphasis);
+  white-space: nowrap;
+}
+
+.rate-source {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  color: var(--c-text-faint);
+}

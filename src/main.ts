@@ -12,11 +12,12 @@ import { Engine } from '@/engine/Engine';
 import { qualityTier, supportsWebGL } from '@/engine/env';
 import { scenes } from '@/scenes';
 
+const stage = document.querySelector<HTMLElement>('#stage');
 const canvasLayer = document.querySelector<HTMLElement>('#canvas-layer');
 const overlayLayer = document.querySelector<HTMLElement>('#overlay-layer');
 
-if (!canvasLayer || !overlayLayer) {
-  throw new Error('Stage markup is missing #canvas-layer or #overlay-layer.');
+if (!stage || !canvasLayer || !overlayLayer) {
+  throw new Error('Stage markup is missing #stage, #canvas-layer or #overlay-layer.');
 }
 
 document.documentElement.dataset['quality'] = qualityTier;
@@ -26,12 +27,9 @@ const loading = createLoadingScreen();
 const diagnostics = createDiagnosticsOverlay();
 const contextNotice = createContextNotice();
 
-document.body.append(
-  progress.element,
-  loading.element,
-  diagnostics.element,
-  contextNotice.element,
-);
+// Inside the stage, not on the body: the chrome belongs to the composition and
+// has to scale and letterbox with it rather than clinging to the window edges.
+stage.append(progress.element, loading.element, diagnostics.element, contextNotice.element);
 
 if (!supportsWebGL) {
   // The talk still has to happen. Text scenes render without a renderer, so

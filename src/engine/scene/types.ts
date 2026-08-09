@@ -13,6 +13,11 @@ export interface SceneContext {
   readonly world: World;
   readonly assets: AssetLoader;
   readonly quality: QualitySettings;
+  /**
+   * Seconds of camera travel before this scene's content appears. The DOM
+   * layer already waits this long, so scene reveals must offset by it too.
+   */
+  readonly entryDelay: number;
   /** Aborted on exit. */
   readonly signal: AbortSignal;
 
@@ -29,7 +34,17 @@ export interface SceneContext {
 }
 
 export interface SceneInstance {
+  /** Clicker steps that stay inside the scene, counting the one it enters on. */
+  readonly beats?: number;
+
   enter(context: SceneContext, direction: NavDirection): void;
+
+  /**
+   * Move to `index`. `settle` reconstructs the state without animating, for
+   * beats reached backwards or by jump.
+   */
+  beat?(index: number, settle: boolean): void;
+
   exit?(direction: NavDirection): void;
 }
 

@@ -12,6 +12,7 @@ import { World } from '@/engine/render/World';
 import { Router } from '@/engine/Router';
 import { SceneDirector, type SceneState } from '@/engine/scene/SceneDirector';
 import type { SceneDefinition } from '@/engine/scene/types';
+import { bindStageFit } from '@/engine/StageFit';
 import { ZoneDirector } from '@/engine/world/ZoneDirector';
 import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { zoneFor } from '@/world/zones';
@@ -129,6 +130,10 @@ export class Engine {
   }
 
   start(): void {
+    // Before the renderer starts, so its first measurement is of a stage that
+    // is already at its final scale.
+    bindStageFit(() => this.renderer.refresh(), this.lifetime.signal);
+
     // Started here, not in the constructor, so the first resize reaches a
     // fully wired camera rig and render pipeline.
     this.renderer.start();
@@ -183,8 +188,13 @@ export class Engine {
 
     bindPresenterInput(
       {
-        next: () => this.navigate(this.scenes.currentIndex + 1),
-        previous: () => this.navigate(this.scenes.currentIndex - 1),
+        // A click plays the next beat if there is one, and otherwise moves on.
+        next: () => {
+          if (!this.scenes.advanceBeat()) this.navigate(this.scenes.currentIndex + 1);
+        },
+        previous: () => {
+          if (!this.scenes.retreatBeat()) this.navigate(this.scenes.currentIndex - 1);
+        },
         first: () => this.navigate(0),
         last: () => this.navigate(this.scenes.count - 1),
         toggleFullscreen: () => void toggleFullscreen(),
