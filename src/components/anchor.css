@@ -1,0 +1,52 @@
+/* Full stage, and above the composition's own veil so a label reads over it.
+   Selector is scoped to the layer so it beats `.scene-layer > *`. */
+.scene-layer > .anchor-field {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/*
+ * The anchor point is the element's own origin, so `left` and `top` are the
+ * projected pixel and everything else hangs off it. The label sits above the
+ * point on a short stem, centred, which is the one arrangement that stays
+ * legible whichever side of frame the object is on.
+ */
+.anchor {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+}
+
+.anchor-label {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-text);
+  /* The world behind a label is whatever the camera found there, so the type
+     carries its own ground rather than trusting it. */
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--c-void) 82%, transparent);
+  border: 1px solid var(--c-border-strong);
+}
+
+.anchor-stem {
+  width: 1px;
+  height: var(--s-6);
+  background: linear-gradient(180deg, var(--c-border-strong) 0%, var(--c-text-faint) 100%);
+}
+
+.anchor-dot {
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 999px;
+  background-color: var(--c-text);
+}

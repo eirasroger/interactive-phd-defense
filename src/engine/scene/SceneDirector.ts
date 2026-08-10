@@ -184,6 +184,7 @@ export class SceneDirector {
       root: layer,
       stage: group,
       world: this.deps.world,
+      camera: this.deps.camera.camera,
       assets: this.deps.assets,
       quality: this.deps.quality,
       entryDelay,

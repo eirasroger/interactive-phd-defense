@@ -54,15 +54,40 @@ export const act1Captions = {
    * where its numbers come from. See `content/epd.ts` and
    * `scenes/act1/EpdScene.ts`. */
 
-  /* Scene 6 (stream 5) is a composition, not a caption — the influence /
-   * information crossing. See `content/earlyDesign.ts` and
-   * `scenes/act1/EarlyDesignScene.ts`. */
+  /**
+   * 7 · Supporting · 0:40 — close on the scaffold, and the object the rest of
+   * the act is about.
+   *
+   * The world is the figure here. One bay of the elevation carries no cladding
+   * panel, the camera is standing on the access that will come down two scenes
+   * later, and both of those say the thing the beat is for: the specification
+   * is open, briefly, and what goes in stands for the life of the building. A
+   * diagram laid over that would be arguing with the picture.
+   */
+  decision: {
+    eyebrow: 'State of the art · 04',
+    heading: 'On what basis is a construction product selected?',
+    body: [
+      'A building is the accumulation of that decision, taken for every element and repeated throughout the project.',
+    ],
+    accent: 'emphasis',
+  },
 
-  /** 7 · Hero · 0:55 — stream 6, standing in front of the four options. */
-  alternatives: {
-    eyebrow: 'State of the art · 05',
-    heading: 'So cost and availability decide instead — and what AI has offered so far.',
-    body: [TO_WRITE(30)],
+  /* Scene 8 (stream 5's gap) is a composition, not a caption — the four
+   * candidates and what is known about each. See `content/practice.ts` and
+   * `scenes/act1/PracticeScene.ts`. */
+
+  /**
+   * 9 · Supporting · recessed · 0:45 — stream 6, turned away from the row.
+   *
+   * The one stream with no object on site, and the one most likely to drift
+   * into a survey. Held to the same rule as the rest: each approach is named by
+   * what it needs as input, and that requirement is the gap it leaves.
+   */
+  ai: {
+    eyebrow: 'State of the art · 06',
+    heading: 'What has been tried computationally, and what each approach needs first.',
+    body: [TO_WRITE(14), TO_WRITE(14), TO_WRITE(14)],
     accent: 'ai',
   },
 

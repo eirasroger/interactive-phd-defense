@@ -1,4 +1,5 @@
 import gsap from 'gsap';
+import type { PerspectiveCamera } from 'three';
 import { CAMERA_DEFAULTS, TRANSITION } from '@/config/presentation';
 import { EASE, seconds } from '@/animations/timing';
 import type { CameraRig } from './CameraRig';
@@ -15,6 +16,15 @@ export class CameraDirector {
   private tween: gsap.core.Tween | null = null;
 
   constructor(private readonly rig: CameraRig) {}
+
+  /**
+   * The camera itself, for scenes that tether DOM to a point in the world.
+   * Read-only by convention: posing it is this director's business, and a scene
+   * that moved it would be fighting the move it was handed.
+   */
+  get camera(): PerspectiveCamera {
+    return this.rig.camera;
+  }
 
   get isMoving(): boolean {
     return this.tween?.isActive() ?? false;

@@ -1,0 +1,116 @@
+.candidate-set {
+  display: grid;
+  gap: var(--s-6);
+  width: 100%;
+}
+
+.candidate-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ---- The candidates, across the top ------------------------------------- */
+
+.candidate-column {
+  fill: var(--c-text-muted);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+/* The criteria, down the side. This is the column the argument is read in, so
+   it carries full text weight where the headers carry label weight. */
+.candidate-label {
+  fill: var(--c-text);
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+/* ---- The cells ----------------------------------------------------------- */
+/*
+ * A cell is two rects, not one: a fill that can drain and a frame that stays.
+ * The last beat empties the first and dissolves the second's stroke into
+ * dashes, both of which interpolate, which a change of class does not. Same
+ * construction as `ImpactMethod` and `Declaration`, because it carries the same
+ * meaning in all three.
+ */
+
+.candidate-cell-fill {
+  fill: color-mix(in srgb, var(--c-void) 55%, transparent);
+  stroke: none;
+}
+
+.candidate-cell-frame {
+  fill: none;
+  stroke: var(--c-border-strong);
+  stroke-width: 1.25;
+  /* Gap zero is a solid line, and the start of a tween to a dashed one. */
+  stroke-dasharray: 40 0;
+}
+
+/* Quantities carry the figure role and tabular numerals, so a column reads down
+   as a column of numbers rather than as four unrelated strings. */
+.candidate-value {
+  fill: var(--c-text);
+  font-family: var(--font-figure);
+  font-size: 18px;
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ---- The threshold ------------------------------------------------------- */
+/* Compliance is satisfied, so it is the one thing on the figure drawn in the
+   sustainability accent. It is also the only row above the rule, which is what
+   says it is a gate and not a comparison. */
+
+.candidate-cell[data-kind='met'] .candidate-cell-fill {
+  fill: color-mix(in srgb, var(--c-circular) 12%, transparent);
+}
+
+.candidate-cell[data-kind='met'] .candidate-cell-frame {
+  stroke: var(--c-circular-dim);
+}
+
+.candidate-cell[data-kind='met'] .candidate-value {
+  fill: var(--c-circular);
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.candidate-threshold-rule {
+  fill: var(--c-border-strong);
+  transform-origin: 0 50%;
+}
+
+.candidate-threshold-label {
+  fill: var(--c-text-faint);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+/* ---- What never arrives -------------------------------------------------- */
+
+.candidate-note-rule {
+  fill: var(--c-emphasis);
+  transform-origin: 0 50%;
+}
+
+.candidate-note-label {
+  fill: var(--c-emphasis);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}

@@ -1,4 +1,4 @@
-import type { Group } from 'three';
+import type { Group, PerspectiveCamera } from 'three';
 import type { QualitySettings } from '@/config/quality';
 import type { AssetLoader } from '@/engine/assets/AssetLoader';
 import type { CameraPose } from '@/engine/camera/types';
@@ -11,6 +11,11 @@ export interface SceneContext {
   /** 3D content root. Detached from the world automatically on exit. */
   readonly stage: Group;
   readonly world: World;
+  /**
+   * The posed camera, for tethering DOM to a point in the world. Scenes read
+   * it; moving it is the camera director's business.
+   */
+  readonly camera: PerspectiveCamera;
   readonly assets: AssetLoader;
   readonly quality: QualitySettings;
   /**

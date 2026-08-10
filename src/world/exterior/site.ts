@@ -488,23 +488,23 @@ export const REVIEW = {
   stagger: 9,
   /**
    * The span of zone progress over which the row stands on site: `scaffold`
-   * (6/11) to `objectives` (9/11), bracketing `alternatives` at 7/11. The travel
-   * happens on beats that face away from the row, so the panels are only ever
-   * seen standing. `act1/index.ts` asserts the deck still agrees with these.
+   * (6/12) to `objectives` (10/12), bracketing `alternatives` at 7/12 and `ai`
+   * at 8/12. The travel happens on beats that face away from the row, so the
+   * panels are only ever seen standing. `act1/index.ts` asserts the deck still
+   * agrees with these.
    *
    * Written as the fraction the deck computes rather than as a decimal: zone
-   * progress is `index / (count - 1)`, the assertion compares it exactly, and
-   * eleven is not a denominator a literal can be written out in.
+   * progress is `index / (count - 1)`, and the assertion compares it exactly.
    */
-  from: 6 / 11,
-  to: 9 / 11,
+  from: 6 / 12,
+  to: 10 / 12,
 } as const;
 
 /**
  * When the scaffold and its hoarding come down.
  *
  * The strike is the one state change Act I makes to the building itself, and it
- * has to happen where the building cannot be seen — `gaps` (8/11) is the only
+ * has to happen where the building cannot be seen — `gaps` (9/12) is the only
  * beat in the act that turns its back on it, which is why the number is that one
  * and not a matter of taste. `act1/index.ts` asserts the deck still agrees.
  *
@@ -513,4 +513,4 @@ export const REVIEW = {
  * stays open until Act IV answers it. Two reveals on one elevation would spend
  * the second one for nothing.
  */
-export const CONSTRUCTION = { struck: 8 / 11 } as const;
+export const CONSTRUCTION = { struck: 9 / 12 } as const;

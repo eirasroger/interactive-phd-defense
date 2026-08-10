@@ -8,11 +8,11 @@ import { CROSSING } from '@/world/exterior/paths';
 import { AVENUE, CONSTRUCTION, ENTRANCE, REVIEW } from '@/world/exterior/site';
 import { AssessmentScene } from './AssessmentScene';
 import { CircularEconomyScene } from './CircularEconomyScene';
-import { EarlyDesignScene } from './EarlyDesignScene';
 import { EpdScene } from './EpdScene';
 import { ExteriorScene } from './ExteriorScene';
 import { LeverageScene } from './LeverageScene';
 import { MotivationScene } from './MotivationScene';
+import { PracticeScene } from './PracticeScene';
 
 const CHAPTER = 'Act I — Exterior';
 
@@ -84,19 +84,21 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * 5. **park** — off the water and turned inland: the riverside walk leading to
  *    the building.
  * 6. **construction** — in to the massing, scaffolded, from the east.
- * 7. **scaffold** — closer, on the scaffold itself.
+ * 7. **scaffold** — closer, on the scaffold itself, at the unassigned bay.
  * 8. **alternatives** — the four options, on the promenade thirty metres east.
- * 9. **gaps** — back out north-west into the park, facing away from everything.
- * 10. **objectives** — the bridge, and the entrance centred down the avenue.
- * 11. **method** — halfway down that avenue, same aim.
- * 12. **entrance** — at the door. The hinge into Act II.
+ * 9. **ai** — turned west along the promenade, the row behind the camera.
+ * 10. **gaps** — back out north-west into the park, facing away from everything.
+ * 11. **objectives** — the bridge, and the entrance centred down the avenue.
+ * 12. **method** — halfway down that avenue, same aim.
+ * 13. **entrance** — at the door. The hinge into Act II.
  *
  * Two composition rules run through every pose. The text column sits on the
  * left, so the subject is aimed **right of centre** — which for a camera
  * heading west means standing north of what it is looking at, and for one
- * heading east means the opposite. And the four `recessed` beats (leverage,
- * river, gaps, method) turn into open site, which is both where the argument
- * stops needing a picture and where the frame budget is recovered.
+ * heading east means the opposite. And the five `recessed` beats (leverage,
+ * river, alternatives, gaps, method) turn into open site or step back from it,
+ * which is both where the argument stops needing a picture and where the frame
+ * budget is recovered.
  *
  * **Three recessed beats run consecutively at `lake`, `leverage` and `river`**,
  * against the rule that two and a half minutes of dimmed world is where a
@@ -232,41 +234,83 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // Blender is Z-up facing -Y and glTF maps that to web +Z, so (x, y, z) there
   // is (x, z, -y) here. Aimed a few metres west of the bays it wraps so the
   // structure stands right of centre.
-  // Its own composition rather than a caption: the influence / information
-  // crossing, which is stream 5's device and belongs on the one beat standing
-  // where the building is still open.
-  {
-    id: 'scaffold',
-    title: 'Early design',
-    chapter: CHAPTER,
-    zone: exteriorZone.id,
-    world: 'foreground',
-    pose: pose([22, 7, 40], [5, 9, 12], 40, 1),
-    assets: [...EXTERIOR_ASSETS],
-    create: () => new EarlyDesignScene(),
-  },
+  //
+  // A caption, because the world is already the figure: the unassigned bay and
+  // the access standing in front of it say the whole beat, and this is the one
+  // pose in the act close enough to read either. It is also where the review
+  // row walks on, thirty-five metres behind the camera.
+  scene(
+    'scaffold',
+    'The decision',
+    'foreground',
+    pose([22, 7, 40], [5, 9, 12], 40, 1),
+    act1Captions.decision,
+  ),
 
   // The options' own scene, and the only one that turns its back on the
   // building entirely. Square to the row and close, aimed `lead` metres back
   // toward the building so the four panels sit across the right of frame and
-  // the left stays clear for the caption.
+  // the left stays clear for the composition.
   //
   // Thirty-five metres from the scaffold pose and on the same side of the site,
-  // so the two beats are one continuous move rather than a cut.
+  // so the two beats are one continuous move rather than a cut. That continuity
+  // is what makes the scaffold and the row read as one place. The panels cannot
+  // stand in the scaffold's own frame: it is a close elevation study aimed
+  // upward, with no ground in it and no half of the frame to spare, and a bay
+  // module stood at that distance is taller than the shot and occludes the
+  // elevation it is a candidate for.
   //
   // Derived from `REVIEW`, never typed: the row's position decides where this
   // stands, so the two cannot drift apart.
-  scene(
-    'alternatives',
-    'What decides in practice',
-    'foreground',
-    pose(
+  {
+    id: 'alternatives',
+    title: 'What decides in practice',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    // `recessed`, and it is the one beat in the act where information has to
+    // dominate: a four-by-four matrix laid at full contrast over four lit
+    // panels leaves both unreadable. Receding rather than blurring is the
+    // design system's own answer, and the row stays legible behind it as the
+    // four things the matrix is about.
+    world: 'recessed',
+    pose: pose(
       [REVIEW.centre[0], 3.6, REVIEW.centre[2] + REVIEW.standoff],
       [REVIEW.centre[0] - REVIEW.lead, 3.2, REVIEW.centre[2]],
       40,
       0.6,
     ),
-    act1Captions.alternatives,
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new PracticeScene(),
+  },
+
+  // Off the row and turned inland, which is the whole reason this pose exists:
+  // the beat is about literature, and four cladding panels in frame would be
+  // arguing with it.
+  //
+  // **Held south of the pavilion, and that is what decides the numbers.**
+  // `PAVILION` stands at x 38.5 to 55.5, z 61.3 to 68.7, with eaves at 3.9 m.
+  // The midpoint of the old `alternatives` → `gaps` glide lands at (46, 59.5),
+  // which clears its near face by under two metres at eaves height — the camera
+  // arrives inside the roof and leaves through it. Standing at z = 52 puts nine
+  // metres between them, and both legs of the move stay south of the building:
+  // the first runs z 52 to 54 across its x span, the second only reaches z 58
+  // by the time it has passed west of x = 38.5.
+  //
+  // Aimed nearly due west, which also swings the pavilion eighty degrees off
+  // axis and the review row behind the camera. That second one is the point of
+  // the beat: this is about literature, and four cladding panels in frame would
+  // be arguing with it.
+  //
+  // Left `foreground` even though a literature beat wants no picture, because
+  // `alternatives` before it and `gaps` after it are both recessed and a third
+  // in a row is where a continuous world starts reading as a slide deck. Three
+  // short lines over open park is a light enough frame to carry it.
+  scene(
+    'ai',
+    'Artificial intelligence in construction',
+    'foreground',
+    pose([50, 4.2, 52], [8, 3.2, 50], 44, 1.5),
+    act1Captions.ai,
   ),
 
   // Back out north-west along the riverside walk, which puts the review row
