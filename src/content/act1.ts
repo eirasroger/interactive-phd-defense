@@ -50,13 +50,9 @@ export const act1Captions = {
    * assessment, built as the life-cycle band that widens across five beats.
    * See `content/assessment.ts` and `scenes/act1/AssessmentScene.ts`. */
 
-  /** 5 · Supporting · 0:50 — stream 4, on the building it would describe. */
-  data: {
-    eyebrow: 'State of the art · 03',
-    heading: 'EPDs as the data early design is expected to decide from.',
-    body: [TO_WRITE(28)],
-    accent: 'emphasis',
-  },
+  /* Scene 5 (stream 4) is a composition, not a caption — the declaration, and
+   * where its numbers come from. See `content/epd.ts` and
+   * `scenes/act1/EpdScene.ts`. */
 
   /* Scene 6 (stream 5) is a composition, not a caption — the influence /
    * information crossing. See `content/earlyDesign.ts` and

@@ -9,6 +9,7 @@ import { AVENUE, CONSTRUCTION, ENTRANCE, REVIEW } from '@/world/exterior/site';
 import { AssessmentScene } from './AssessmentScene';
 import { CircularEconomyScene } from './CircularEconomyScene';
 import { EarlyDesignScene } from './EarlyDesignScene';
+import { EpdScene } from './EpdScene';
 import { ExteriorScene } from './ExteriorScene';
 import { MotivationScene } from './MotivationScene';
 
@@ -176,13 +177,21 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // The massing whole, from the east three-quarter, which is the side the
   // scaffold stands on. Aimed past the building's west corner so the elevation
   // sits right of centre.
-  scene(
-    'construction',
-    'The building under construction',
-    'foreground',
-    pose([46, 9, 52], [-10, 8, 18], 44, 2.5),
-    act1Captions.data,
-  ),
+  //
+  // Its own composition rather than a caption: the declaration, read on the
+  // building it would describe. The panel in the slot is the product this beat
+  // is holding a document about, so the running example is met here as data
+  // before it is met at C2 as a corpus.
+  {
+    id: 'construction',
+    title: 'Environmental product declarations',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'foreground',
+    pose: pose([46, 9, 52], [-10, 8, 18], 44, 2.5),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new EpdScene(),
+  },
 
   // Close on the scaffold. This is the Blender preview framing, converted:
   // Blender is Z-up facing -Y and glTF maps that to web +Z, so (x, y, z) there

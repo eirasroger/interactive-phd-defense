@@ -1,0 +1,154 @@
+.declaration {
+  width: 100%;
+}
+
+.declaration-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ---- What the declaration says it is ----------------------------------- */
+
+.declaration-product,
+.declaration-unit {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.declaration-product {
+  fill: var(--c-text-muted);
+}
+
+.declaration-unit {
+  fill: var(--c-text-faint);
+}
+
+/* ---- The modules -------------------------------------------------------- */
+/*
+ * A module is two rects, not one: a fill that can drain and a frame that stays.
+ * The turn empties the first and dissolves the second's stroke into dashes,
+ * both of which interpolate, which a change of class does not.
+ */
+
+.declaration-module-fill {
+  fill: color-mix(in srgb, var(--c-void) 55%, transparent);
+  stroke: none;
+}
+
+.declaration-module-frame {
+  fill: none;
+  stroke: var(--c-border-strong);
+  stroke-width: 1.25;
+  /* Gap zero is a solid line, and the start of a tween to a dashed one. */
+  stroke-dasharray: 40 0;
+}
+
+.declaration-module-code {
+  fill: var(--c-text);
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+}
+
+.declaration-module-name {
+  fill: var(--c-text-muted);
+  font-family: var(--font-label);
+  font-size: 13.5px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+/* The verdict is the only word in the figure that states the argument, so it
+   is the only one carrying accent colour. */
+.declaration-module-verdict {
+  fill: var(--c-circular);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.declaration-module[data-scenario='true'] .declaration-module-verdict {
+  fill: var(--c-emphasis);
+}
+
+/* Muted, not faint: the module's own name recedes when it turns out to be a
+   scenario, and what it rests on is the thing that has to be readable instead. */
+.declaration-module-basis {
+  fill: var(--c-text-muted);
+  font-family: var(--font-label);
+  font-size: 15px;
+}
+
+/* ---- The gate ----------------------------------------------------------- */
+
+.declaration-gate-rule {
+  fill: var(--c-emphasis);
+}
+
+.declaration-gate-label {
+  fill: var(--c-emphasis);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+/* ---- The declared value ------------------------------------------------- */
+/* The tick is what the declaration states. The bracket is what it rests on,
+   opening from the tick in both directions so the point is seen becoming an
+   interval rather than being replaced by one. */
+
+/* Capped at 12: the indicator name is the longest label in the figure and at
+   13 it runs past the right edge of the view box. */
+.declaration-indicator {
+  fill: var(--c-text-muted);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.declaration-axis {
+  stroke: color-mix(in srgb, var(--c-text-faint) 55%, transparent);
+  stroke-width: 1.25;
+}
+
+/* `non-scaling-stroke` is what makes the open tween work: the mark is revealed
+   by scaling its geometry vertically, and without this the caps would thin to
+   nothing on the way out and thicken back as it lands. */
+.declaration-range {
+  fill: none;
+  stroke: var(--c-emphasis);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.declaration-tick {
+  fill: var(--c-text);
+}
+
+.declaration-amount {
+  fill: var(--c-text);
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-title);
+}
+
+.declaration-amount-unit {
+  fill: var(--c-text-faint);
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
