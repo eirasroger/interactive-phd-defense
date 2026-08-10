@@ -7,17 +7,19 @@ import {
   createContextNotice,
   createDiagnosticsOverlay,
   createLoadingScreen,
+  createOrientationNotice,
 } from '@/components/SystemOverlays';
 import { Engine } from '@/engine/Engine';
 import { qualityTier, supportsWebGL } from '@/engine/env';
 import { scenes } from '@/scenes';
 
+const viewport = document.querySelector<HTMLElement>('#viewport');
 const stage = document.querySelector<HTMLElement>('#stage');
 const canvasLayer = document.querySelector<HTMLElement>('#canvas-layer');
 const overlayLayer = document.querySelector<HTMLElement>('#overlay-layer');
 
-if (!stage || !canvasLayer || !overlayLayer) {
-  throw new Error('Stage markup is missing #stage, #canvas-layer or #overlay-layer.');
+if (!viewport || !stage || !canvasLayer || !overlayLayer) {
+  throw new Error('Stage markup is missing #viewport, #stage, #canvas-layer or #overlay-layer.');
 }
 
 document.documentElement.dataset['quality'] = qualityTier;
@@ -30,6 +32,10 @@ const contextNotice = createContextNotice();
 // Inside the stage, not on the body: the chrome belongs to the composition and
 // has to scale and letterbox with it rather than clinging to the window edges.
 stage.append(progress.element, loading.element, diagnostics.element, contextNotice.element);
+
+// On the viewport, not the stage: it reports that the stage is scaled too far
+// down to read, so it cannot be subject to that scale itself.
+viewport.append(createOrientationNotice());
 
 if (!supportsWebGL) {
   // The talk still has to happen. Text scenes render without a renderer, so

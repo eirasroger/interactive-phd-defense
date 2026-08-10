@@ -49,6 +49,26 @@ export function createDiagnosticsOverlay(): DiagnosticsOverlay {
   };
 }
 
+/**
+ * Portrait guard.
+ *
+ * The stage is a fixed 16:9 surface scaled to fit, so a portrait handset scales
+ * it by width — about 0.2 — and paints the whole talk into a 390x219 band with
+ * body text under 5px. Landscape is the only orientation in which a phone can
+ * show this deck at all, so ask for it rather than rendering something illegible
+ * and calling it responsive.
+ *
+ * Visibility is left to CSS: it is a media query, and routing it through JS
+ * would mean duplicating the query and keeping the two in step.
+ */
+export function createOrientationNotice(): HTMLElement {
+  return el('div', {
+    className: 'orientation-notice',
+    attrs: { role: 'status' },
+    text: 'Rotate your device to view this presentation.',
+  });
+}
+
 export interface ContextNotice {
   readonly element: HTMLElement;
   set(lost: boolean): void;

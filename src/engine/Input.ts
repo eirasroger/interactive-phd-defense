@@ -59,6 +59,57 @@ export function bindPresenterInput(handlers: PresenterHandlers, signal: AbortSig
   );
 }
 
+/** Below this a gesture is a tap; above it, a deliberate swipe. */
+const SWIPE_MIN_PX = 40;
+
+/**
+ * Touch navigation.
+ *
+ * The deck is driven by a clicker in the hall, which emits key events; on a
+ * phone there is no keyboard, so without this the first scene is the only one
+ * reachable. A tap means the same thing the clicker does, and a swipe is added
+ * because a deck being read rather than presented needs to go backwards.
+ */
+export function bindTouchNavigation(
+  handlers: Pick<PresenterHandlers, 'next' | 'previous'>,
+  signal: AbortSignal,
+): void {
+  let originX = 0;
+  let originY = 0;
+  let tracking = false;
+
+  window.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (event.pointerType !== 'touch') return;
+      tracking = true;
+      originX = event.clientX;
+      originY = event.clientY;
+    },
+    { passive: true, signal },
+  );
+
+  window.addEventListener(
+    'pointerup',
+    (event) => {
+      if (!tracking || event.pointerType !== 'touch') return;
+      tracking = false;
+
+      const dx = event.clientX - originX;
+      const dy = event.clientY - originY;
+
+      // A mostly-vertical drag was aimed at the page, not at the deck. Treating
+      // it as a tap would advance the talk every time someone tried to scroll.
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > SWIPE_MIN_PX) return;
+
+      if (dx <= -SWIPE_MIN_PX) handlers.next();
+      else if (dx >= SWIPE_MIN_PX) handlers.previous();
+      else handlers.next();
+    },
+    { passive: true, signal },
+  );
+}
+
 /** Hides the cursor while the presenter is talking rather than pointing. */
 export function bindPointerIdle(signal: AbortSignal): void {
   let timer = 0;

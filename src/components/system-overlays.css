@@ -81,3 +81,33 @@
 .context-notice[hidden] {
   display: none;
 }
+
+/*
+ * Sits on #viewport rather than inside #stage: the stage is scaled to about 0.2
+ * in portrait, which is the condition being reported, so a notice within it
+ * would be as unreadable as the deck behind it. Sized in vw/vh for the same
+ * reason — these are real window units, not stage units.
+ */
+.orientation-notice {
+  display: none;
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  .orientation-notice {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-presenter);
+
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    padding: 12vw;
+
+    background-color: var(--c-void);
+    text-align: center;
+    text-wrap: balance;
+    font-size: clamp(1rem, 4.5vw, 1.5rem);
+    line-height: var(--lh-snug);
+    color: var(--c-text-muted);
+  }
+}

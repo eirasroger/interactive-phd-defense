@@ -4,7 +4,12 @@ import { CameraDirector } from '@/engine/camera/CameraDirector';
 import { CameraRig } from '@/engine/camera/CameraRig';
 import { Clock } from '@/engine/Clock';
 import { PerformanceMonitor } from '@/engine/diagnostics/PerformanceMonitor';
-import { bindPointerIdle, bindPresenterInput, toggleFullscreen } from '@/engine/Input';
+import {
+  bindPointerIdle,
+  bindPresenterInput,
+  bindTouchNavigation,
+  toggleFullscreen,
+} from '@/engine/Input';
 import { AtmosphereDirector } from '@/engine/render/AtmosphereDirector';
 import { RenderPipeline } from '@/engine/render/RenderPipeline';
 import { Renderer } from '@/engine/render/Renderer';
@@ -186,15 +191,18 @@ export class Engine {
   private bindInput(): void {
     const { signal } = this.lifetime;
 
+    // A click plays the next beat if there is one, and otherwise moves on.
+    const next = (): void => {
+      if (!this.scenes.advanceBeat()) this.navigate(this.scenes.currentIndex + 1);
+    };
+    const previous = (): void => {
+      if (!this.scenes.retreatBeat()) this.navigate(this.scenes.currentIndex - 1);
+    };
+
     bindPresenterInput(
       {
-        // A click plays the next beat if there is one, and otherwise moves on.
-        next: () => {
-          if (!this.scenes.advanceBeat()) this.navigate(this.scenes.currentIndex + 1);
-        },
-        previous: () => {
-          if (!this.scenes.retreatBeat()) this.navigate(this.scenes.currentIndex - 1);
-        },
+        next,
+        previous,
         first: () => this.navigate(0),
         last: () => this.navigate(this.scenes.count - 1),
         toggleFullscreen: () => void toggleFullscreen(),
@@ -206,6 +214,7 @@ export class Engine {
       signal,
     );
 
+    bindTouchNavigation({ next, previous }, signal);
     bindPointerIdle(signal);
   }
 

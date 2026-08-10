@@ -15,6 +15,10 @@
   inset: 0;
   overflow: hidden;
   background-color: var(--c-void);
+
+  /* Suppresses double-tap zoom, and with it the ~300ms delay a touch browser
+     otherwise holds every tap for in case a second one follows. */
+  touch-action: manipulation;
 }
 
 /*

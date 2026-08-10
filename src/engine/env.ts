@@ -15,6 +15,19 @@ export const prefersReducedMotion = (): boolean =>
 
 export const isSafeMode = (): boolean => params.get('safe') === '1';
 
+/**
+ * A coarse pointer that cannot hover is the one phone/tablet signal that does
+ * not mean parsing a user-agent string.
+ */
+export const isTouchPrimary = (): boolean =>
+  window.matchMedia('(pointer: coarse) and (hover: none)').matches;
+
+/** `?quality=high` overrides the probe, for a tablet that can afford more. */
+function requestedTier(): QualityTier | null {
+  const value = params.get('quality');
+  return value === 'safe' || value === 'standard' || value === 'high' ? value : null;
+}
+
 function detectWebGL(): boolean {
   try {
     const canvas = document.createElement('canvas');
@@ -27,7 +40,22 @@ function detectWebGL(): boolean {
 export const supportsWebGL = detectWebGL();
 
 export function detectQualityTier(): QualityTier {
+  const requested = requestedTier();
+  if (requested) return requested;
+
   if (isSafeMode() || prefersReducedMotion() || !supportsWebGL) return 'safe';
+
+  /*
+   * Handsets take the conservative path regardless of what they report.
+   *
+   * The heuristic below cannot see them: `screen` is in CSS pixels, so a phone
+   * measures ~400x900 and clears the pixel bound far more easily than the large
+   * displays that bound exists to exclude. An 8-core Android — and Chrome caps
+   * `deviceMemory` at exactly 8 — therefore satisfied all three conditions and
+   * was handed 2048px shadow maps, bloom and an 80k particle budget on top of
+   * 47MB of models. That is what exhausts the GPU and loses the context.
+   */
+  if (isTouchPrimary()) return 'safe';
 
   const cores = navigator.hardwareConcurrency ?? 4;
   const memory = (navigator as { deviceMemory?: number }).deviceMemory ?? 4;

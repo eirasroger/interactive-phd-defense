@@ -29,7 +29,18 @@ export function bindStageFit(onChange: (scale: number) => void, signal: AbortSig
     onChange(scale);
   };
 
-  window.addEventListener('resize', fit, { signal });
-  window.addEventListener('orientationchange', fit, { signal });
+  /*
+   * iOS updates viewport metrics *after* `orientationchange` fires, so reading
+   * synchronously latches the pre-rotation size — and the early-out above then
+   * holds it there until some unrelated resize happens. Re-reading on the next
+   * frame catches the settled value; the early-out makes the extra call free.
+   */
+  const refit = (): void => {
+    fit();
+    requestAnimationFrame(fit);
+  };
+
+  window.addEventListener('resize', refit, { signal });
+  window.addEventListener('orientationchange', refit, { signal });
   fit();
 }
