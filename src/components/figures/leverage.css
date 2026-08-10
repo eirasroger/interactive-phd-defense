@@ -1,0 +1,107 @@
+.leverage {
+  display: grid;
+  gap: var(--s-6);
+  width: 100%;
+}
+
+/* Same treatment the ledger gives its attribution, because it is the same
+   thing: the figure states where it comes from and gets out of the way. */
+.leverage-source {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  color: var(--c-text-faint);
+}
+
+.leverage-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* The spine both wedges are measured from, and the phases they run across. */
+
+.leverage-axis {
+  stroke: var(--c-border-strong);
+  stroke-width: 1;
+}
+
+/* Each name is set off the baseline on one of two rows, so the tick is what
+   says which point on the axis it belongs to. */
+.leverage-tick {
+  fill: none;
+  stroke: var(--c-border-strong);
+  stroke-width: 1;
+}
+
+.leverage-phase {
+  fill: var(--c-text-faint);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+
+.leverage-fill[data-series='ability'] {
+  fill: color-mix(in srgb, var(--c-circular) 13%, transparent);
+}
+
+.leverage-fill[data-series='cost'] {
+  fill: color-mix(in srgb, var(--c-ai) 13%, transparent);
+}
+
+.leverage-edge {
+  fill: none;
+  stroke-width: 2.75;
+  stroke-linecap: round;
+}
+
+.leverage-edge[data-series='ability'] {
+  stroke: var(--c-circular);
+}
+
+.leverage-edge[data-series='cost'] {
+  stroke: var(--c-ai);
+}
+
+.leverage-name {
+  font-family: var(--font-label);
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.03em;
+}
+
+.leverage-name[data-series='ability'] {
+  fill: var(--c-circular);
+}
+
+.leverage-name[data-series='cost'] {
+  fill: var(--c-ai);
+}
+
+/* ---- The window the thesis works in ------------------------------------ */
+/* Amber, as everywhere the act points at its own subject. */
+
+.leverage-window-edge {
+  fill: none;
+  stroke: var(--c-emphasis);
+  stroke-width: 1.25;
+  stroke-dasharray: 6 5;
+}
+
+.leverage-window-bracket {
+  fill: none;
+  stroke: var(--c-emphasis);
+  stroke-width: 1.5;
+}
+
+.leverage-window-label {
+  fill: var(--c-emphasis);
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}

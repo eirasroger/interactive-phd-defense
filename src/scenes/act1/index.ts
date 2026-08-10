@@ -11,6 +11,7 @@ import { CircularEconomyScene } from './CircularEconomyScene';
 import { EarlyDesignScene } from './EarlyDesignScene';
 import { EpdScene } from './EpdScene';
 import { ExteriorScene } from './ExteriorScene';
+import { LeverageScene } from './LeverageScene';
 import { MotivationScene } from './MotivationScene';
 
 const CHAPTER = 'Act I — Exterior';
@@ -74,25 +75,35 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * 1. **overview** — high over the lake, looking back at the whole site.
  * 2. **lake** — straight down onto the water on the same bearing, facing the
  *    shore. The site is read from the water, as if off a boat.
- * 3. **river** — west along the outlet, over the channel, following it. Its
+ * 3. **leverage** — on down the same bearing, still over water. Its own
+ *    composition: the room to change the building against what changing it
+ *    costs.
+ * 4. **river** — west along the outlet, over the channel, following it. Its
  *    own composition, not a caption: circular economy, as the value-retention
  *    hierarchy.
- * 4. **park** — off the water and turned inland: the riverside walk leading to
+ * 5. **park** — off the water and turned inland: the riverside walk leading to
  *    the building.
- * 5. **construction** — in to the massing, scaffolded, from the east.
- * 6. **scaffold** — closer, on the scaffold itself.
- * 7. **alternatives** — the four options, on the promenade thirty metres east.
- * 8. **gaps** — back out north-west into the park, facing away from everything.
- * 9. **objectives** — the bridge, and the entrance centred down the avenue.
- * 10. **method** — halfway down that avenue, same aim.
- * 11. **entrance** — at the door. The hinge into Act II.
+ * 6. **construction** — in to the massing, scaffolded, from the east.
+ * 7. **scaffold** — closer, on the scaffold itself.
+ * 8. **alternatives** — the four options, on the promenade thirty metres east.
+ * 9. **gaps** — back out north-west into the park, facing away from everything.
+ * 10. **objectives** — the bridge, and the entrance centred down the avenue.
+ * 11. **method** — halfway down that avenue, same aim.
+ * 12. **entrance** — at the door. The hinge into Act II.
  *
  * Two composition rules run through every pose. The text column sits on the
  * left, so the subject is aimed **right of centre** — which for a camera
  * heading west means standing north of what it is looking at, and for one
- * heading east means the opposite. And the three `recessed` beats (river, gaps,
- * method) turn into open site, which is both where the argument stops needing a
- * picture and where the frame budget is recovered.
+ * heading east means the opposite. And the four `recessed` beats (leverage,
+ * river, gaps, method) turn into open site, which is both where the argument
+ * stops needing a picture and where the frame budget is recovered.
+ *
+ * **Three recessed beats run consecutively at `lake`, `leverage` and `river`**,
+ * against the rule that two and a half minutes of dimmed world is where a
+ * continuous world starts reading as a slide deck. Taken deliberately: the
+ * motivation and its premise are the one stretch of the act with no object to
+ * look at, and the alternative is arguing them over a building whose relevance
+ * has not been established yet.
  */
 export const act1Scenes: readonly SceneDefinition[] = [
   // Forty-four metres up and out over the lake, looking back west-south-west at
@@ -126,6 +137,30 @@ export const act1Scenes: readonly SceneDefinition[] = [
     pose: pose([138, 6, 98], [26, 5, 66], 48, 6),
     assets: [...EXTERIOR_ASSETS],
     create: () => new MotivationScene(),
+  },
+
+  // Halfway from the lake pose to the river pose, on the same bearing and the
+  // same descent — literally a point on the glide the camera already travels
+  // between those two, which is how a beat is inserted into a continuous route
+  // without opening a corridor through anything.
+  //
+  // South of z = 98 for the reason the river pose carries: `WOODLAND.bank`
+  // starts there, has no corridor clearance, and both legs of this move now
+  // stop short of it.
+  //
+  // `recessed`, and its own composition: the argument is a shape, so the world
+  // steps back and becomes the surface it is read against. This is the second
+  // half of the motivation, and the premise the three stream scenes after it
+  // all assume — see `content/leverage.ts`.
+  {
+    id: 'leverage',
+    title: 'Why the early stage',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'recessed',
+    pose: pose([92, 5.5, 96], [13, 2, 88], 49, 5),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new LeverageScene(),
   },
 
   // West along the outlet, still on the water, now over the channel itself and
