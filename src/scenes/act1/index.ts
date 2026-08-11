@@ -10,6 +10,7 @@ import { AssessmentScene } from './AssessmentScene';
 import { CircularEconomyScene } from './CircularEconomyScene';
 import { EpdScene } from './EpdScene';
 import { ExteriorScene } from './ExteriorScene';
+import { GapsScene } from './GapsScene';
 import { LeverageScene } from './LeverageScene';
 import { MotivationScene } from './MotivationScene';
 import { PracticeScene } from './PracticeScene';
@@ -86,11 +87,10 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * 6. **construction** — in to the massing, scaffolded, from the east.
  * 7. **scaffold** — closer, on the scaffold itself, at the unassigned bay.
  * 8. **alternatives** — the four options, on the promenade thirty metres east.
- * 9. **ai** — turned west along the promenade, the row behind the camera.
- * 10. **gaps** — back out north-west into the park, facing away from everything.
- * 11. **objectives** — the bridge, and the entrance centred down the avenue.
- * 12. **method** — halfway down that avenue, same aim.
- * 13. **entrance** — at the door. The hinge into Act II.
+ * 9. **gaps** — north-west into the park, facing away from everything.
+ * 10. **objectives** — the bridge, and the entrance centred down the avenue.
+ * 11. **method** — halfway down that avenue, same aim.
+ * 12. **entrance** — at the door. The hinge into Act II.
  *
  * Two composition rules run through every pose. The text column sits on the
  * left, so the subject is aimed **right of centre** — which for a camera
@@ -99,6 +99,12 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * river, alternatives, gaps, method) turn into open site or step back from it,
  * which is both where the argument stops needing a picture and where the frame
  * budget is recovered.
+ *
+ * **`alternatives` and `gaps` now run consecutively recessed**, which the old
+ * `ai` beat existed partly to prevent. Accepted: they are the two beats of the
+ * act that carry the most information, the world has nothing to contribute to
+ * either, and two is under the three-in-a-row threshold the rule is really
+ * about.
  *
  * **Three recessed beats run consecutively at `lake`, `leverage` and `river`**,
  * against the rule that two and a half minutes of dimmed world is where a
@@ -283,47 +289,42 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new PracticeScene(),
   },
 
-  // Off the row and turned inland, which is the whole reason this pose exists:
-  // the beat is about literature, and four cladding panels in frame would be
-  // arguing with it.
+  // Out into the park, which puts the review row **behind the camera** while it
+  // walks itself off site during this scene. It also swings the building
+  // seventy degrees off axis, so what is left is grass, a path and the far bank
+  // — the whole job of a recessed beat.
   //
   // **Held south of the pavilion, and that is what decides the numbers.**
-  // `PAVILION` stands at x 38.5 to 55.5, z 61.3 to 68.7, with eaves at 3.9 m.
-  // The midpoint of the old `alternatives` → `gaps` glide lands at (46, 59.5),
-  // which clears its near face by under two metres at eaves height — the camera
-  // arrives inside the roof and leaves through it. Standing at z = 52 puts nine
-  // metres between them, and both legs of the move stay south of the building:
-  // the first runs z 52 to 54 across its x span, the second only reaches z 58
-  // by the time it has passed west of x = 38.5.
+  // `PAVILION` stands at x 38.5 to 55.5, z 61.3 to 68.7, with eaves at 3.9 m
+  // and a roof raking to 5.2. The pose this replaces stood at (30, 62), and the
+  // straight line `CameraDirector` tweens from `alternatives` — which begins at
+  // (62, 57) — crosses the pavilion's x span at z 58.0 to 60.7, clearing its
+  // near face by 0.6 m with the camera passing through 4.3 m of height. That is
+  // inside the near clip plane of a wall, not a near miss.
   //
-  // Aimed nearly due west, which also swings the pavilion eighty degrees off
-  // axis and the review row behind the camera. That second one is the point of
-  // the beat: this is about literature, and four cladding panels in frame would
-  // be arguing with it.
+  // Twelve metres south instead. The incoming leg runs z 57 to 50, away from
+  // the pavilion the whole way; the outgoing leg to `objectives` never reaches
+  // x 38.5, so neither touches it. The bearing and pitch are the old pose's,
+  // translated — the frame is the same park, read from twelve metres nearer the
+  // promenade.
   //
-  // Left `foreground` even though a literature beat wants no picture, because
-  // `alternatives` before it and `gaps` after it are both recessed and a third
-  // in a row is where a continuous world starts reading as a slide deck. Three
-  // short lines over open park is a light enough frame to carry it.
-  scene(
-    'ai',
-    'Artificial intelligence in construction',
-    'foreground',
-    pose([50, 4.2, 52], [8, 3.2, 50], 44, 1.5),
-    act1Captions.ai,
-  ),
-
-  // Back out north-west along the riverside walk, which puts the review row
-  // **behind the camera** while it walks itself off site during this scene. It
-  // also swings the building past the right edge, so what is left is grass, a
-  // path and the far bank — the whole job of a recessed beat.
-  scene(
-    'gaps',
-    'Research gaps and open challenges',
-    'recessed',
-    pose([30, 5, 62], [-30, 2, 74], 48, 2),
-    act1Captions.gaps,
-  ),
+  // **Unverified against a render.** The site is authored blind and there is no
+  // free-look camera yet (`PLAN.md`), so the clearances above are arithmetic.
+  // Park groups scatter outside the review corridor at x < 38, which is where
+  // this stands: check the arrival for a tree before rehearsing on it.
+  //
+  // Its own composition rather than a caption: the coverage field, struck one
+  // row at a time. See `content/gaps.ts` and `scenes/act1/GapsScene.ts`.
+  {
+    id: 'gaps',
+    title: 'Research gaps and open challenges',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'recessed',
+    pose: pose([34, 4.8, 50], [-26, 2, 70], 48, 2),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new GapsScene(),
+  },
 
   // From the bridge, on the site axis. The one terminated vista in the act: the
   // entrance sits dead centre at the end of fifty metres of avenue, with the

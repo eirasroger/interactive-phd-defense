@@ -1,0 +1,149 @@
+/*
+ * Full width rather than the standard claim/evidence split: six cards in the
+ * seven-column evidence slot are 290px each, which sets the descriptions at
+ * four words a line.
+ */
+.gaps-composition {
+  display: grid;
+  align-content: center;
+  gap: var(--s-12);
+  width: 100%;
+}
+
+.gaps-head {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.gaps-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-emphasis);
+}
+
+.gaps-eyebrow::before {
+  content: '';
+  width: var(--s-8);
+  height: 1px;
+  background-color: currentColor;
+  opacity: 0.5;
+}
+
+.gaps-heading {
+  font-family: var(--font-display);
+  font-size: var(--t-title);
+  font-weight: var(--display-weight);
+  line-height: var(--display-line);
+  letter-spacing: var(--display-tracking);
+}
+
+/*
+ * **Fixed height, and that is not a detail.** With auto rows the second row is
+ * short while its cards are still empty and grows as they fill, so every card
+ * already on screen moves under the audience mid-sentence. The stage is a fixed
+ * 1920x1080, so a fixed height here is exactly as deterministic as the surface
+ * it sits on.
+ *
+ * Sized to the longest card at its own worst case — a two-line title over a
+ * three-line description — and no taller, so a short card is not mostly floor.
+ */
+.gap-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, 1fr);
+  gap: var(--s-6);
+  width: 100%;
+  height: 540px;
+}
+
+.gap-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--s-4);
+  padding: var(--s-8);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  overflow: hidden;
+
+  /* Dark enough to read against a lit park, translucent enough that the world
+     is still behind it rather than switched off. A `recessed` beat recedes the
+     world; it does not replace it. */
+  background-color: color-mix(in srgb, var(--c-void) 88%, transparent);
+  box-shadow: var(--shadow-lifted);
+
+  /* The active card scales, and a transform on a subpixel-positioned grid cell
+     is what makes text shimmer as it settles. */
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/*
+ * What marks the card being spoken about: a wash off its own top-left corner,
+ * behind everything in it. Cheaper than a border treatment and far quieter — the
+ * card is lit rather than outlined, so the accent never competes with the rule.
+ */
+.gap-card-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 90% at 0% 0%,
+    color-mix(in srgb, var(--c-emphasis) 13%, transparent) 0%,
+    transparent 62%
+  );
+}
+
+/* Drawn across the top edge when the card fills, amber while it is the one
+   being spoken about and neutral once it has handed that on. */
+.gap-card-rule {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 2px;
+  background-color: var(--c-border-strong);
+  transform-origin: left center;
+}
+
+.gap-card-key {
+  position: relative;
+  font-family: var(--font-figure);
+  font-size: 1.75rem;
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--c-text-faint);
+}
+
+/* The mask the title is wiped up behind. `clip` rather than `hidden` so the
+   descender of a `p` or `g` on the last line is not shaved. */
+.gap-card-title {
+  position: relative;
+  overflow: hidden;
+
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  text-wrap: balance;
+  color: var(--c-text);
+}
+
+.gap-card-title-line {
+  display: block;
+}
+
+.gap-card-body {
+  position: relative;
+  font-size: 1.0625rem;
+  line-height: var(--lh-normal);
+  color: var(--c-text-muted);
+}

@@ -13,15 +13,22 @@ import type { CaptionContent } from '@/components/Caption';
  * that reads as plausible is how a draft sentence survives into a defence.
  *
  * The six state-of-the-art streams are **distributed across five scenes** —
- * circular economy, sustainability assessment, EPDs, early design, artificial
- * intelligence — each with the piece of the site that argues it. One caption
- * listing all six asks a single frame to carry a literature review. See
- * `scenes/act1/index.ts` for the walk.
+ * circular economy, sustainability assessment, EPDs, the decision itself, and
+ * what decides it in practice — each with the piece of the site that argues it.
+ * One caption listing all six asks a single frame to carry a literature review.
+ * See `scenes/act1/index.ts` for the walk.
  *
  * The environmental burden itself is not one of the five: it is made in the
  * motivation beat (`content/motivation.ts`) and would be repetition here, so
  * stream 1's slot went to circularity instead — see `content/circularEconomy.ts`
  * and `scenes/act1/CircularEconomyScene.ts`.
+ *
+ * **Stream 6 — artificial intelligence — has no scene, by decision.** Decision
+ * tools and the computational work attempted on this problem are delivered
+ * verbally over the `alternatives` beat. Its eyebrow number is therefore never
+ * seen: the on-screen run is `01` to `05`, and `06` first appears as the sixth
+ * row of the gaps figure. That row is the only place the stream is written down,
+ * which is why its provenance label is load-bearing rather than decorative.
  */
 
 const TO_WRITE = (words: number): string =>
@@ -77,39 +84,9 @@ export const act1Captions = {
    * candidates and what is known about each. See `content/practice.ts` and
    * `scenes/act1/PracticeScene.ts`. */
 
-  /**
-   * 9 · Supporting · recessed · 0:45 — stream 6, turned away from the row.
-   *
-   * The one stream with no object on site, and the one most likely to drift
-   * into a survey. Held to the same rule as the rest: each approach is named by
-   * what it needs as input, and that requirement is the gap it leaves.
-   */
-  ai: {
-    eyebrow: 'State of the art · 06',
-    heading: 'What has been tried computationally, and what each approach needs first.',
-    body: [TO_WRITE(14), TO_WRITE(14), TO_WRITE(14)],
-    accent: 'ai',
-  },
-
-  /**
-   * 8 · Supporting · recessed · 1:00
-   *
-   * Six gaps, one per stream, in the order the streams were walked through.
-   * The pairing is the point of the scene and the body must preserve it.
-   */
-  gaps: {
-    eyebrow: 'Research gaps',
-    heading: 'Six gaps, and the open challenges they leave.',
-    body: [
-      TO_WRITE(12),
-      TO_WRITE(12),
-      TO_WRITE(12),
-      TO_WRITE(12),
-      TO_WRITE(12),
-      TO_WRITE(12),
-    ],
-    accent: 'emphasis',
-  },
+  /* Scene 9 is a composition, not a caption — the six gaps, struck one at a
+   * time across the coverage they are read against. See `content/gaps.ts` and
+   * `scenes/act1/GapsScene.ts`. */
 
   /** 9 · Hero · 0:50 — the 6 → 4 regrouping, shown down a terminated vista. */
   objectives: {
