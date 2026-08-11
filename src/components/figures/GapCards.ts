@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { EASE, seconds } from '@/animations/timing';
 import { el } from '@/utilities/dom';
+import { splitLines } from './splitLines';
 import './gap-cards.css';
 
 export interface GapCard {
@@ -19,10 +20,11 @@ export interface GapCards {
   /** The card frames, for the scene's own entrance stagger. */
   readonly frames: readonly HTMLElement[];
   /**
-   * `-1` for the empty frames, then the index of the card being spoken about.
-   * Past the last index every card is settled and no accent is held, which is
-   * the state the scene rests in.
+   * Splits the titles into their rendered lines. Must be called once the cards
+   * are in the document, and again if the webfont resolves after that.
    */
+  measure(): void;
+  /** `-1` for the empty frames, then the index of the card being spoken about. */
   show(active: number, settle?: boolean): gsap.core.Timeline;
 }
 
@@ -43,8 +45,7 @@ export interface GapCards {
  * then active, then settled, and the amber travels with the active card rather
  * than being a property of any gap. That is what keeps six equal claims looking
  * like six equal claims, and it also gives the room an unmistakable answer to
- * *which one is he on* — the reason this reads as directed rather than as a grid
- * that fades in.
+ * *which one is he on*.
  *
  * Colours are resolved from tokens here rather than left as `var()` in the tween:
  * GSAP interpolates colour values, not custom-property references, and a tween
@@ -52,22 +53,55 @@ export interface GapCards {
  */
 
 /**
- * Durations are the figure's own rather than the deck's shared ramp.
+ * The choreography, in seconds from the start of a beat.
  *
- * A presenter clicks faster than a design system's `slow`, and every part of
- * this moving at one duration is what made the first pass feel soft: the card
- * being handed the accent has to arrive after the previous one has let it go,
- * which is a relationship between two durations and cannot be expressed with
- * one. The hand-off is the quickest thing on screen; the wipe is the slowest.
+ * **A beat is a hand-off, not a cross-fade, and the offsets are what say so.**
+ * The card losing the accent starts letting go at zero and is done in a third of
+ * a second; the card taking it does not begin until that release is most of the
+ * way through. Everything running from t=0 at one duration — which is what this
+ * was — is why it read as soft: six parts arriving together is one event, and a
+ * beat should be a short sequence the eye can follow.
+ *
+ * Reading order down the card: frame, then the mark that says *this one*, then
+ * the number, then the statement line by line, then the description.
  */
-const TIMING = {
-  handoff: 0.34,
-  frame: 0.5,
-  key: 0.42,
-  rule: 0.62,
-  wipe: 0.78,
+const CUE = {
+  release: 0,
+  frame: 0.1,
+  glow: 0.13,
+  rule: 0.17,
+  key: 0.21,
+  title: 0.27,
+  body: 0.46,
+} as const;
+
+const SPAN = {
+  release: 0.34,
+  frame: 0.58,
+  glow: 0.66,
+  rule: 0.7,
+  key: 0.45,
+  title: 0.82,
   body: 0.62,
 } as const;
+
+/**
+ * One ease for everything was the other half of the softness. Roles move
+ * differently: a frame settles, a rule is drawn, type arrives.
+ */
+const MOVE = {
+  /** Unfussy, and over before the eye follows it. */
+  release: 'power2.out',
+  /** Decelerating into place, without `expo`'s long tail on a moving box. */
+  arrive: 'power3.out',
+  /** A rule being drawn, not thrown. */
+  rule: 'power4.out',
+  /** Type. `expo.out` is the deck's own enter, and it is right for a wipe. */
+  type: EASE.enter,
+} as const;
+
+/** Line-to-line delay inside one statement. */
+const LINE_STEP = 0.07;
 
 /** Tokens are the source of truth for colour, and GSAP needs resolved values. */
 const token = (name: string): string =>
@@ -80,6 +114,8 @@ interface Step {
   readonly vars: gsap.TweenVars;
   readonly at: number;
   readonly duration: number;
+  readonly ease: string;
+  readonly stagger?: number;
 }
 
 export function createGapCards(spec: GapCardsSpec): GapCards {
@@ -95,10 +131,7 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
     const rule = el('span', { className: 'gap-card-rule' });
     const glow = el('span', { className: 'gap-card-glow' });
     const key = el('span', { className: 'gap-card-key', text: item.key });
-    // Wrapped so the title can be wiped up behind its own edge. A masked reveal
-    // reads as typesetting; the same text fading in reads as a web page.
-    const line = el('span', { className: 'gap-card-title-line', text: item.title });
-    const title = el('h3', { className: 'gap-card-title', children: [line] });
+    const title = el('h3', { className: 'gap-card-title', text: item.title });
     const body = el('p', { className: 'gap-card-body', text: item.body });
 
     const element = el('article', {
@@ -106,7 +139,17 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
       children: [glow, rule, key, title, body],
     });
 
-    return { element, rule, glow, key, line, body };
+    // Replaced by the measured lines; until then the whole statement is one.
+    return {
+      element,
+      rule,
+      glow,
+      key,
+      title,
+      body,
+      source: item.title,
+      lines: [title] as HTMLElement[],
+    };
   });
 
   const element = el('div', {
@@ -123,9 +166,13 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
       const shown = phase !== 'pending';
       const lit = phase === 'active';
 
-      // Letting go is quicker than being handed it, so the accent is never on
-      // two cards at once for long enough to be seen on two cards.
-      const pace = phase === 'settled' ? TIMING.handoff : undefined;
+      // Anything not being handed the accent moves at once and quickly. Running
+      // a release through the arrival choreography would take a second to undo
+      // what the next card is spending a second doing.
+      const quick = !lit;
+      const at = (cue: number): number => (quick ? 0 : cue);
+      const span = (length: number): number => (quick ? SPAN.release : length);
+      const ease = quick ? MOVE.release : MOVE.arrive;
 
       return [
         {
@@ -133,54 +180,73 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
           vars: {
             borderColor: shown ? colours.edgeLit : colours.edge,
             scale: lit ? 1.018 : 1,
+            // Rising rather than only growing. Four pixels is nothing to name
+            // and everything to feel.
+            y: lit ? -4 : 0,
             opacity: phase === 'settled' ? 0.88 : 1,
           },
-          at: 0,
-          duration: pace ?? TIMING.frame,
+          at: at(CUE.frame),
+          duration: span(SPAN.frame),
+          ease,
         },
         {
           node: card.glow,
           vars: { opacity: lit ? 1 : 0 },
-          at: 0,
-          duration: pace ?? TIMING.frame,
+          at: at(CUE.glow),
+          duration: span(SPAN.glow),
+          ease: quick ? MOVE.release : 'power2.out',
         },
         {
           node: card.rule,
-          vars: {
-            scaleX: shown ? 1 : 0,
-            backgroundColor: lit ? colours.accent : colours.edgeLit,
-          },
-          at: 0.04,
-          duration: pace ?? TIMING.rule,
+          vars: { scaleX: shown ? 1 : 0, backgroundColor: lit ? colours.accent : colours.edgeLit },
+          at: at(CUE.rule),
+          duration: span(SPAN.rule),
+          ease: quick ? MOVE.release : MOVE.rule,
         },
         {
           node: card.key,
-          vars: {
-            color: lit ? colours.accent : shown ? colours.keySettled : colours.keyPending,
-          },
-          at: 0,
-          duration: pace ?? TIMING.key,
+          vars: { color: lit ? colours.accent : shown ? colours.keySettled : colours.keyPending },
+          at: at(CUE.key),
+          duration: span(SPAN.key),
+          ease: MOVE.release,
         },
         {
-          node: card.line,
-          vars: { yPercent: shown ? 0 : 100 },
-          at: 0.1,
-          duration: TIMING.wipe,
+          node: card.lines,
+          // Past 100%: a line clearing its own mask by a margin arrives with
+          // travel behind it rather than appearing to start at the edge.
+          vars: { yPercent: shown ? 0 : 112 },
+          at: at(CUE.title),
+          duration: span(SPAN.title),
+          ease: quick ? MOVE.release : MOVE.type,
+          stagger: lit ? LINE_STEP : 0,
         },
         {
           node: card.body,
           vars: { opacity: shown ? 1 : 0, y: shown ? 0 : 10 },
-          at: 0.2,
-          duration: TIMING.body,
+          at: at(CUE.body),
+          duration: span(SPAN.body),
+          ease: quick ? MOVE.release : MOVE.arrive,
         },
       ];
     });
 
-  return {
+  let current = -1;
+
+  const api: GapCards = {
     element,
     frames: cards.map((card) => card.element),
 
+    measure() {
+      for (const card of cards) {
+        const lines = splitLines(card.title, card.source);
+        if (lines.length > 0) card.lines = lines;
+      }
+      // The freshly built lines carry none of the state the old block had.
+      api.show(current, true);
+    },
+
     show(active, settle = false) {
+      current = active;
       const timeline = gsap.timeline();
 
       for (const step of plan(active)) {
@@ -193,7 +259,8 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
           {
             ...step.vars,
             duration: seconds(step.duration),
-            ease: EASE.enter,
+            ease: step.ease,
+            stagger: seconds(step.stagger ?? 0),
             overwrite: 'auto',
           },
           step.at,
@@ -203,4 +270,6 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
       return timeline;
     },
   };
+
+  return api;
 }

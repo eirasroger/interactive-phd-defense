@@ -88,13 +88,9 @@ export const act1Captions = {
    * time across the coverage they are read against. See `content/gaps.ts` and
    * `scenes/act1/GapsScene.ts`. */
 
-  /** 9 · Hero · 0:50 — the 6 → 4 regrouping, shown down a terminated vista. */
-  objectives: {
-    eyebrow: 'Objectives',
-    heading: 'The six regroup into four things that must be built.',
-    body: [TO_WRITE(30)],
-    accent: 'emphasis',
-  },
+  /* Scene 10 is a composition, not a caption — the 6 → 4 regrouping, shown down
+   * a terminated vista. See `content/objectives.ts` and
+   * `scenes/act1/ObjectivesScene.ts`. */
 
   /** 10 · Supporting · recessed · 0:40 — walked, because the method is a route. */
   method: {

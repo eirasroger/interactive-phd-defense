@@ -122,23 +122,23 @@
   color: var(--c-text-faint);
 }
 
-/* The mask the title is wiped up behind. `clip` rather than `hidden` so the
-   descender of a `p` or `g` on the last line is not shaved. */
+/* The masks are per rendered line and belong to `splitLines`, so this carries
+   no `overflow` of its own — one round the whole block would clip the padding
+   those masks use to protect their descenders. */
 .gap-card-title {
   position: relative;
-  overflow: hidden;
 
   font-family: var(--font-display);
   font-size: 1.6rem;
   font-weight: var(--fw-semibold);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-title);
-  text-wrap: balance;
+  /* Not `balance`. It re-flows the block as a whole, so it breaks differently
+     over `splitLines`' probe spans than over plain text — and the measured lines
+     then do not match what was on screen. Greedy wrapping measures the same
+     both ways. */
+  text-wrap: auto;
   color: var(--c-text);
-}
-
-.gap-card-title-line {
-  display: block;
 }
 
 .gap-card-body {

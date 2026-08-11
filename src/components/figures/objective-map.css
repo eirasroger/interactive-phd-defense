@@ -1,0 +1,238 @@
+.objectives-composition {
+  display: grid;
+  align-content: center;
+  gap: var(--s-12);
+  width: 100%;
+}
+
+.objectives-head {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.objectives-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-emphasis);
+}
+
+.objectives-eyebrow::before {
+  content: '';
+  width: var(--s-8);
+  height: 1px;
+  background-color: currentColor;
+  opacity: 0.5;
+}
+
+.objectives-heading {
+  font-family: var(--font-display);
+  font-size: var(--t-title);
+  font-weight: var(--display-weight);
+  line-height: var(--display-line);
+  letter-spacing: var(--display-tracking);
+}
+
+.objective-map {
+  display: grid;
+  gap: var(--s-8);
+  width: 100%;
+}
+
+/* ---- The six, along the top ---------------------------------------------- */
+/*
+ * Present for the whole scene, at a weight that reads as a reference row rather
+ * than as content: the gaps were made one scene ago, and this is where they are
+ * spent.
+ */
+
+.objective-gaps {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--s-4);
+  width: 100%;
+}
+
+.gap-chip {
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-4) var(--s-6);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+
+  /* Denser than the gap cards', and the reason is the scene behind it: `gaps` is
+     `recessed` and reads against a dimmed park, `objectives` is `foreground` and
+     reads against a lit elevation at the end of the avenue. The same 88% that
+     sits solid on one goes milky on the other. */
+  background-color: color-mix(in srgb, var(--c-void) 95%, transparent);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.gap-chip-key {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+}
+
+.gap-chip-label {
+  font-size: 1rem;
+  line-height: var(--lh-snug);
+  color: var(--c-text-faint);
+  text-wrap: pretty;
+}
+
+/* ---- The four, under them ------------------------------------------------ */
+
+.objective-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-6);
+  width: 100%;
+  /* Fixed, for the reason `gap-cards.css` is: rows that grow as their cards fill
+     move every card already on screen mid-sentence. */
+  height: 372px;
+}
+
+.objective-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--s-4);
+  padding: var(--s-8);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  overflow: hidden;
+
+  background-color: color-mix(in srgb, var(--c-void) 95%, transparent);
+  box-shadow: var(--shadow-lifted);
+
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.objective-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 90% at 0% 0%,
+    color-mix(in srgb, var(--c-emphasis) 13%, transparent) 0%,
+    transparent 62%
+  );
+}
+
+.objective-rule {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 2px;
+  background-color: var(--c-border-strong);
+  transform-origin: left center;
+}
+
+.objective-key {
+  position: relative;
+  font-family: var(--font-figure);
+  font-size: 1.75rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.02em;
+  color: var(--c-text-faint);
+}
+
+/* Set smaller than a gap card's title: these are full objective statements
+   rather than four-word names, and a 140-character sentence at heading size is a
+   wall in a 400px column.
+
+   The masks are per rendered line and belong to `splitLines`, so this carries no
+   `overflow` of its own — one round the whole block would clip the padding those
+   masks use to protect their descenders. */
+.objective-title {
+  position: relative;
+  align-self: start;
+
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-body);
+  /* Not `pretty` or `balance`. Both re-flow the block as a whole, so they break
+     differently over `splitLines`' probe spans than over plain text — and the
+     measured lines then do not match what was on screen a moment earlier. Greedy
+     wrapping is the only mode that measures the same both ways. */
+  text-wrap: auto;
+  color: var(--c-text);
+}
+
+/* ---- The mark ------------------------------------------------------------ */
+/*
+ * Pinned to the foot of the card, so all four sit on one baseline across the row
+ * however many lines their statements run to. That shared baseline is most of
+ * what makes them read as a set rather than as four drawings.
+ *
+ * Everything inside is `currentColor`, so the card tweens one property and every
+ * stroke, dash and dot follows it from neutral to accent.
+ */
+.objective-mark {
+  position: relative;
+  align-self: end;
+  justify-self: start;
+  color: var(--c-text-muted);
+
+  /* It assembles by growing out of the corner it is pinned to, so its baseline
+     and left edge never move — which is what keeps four marks aligned across the
+     row while each one is arriving. */
+  transform-origin: left bottom;
+  will-change: transform, opacity;
+}
+
+.objective-icon {
+  display: block;
+  width: 84px;
+  height: 84px;
+  overflow: visible;
+}
+
+.objective-icon .icon-stroke {
+  fill: none;
+  stroke: currentColor;
+  /* 1.5 on a 64 grid drawn at 84px lands at ~1.97 device pixels, which is the
+     card's own top rule. One weight across the whole composition. */
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.objective-icon .icon-dot {
+  fill: currentColor;
+  stroke: none;
+  /* Scaled about their own centres, not the viewBox origin. */
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Absence, in the same dash the candidate set and the declaration use. Revealed
+   by opacity rather than drawn on, because the draw-on writes `stroke-dasharray`
+   and would replace this pattern with a solid line. */
+.objective-icon .icon-dash {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 3 3.5;
+}
+
+/* Scaffolding: the axis cage, the sheets behind the front one. Present, and
+   deliberately not competing with what sits on them. */
+.objective-icon .icon-faint {
+  opacity: 0.42;
+}

@@ -1,24 +1,23 @@
 import gsap from 'gsap';
 import { DURATION, EASE, STAGGER, seconds } from '@/animations/timing';
-import { createGapCards, type GapCards } from '@/components/figures/GapCards';
-import { GAPS } from '@/content/gaps';
+import { createObjectiveMap, type ObjectiveMap } from '@/components/figures/ObjectiveMap';
+import { OBJECTIVES } from '@/content/objectives';
 import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 import { el } from '@/utilities/dom';
 
 /**
- * Scene 9 — the six research gaps.
+ * Scene 10 — the six gaps regrouped into four objectives.
  *
- * One beat per gap, and no more. A seventh that released the accent so the six
- * rested equal was tried and cut: the click after the last gap is the click that
- * leaves for the objectives, so a beat spent un-highlighting card 06 is a beat
- * the audience watches nothing happen in.
+ * Four beats, one per objective, and none spent on anything but a fold. The six
+ * gaps stand along the top throughout; each beat lights the ones its objective
+ * is motivated by.
  */
-const BEATS = GAPS.cards.items.length;
+const BEATS = OBJECTIVES.map.items.length;
 
-export class GapsScene implements SceneInstance {
+export class ObjectivesScene implements SceneInstance {
   readonly beats = BEATS;
 
-  private cards: GapCards | null = null;
+  private map: ObjectiveMap | null = null;
   /** Everything the entry timeline animates, so a killed entry can be settled. */
   private head: HTMLElement[] = [];
 
@@ -27,30 +26,30 @@ export class GapsScene implements SceneInstance {
   enter(context: SceneContext): void {
     context.root.dataset['align'] = 'wide';
 
-    const eyebrow = el('p', { className: 'gaps-eyebrow', text: GAPS.eyebrow });
-    const heading = el('h2', { className: 'gaps-heading', text: GAPS.heading });
-    const headBlock = el('div', { className: 'gaps-head', children: [eyebrow, heading] });
+    const eyebrow = el('p', { className: 'objectives-eyebrow', text: OBJECTIVES.eyebrow });
+    const heading = el('h2', { className: 'objectives-heading', text: OBJECTIVES.heading });
+    const headBlock = el('div', { className: 'objectives-head', children: [eyebrow, heading] });
 
-    const cards = createGapCards(GAPS.cards);
-    this.cards = cards;
-    this.head = [eyebrow, heading, ...cards.frames];
+    const map = createObjectiveMap(OBJECTIVES.map);
+    this.map = map;
+    this.head = [eyebrow, heading, ...map.frames];
 
     context.root.appendChild(
-      el('div', { className: 'gaps-composition', children: [headBlock, cards.element] }),
+      el('div', { className: 'objectives-composition', children: [headBlock, map.element] }),
     );
 
     // Only now is there a layout to read line breaks off. If the webfont has not
     // resolved the text will rewrap when it does, so measure again on that —
     // guarded by the scene's signal, because a scene that has already exited must
     // not be writing to its own dead DOM.
-    cards.measure();
+    map.measure();
     if (document.fonts.status !== 'loaded') {
       void document.fonts.ready.then(() => {
-        if (!context.signal.aborted) cards.measure();
+        if (!context.signal.aborted) map.measure();
       });
     }
 
-    cards.show(-1, true);
+    map.show(-1, true);
 
     const entry = gsap.timeline({ delay: context.entryDelay + 0.15 });
     entry
@@ -61,28 +60,24 @@ export class GapsScene implements SceneInstance {
         ease: EASE.enter,
         stagger: seconds(STAGGER),
       })
-      // Staggered in reading order, but at 45ms — fast enough that the six
-      // still land as one field rather than as six arrivals the audience counts
-      // through, and slow enough that the field is built rather than switched
-      // on. The whole sweep takes a quarter of a second.
       .from(
-        cards.frames,
+        map.frames,
         {
           y: 26,
           opacity: 0,
           duration: seconds(DURATION.slow),
           ease: EASE.enter,
-          stagger: seconds(0.045),
+          stagger: seconds(0.04),
         },
         0.25,
       )
-      .add(cards.show(0), 0.6);
+      .add(map.show(0), 0.65);
     this.motion = entry;
   }
 
   beat(index: number, settle: boolean): void {
-    const cards = this.cards;
-    if (!cards) return;
+    const map = this.map;
+    if (!map) return;
 
     // The deck calls this for beat 0 immediately after `enter`, which kills the
     // entry timeline while its `from` tweens are still at their start values —
@@ -90,6 +85,6 @@ export class GapsScene implements SceneInstance {
     this.motion?.kill();
     gsap.set(this.head, { opacity: 1, y: 0 });
 
-    this.motion = gsap.timeline().add(cards.show(index, settle), 0);
+    this.motion = gsap.timeline().add(map.show(index, settle), 0);
   }
 }

@@ -13,6 +13,7 @@ import { ExteriorScene } from './ExteriorScene';
 import { GapsScene } from './GapsScene';
 import { LeverageScene } from './LeverageScene';
 import { MotivationScene } from './MotivationScene';
+import { ObjectivesScene } from './ObjectivesScene';
 import { PracticeScene } from './PracticeScene';
 
 const CHAPTER = 'Act I — Exterior';
@@ -330,13 +331,18 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // entrance sits dead centre at the end of fifty metres of avenue, with the
   // tree rows converging on it. Derived from the crossing rather than typed, so
   // meandering the river moves the bridge and this pose together.
-  scene(
-    'objectives',
-    'Four objectives',
-    'foreground',
-    pose([CROSSING.x, 2.3, CROSSING.z], [0, 5, ENTRANCE_FACE], 52),
-    act1Captions.objectives,
-  ),
+  // Its own composition rather than a caption: the six gap keys gathered into
+  // four. See `content/objectives.ts` and `scenes/act1/ObjectivesScene.ts`.
+  {
+    id: 'objectives',
+    title: 'Four objectives',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'foreground',
+    pose: pose([CROSSING.x, 2.3, CROSSING.z], [0, 5, ENTRANCE_FACE], 52),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new ObjectivesScene(),
+  },
 
   // Halfway down the same walk, aimed at the same point. Nothing changes but
   // the distance, which is what makes the beat read as an approach rather than
