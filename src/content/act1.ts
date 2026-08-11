@@ -5,12 +5,12 @@ import type { CaptionContent } from '@/components/Caption';
  * Act I — Exterior.
  *
  * Structure only. Headings are the scene claims from the narrative manifest and
- * are architecture, not copy. Body text is **placeholder**, sized to the length
- * the final copy should occupy so the typographic composition can be judged
- * against a real block rather than an empty one.
+ * are architecture, not copy.
  *
- * Every `TO WRITE` marker is meant to be visible on screen. Placeholder copy
- * that reads as plausible is how a draft sentence survives into a defence.
+ * **Two captions are left, and both are final.** Every other beat in the act
+ * grew its own composition, which is why the placeholder machinery that stood
+ * here is gone: a `TO WRITE` marker earns its place on screen only while there
+ * is a scene still waiting for copy, and there is not.
  *
  * The six state-of-the-art streams are **distributed across five scenes** —
  * circular economy, sustainability assessment, EPDs, the decision itself, and
@@ -30,9 +30,6 @@ import type { CaptionContent } from '@/components/Caption';
  * row of the gaps figure. That row is the only place the stream is written down,
  * which is why its provenance label is load-bearing rather than decorative.
  */
-
-const TO_WRITE = (words: number): string =>
-  `TO WRITE · ${words} words. ${'· '.repeat(Math.max(words - 4, 1)).trim()}`;
 
 export const act1Captions = {
   /** 1 · Connective · 0:30 — the establishing shot, and the title card. */
@@ -92,18 +89,12 @@ export const act1Captions = {
    * a terminated vista. See `content/objectives.ts` and
    * `scenes/act1/ObjectivesScene.ts`. */
 
-  /** 10 · Supporting · recessed · 0:40 — walked, because the method is a route. */
-  method: {
-    eyebrow: 'Research structure',
-    heading: 'TO WRITE · how the objectives shape the work.',
-    body: [TO_WRITE(32)],
-    accent: 'circular',
-  },
-
-  /** 11 · Connective · 0:20 — nearly wordless; this is the doorway. */
-  entrance: {
-    eyebrow: 'Act II',
-    heading: 'Five papers. One pipeline.',
-    accent: 'ai',
-  },
+  /* Scene 11 is a composition, not a caption, and it is where the act ends —
+   * the five papers, then the pipeline they are. See `content/contributions.ts`
+   * and `scenes/act1/ContributionsScene.ts`.
+   *
+   * **The arrival at the door was a scene and is not one any more.** It carried
+   * *Five papers. One pipeline.*, which is the previous frame said out loud one
+   * beat after the audience watched it drawn. The way into Act II is the doors
+   * opening — a transition, with nothing written on it. */
 } as const satisfies Record<string, CaptionContent>;

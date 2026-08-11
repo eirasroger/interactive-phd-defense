@@ -8,6 +8,7 @@ import { CROSSING } from '@/world/exterior/paths';
 import { AVENUE, CONSTRUCTION, ENTRANCE, REVIEW } from '@/world/exterior/site';
 import { AssessmentScene } from './AssessmentScene';
 import { CircularEconomyScene } from './CircularEconomyScene';
+import { ContributionsScene } from './ContributionsScene';
 import { EpdScene } from './EpdScene';
 import { ExteriorScene } from './ExteriorScene';
 import { GapsScene } from './GapsScene';
@@ -90,8 +91,13 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * 8. **alternatives** — the four options, on the promenade thirty metres east.
  * 9. **gaps** — north-west into the park, facing away from everything.
  * 10. **objectives** — the bridge, and the entrance centred down the avenue.
- * 11. **method** — halfway down that avenue, same aim.
- * 12. **entrance** — at the door. The hinge into Act II.
+ * 11. **contributions** — halfway down that avenue, same aim. The act ends here.
+ *
+ * **There is no arrival-at-the-door beat.** One stood here, carrying the words
+ * *Five papers. One pipeline.* — which is the previous scene's last frame said
+ * out loud, at the exact moment the audience has just watched it drawn. The act
+ * now ends on the pipeline, and the way in is the doors opening, which is a
+ * transition rather than a slide.
  *
  * Two composition rules run through every pose. The text column sits on the
  * left, so the subject is aimed **right of centre** — which for a camera
@@ -347,35 +353,24 @@ export const act1Scenes: readonly SceneDefinition[] = [
   // Halfway down the same walk, aimed at the same point. Nothing changes but
   // the distance, which is what makes the beat read as an approach rather than
   // as a new place.
-  scene(
-    'method',
-    'Method and structure',
-    'recessed',
-    pose([0, 2.2, alongAvenue(0.46)], [0, 5, ENTRANCE_FACE], 50, 1),
-    act1Captions.method,
-  ),
-
-  // The hinge into Act II, derived from the entrance rather than hand-placed so
-  // the corridor threshold lines up with the same opening. Parallel to the
-  // entrance axis rather than aimed at it: a straight one-point approach puts
-  // the door right of centre, leaves the text column clear, and is already
-  // pointing where Act II continues.
   //
-  // Close. At the standoff the other poses use, a 34 m elevation fills the
-  // frame and the opening is lost among eight identical bays — which is fatal
-  // for the one shot whose whole job is to say *this is the way in*.
-  scene(
-    'entrance',
-    'Entering',
-    'foreground',
-    pose(
-      [ENTRANCE.position[0] - 5.5, 3.4, ENTRANCE.position[2] + 24],
-      [ENTRANCE.position[0] - 5.5, 2.6, ENTRANCE.position[2]],
-      44,
-      1.5,
-    ),
-    act1Captions.entrance,
-  ),
+  // Its own composition rather than a caption: the four objectives answered,
+  // then the five answers travelling into the plan of the corridor the next
+  // scene walks into. See `content/contributions.ts`.
+  //
+  // `recessed`, and it has to be. This is the widest composition in the act — a
+  // 1664-unit field carrying five cards and six edges — and the avenue it sits
+  // over is a lit vista with tree rows converging down the middle of frame.
+  {
+    id: 'contributions',
+    title: 'Contributions',
+    chapter: CHAPTER,
+    zone: exteriorZone.id,
+    world: 'recessed',
+    pose: pose([0, 2.2, alongAvenue(0.46)], [0, 5, ENTRANCE_FACE], 50, 1),
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new ContributionsScene(),
+  },
 ];
 
 /**

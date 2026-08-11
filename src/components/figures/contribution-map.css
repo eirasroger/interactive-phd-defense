@@ -1,0 +1,253 @@
+.contributions-composition {
+  display: grid;
+  align-content: center;
+  gap: var(--s-8);
+  width: 100%;
+}
+
+.contributions-head {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.contributions-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-emphasis);
+}
+
+.contributions-eyebrow::before {
+  content: '';
+  width: var(--s-8);
+  height: 1px;
+  background-color: currentColor;
+  opacity: 0.5;
+}
+
+/* The heading's second half is held back, so the two sit on one baseline rather
+   than stacking — the coda completes a sentence, it does not start one. */
+.contributions-headline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.4em;
+
+  font-family: var(--font-display);
+  font-size: var(--t-title);
+  font-weight: var(--display-weight);
+  line-height: var(--display-line);
+  letter-spacing: var(--display-tracking);
+}
+
+.contributions-coda {
+  color: var(--c-text-faint);
+}
+
+.contribution-map {
+  display: grid;
+  width: 100%;
+}
+
+/* ---- The field ----------------------------------------------------------- */
+/*
+ * Fixed, and absolutely positioned inside. Two layouts share one set of cards,
+ * so a card's box is a number the figure computes rather than something a grid
+ * decides — which is the only way the same five elements can travel from a row
+ * into a plan instead of being replaced by five others.
+ *
+ * The numbers here and in `ContributionMap.ts` are one layout. The SVG shares
+ * the coordinate system through its viewBox, so an edge lands on a card edge
+ * without measuring anything.
+ */
+
+.contribution-field {
+  position: relative;
+  width: 1664px;
+  height: 470px;
+}
+
+/* ---- The papers ---------------------------------------------------------- */
+
+.paper-card {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  /* The sheet is clipped by the card, which is what lets its window shrink to a
+     masthead sliver without the page inside it being squashed. */
+  overflow: hidden;
+
+  background-color: color-mix(in srgb, var(--c-void) 92%, transparent);
+  /* Two shadows, not one: a tight contact shadow that sits the card on the
+     ground, and a wide soft one that lifts it off the world behind. A single
+     large blur reads as a glow. */
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 0.5),
+    0 22px 60px rgb(0 0 0 / 0.55);
+
+  will-change: transform, width, height;
+  backface-visibility: hidden;
+}
+
+/*
+ * The published page, as an object rather than as a picture of one.
+ *
+ * White stock on a dark ground is the one place in this deck a bright surface is
+ * correct — it is what a published page *is*, and dimming it into the palette
+ * would make it read as a screenshot someone tried to hide. The window is what
+ * animates; the page inside keeps its own aspect at every size, so the masthead
+ * is never stretched. That stretch is the exact tell that separates a document
+ * from a graphic of one.
+ */
+.paper-sheet {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  background-color: #fff;
+  will-change: height;
+}
+
+.paper-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Paper white is brighter than anything else the deck ever shows. A couple of
+     points off the top end keeps it reading as stock rather than as a lit panel,
+     without touching the black of the type. */
+  filter: brightness(0.96) contrast(1.02);
+}
+
+/* A hairline where paper meets card, so the two materials are separated by an
+   edge rather than by a colour change. */
+.paper-sheet::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  height: 1px;
+  background-color: rgb(0 0 0 / 0.55);
+}
+
+.paper-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  min-height: 0;
+}
+
+.paper-head {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.paper-key {
+  font-family: var(--font-figure);
+  font-size: 1.5rem;
+  font-weight: var(--fw-medium);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--c-emphasis);
+}
+
+/* The station name, and the label that survives into the plan. It is what the
+   audience meets again on the corridor wall in Act II, so it is set as a name
+   rather than as a caption. */
+.paper-role {
+  font-size: 1.0625rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-body);
+  color: var(--c-text);
+  text-wrap: pretty;
+}
+
+/* Pinned to the card's foot, so all five sit on one baseline across the row
+   however many lines their station names run to. */
+.paper-record {
+  display: grid;
+  gap: var(--s-1);
+  margin-block-start: auto;
+  padding-block-start: var(--s-3);
+  border-block-start: 1px solid var(--c-border);
+}
+
+.paper-journal {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  line-height: var(--lh-snug);
+  color: var(--c-text-faint);
+}
+
+/* Tabular, because these are quantities: volume, year, article. The specificity
+   is the credential — the page above says which journal, this says exactly
+   where. */
+.paper-locator {
+  font-family: var(--font-figure);
+  font-size: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--c-text-faint);
+}
+
+/* Neutral, not accented. The key above is already amber and five cards carrying
+   two accents each is ten amber marks in one frame — past the point where an
+   accent means anything. O4 appearing on two cards is the asymmetry
+   `narrative.md` flags, and it is legible as repeated words without colour. */
+.paper-answers {
+  margin-block-start: var(--s-2);
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+
+/* ---- The plan ------------------------------------------------------------ */
+
+.contribution-plan {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/*
+ * One weight for every edge.
+ *
+ * Drawn in the text scale rather than the border scale — a border colour is
+ * tuned to sit against a surface, and these run over open world.
+ *
+ * `opacity: 0` is the resting state, so an edge is invisible before the plan
+ * forms even if `getTotalLength` returned nothing to draw with.
+ */
+.plan-edge {
+  fill: none;
+  opacity: 0;
+  stroke: var(--c-text-faint);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.plan-arrow {
+  fill: var(--c-text-faint);
+  opacity: 0;
+}
