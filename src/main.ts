@@ -1,6 +1,7 @@
 import '@/styles/base.css';
 import '@/styles/stage.css';
 
+import gsap from 'gsap';
 import { manifest } from '@/assets/manifest';
 import { createProgressIndicator } from '@/components/ProgressIndicator';
 import {
@@ -57,7 +58,18 @@ const engine = new Engine({
 engine.start();
 
 if (import.meta.env.DEV) {
-  // Dev-only handle for inspecting the scene graph and renderer counters
-  // from the console. Stripped from production builds.
+  // Dev-only handles, stripped from production builds.
+  //
+  // `__engine` inspects the scene graph and renderer counters. `__time` scales
+  // GSAP's global timeline, which is how a transition gets *authored* rather
+  // than guessed at: the entry into Act II is nine seconds of continuously
+  // changing camera, doors and light, and at 1x the only way to look at any
+  // given moment of it is to catch one. At 0.1 it can be watched.
+  //
+  // The render loop is GSAP's ticker and is not on the global timeline, so
+  // slowing this slows the animation and leaves the frame rate alone.
   (globalThis as { __engine?: Engine }).__engine = engine;
+  (globalThis as { __time?: (scale: number) => void }).__time = (scale: number) => {
+    gsap.globalTimeline.timeScale(scale);
+  };
 }

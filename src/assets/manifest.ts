@@ -3,6 +3,7 @@ import assemblyUrl from './models/assembly.glb?url';
 import corridorBayUrl from './models/corridor-bay.glb?url';
 import exteriorBuildingUrl from './models/exterior-building.glb?url';
 import exteriorConstructionUrl from './models/exterior-construction.glb?url';
+import exteriorDoorsUrl from './models/exterior-doors.glb?url';
 import facadeCandidatesUrl from './models/facade-candidates.glb?url';
 import exteriorPlantingUrl from './models/exterior-planting.glb?url';
 import parkAssetsUrl from './models/park-assets.glb?url';
@@ -31,6 +32,9 @@ export const manifest: readonly AssetEntry[] = [
   { id: 'corridorBay', url: corridorBayUrl, kind: 'model' },
   { id: 'exteriorBuilding', url: exteriorBuildingUrl, kind: 'model' },
   { id: 'exteriorConstruction', url: exteriorConstructionUrl, kind: 'model' },
+  // The two sliding leaves, separate from the building because they move and
+  // the building exports as one joined mesh. 142 KB.
+  { id: 'exteriorDoors', url: exteriorDoorsUrl, kind: 'model' },
   { id: 'facadeCandidates', url: facadeCandidatesUrl, kind: 'model' },
   { id: 'facadeSlotFill', url: facadeSlotFillUrl, kind: 'model' },
   { id: 'exteriorPlanting', url: exteriorPlantingUrl, kind: 'model' },

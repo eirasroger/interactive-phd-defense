@@ -6,6 +6,7 @@ import type { Atmosphere } from '@/engine/render/atmosphere';
 import type { ZoneContext, ZoneDefinition, ZoneInstance } from '@/engine/world/types';
 import { createBakedPart, createBuilding, findParts, sharpen, type Building } from './building';
 import { createCanopyField } from './canopy';
+import { createEntrance, ENTRANCE_TRAVEL_SECONDS, type Entrance } from './entrance';
 import { createLake, type Lake } from './lake';
 import { createParkland, type Parkland } from './parkland';
 import { createPavilion, type Pavilion } from './pavilion';
@@ -15,6 +16,8 @@ import { createBankside, type Bankside } from './bankside';
 import { createBridge, type Bridge } from './bridge';
 import { createPlayground, type Playground } from './playground';
 import { createRiver, type River } from './river';
+import { DOORS_AT } from '@/animations/entry';
+import { seconds as scaled } from '@/animations/timing';
 import { BUILDING_HEIGHT, CONSTRUCTION, REVIEW } from './site';
 import { createSkyTexture } from './sky';
 import { createOutcrop, type StoneField } from './stones';
@@ -24,6 +27,7 @@ import { createWoodland, type Woodland } from './woodland';
 /** Asset ids every Act I scene declares, so they resolve before the zone mounts. */
 export const EXTERIOR_ASSET = 'exteriorBuilding';
 export const CONSTRUCTION_ASSET = 'exteriorConstruction';
+export const DOORS_ASSET = 'exteriorDoors';
 export const CANDIDATES_ASSET = 'facadeCandidates';
 export const SLOT_FILL_ASSET = 'facadeSlotFill';
 export const PLANTING_ASSET = 'exteriorPlanting';
@@ -32,6 +36,7 @@ export const PARK_ASSET = 'parkAssets';
 export const EXTERIOR_ASSETS = [
   EXTERIOR_ASSET,
   CONSTRUCTION_ASSET,
+  DOORS_ASSET,
   CANDIDATES_ASSET,
   SLOT_FILL_ASSET,
   PLANTING_ASSET,
@@ -132,6 +137,7 @@ class Exterior implements ZoneInstance {
   private readonly construction: Building;
   private readonly slotFill: Building;
   private readonly candidates: readonly Building[];
+  private readonly entrance: Entrance;
   private readonly parts: readonly Building[];
   // Built from the key's own direction, so the sun in the panorama and the light
   // casting the shadows cannot disagree.
@@ -140,6 +146,7 @@ class Exterior implements ZoneInstance {
   private presence = -1;
   private scaffolded = true;
   private strike: gsap.core.Tween | null = null;
+  private threshold: gsap.core.Tween | null = null;
 
   constructor(private readonly context: ZoneContext) {
     const { assets, stage } = context;
@@ -208,7 +215,13 @@ class Exterior implements ZoneInstance {
       this.outcrop.object,
     );
 
-    for (const id of [EXTERIOR_ASSET, CONSTRUCTION_ASSET, SLOT_FILL_ASSET, CANDIDATES_ASSET]) {
+    for (const id of [
+      EXTERIOR_ASSET,
+      CONSTRUCTION_ASSET,
+      SLOT_FILL_ASSET,
+      CANDIDATES_ASSET,
+      DOORS_ASSET,
+    ]) {
       sharpen(assets.model(id), context.quality.anisotropy);
     }
 
@@ -216,9 +229,10 @@ class Exterior implements ZoneInstance {
     this.construction = createBuilding(assets.model(CONSTRUCTION_ASSET));
     this.slotFill = createBuilding(assets.model(SLOT_FILL_ASSET));
     this.candidates = findParts(assets.model(CANDIDATES_ASSET), REVIEW.count).map(createBakedPart);
+    this.entrance = createEntrance(assets.model(DOORS_ASSET));
 
     this.parts = [this.building, this.construction, this.slotFill, ...this.candidates];
-    stage.add(...this.parts.map((part) => part.object));
+    stage.add(...this.parts.map((part) => part.object), this.entrance.object);
 
     // Act I is the building under construction with the bay still open. The
     // fill is Act IV's, and the options are parked off frame until the act
@@ -327,6 +341,38 @@ class Exterior implements ZoneInstance {
     const onStage = progress >= REVIEW.from && progress <= REVIEW.to;
     this.setReview(onStage ? 1 : 0, animate);
     this.setScaffold(progress < CONSTRUCTION.struck, animate);
+    // Shut for the whole act, including on a jump back into it from the
+    // corridor. The doors are not zone progress — they are an event, and
+    // `setThreshold` owns it — but the *closed* state is what every Act I scene
+    // is entitled to, and re-entering the exterior has to restore it.
+    this.entrance.open(0, 0);
+  }
+
+  /**
+   * Opens the doors, timed against the move that is carrying the camera in.
+   *
+   * They part at `DOORS_AT` of the move rather than on arrival, and the
+   * difference is the whole register of the shot: doors that open as you reach
+   * them are automatic doors reacting to a body; doors already opening as you
+   * approach are a building admitting you. See `animations/entry.ts`, where the
+   * fraction is defined next to the speed profile it is a fraction of, because
+   * the two are one piece of choreography.
+   *
+   * Driven off the move's own length rather than a clock of its own, and killed
+   * with the zone — a presenter who navigates on mid-flight leaves a zone that
+   * is released, so there is no timer left running against doors nobody is
+   * travelling towards.
+   */
+  setThreshold(open: boolean, seconds: number): void {
+    if (!open || seconds <= 0) {
+      this.entrance.open(open ? 1 : 0, 0);
+      return;
+    }
+
+    this.threshold?.kill();
+    this.threshold = gsap.delayedCall(scaled(seconds * DOORS_AT), () => {
+      this.entrance.open(1, ENTRANCE_TRAVEL_SECONDS);
+    });
   }
 
   update(dt: number): void {
@@ -340,6 +386,8 @@ class Exterior implements ZoneInstance {
   dispose(): void {
     for (const candidate of this.candidates) gsap.killTweensOf(candidate.object.position);
     this.strike?.kill();
+    this.threshold?.kill();
+    this.entrance.dispose();
     this.context.world.setBackground(null);
     this.context.world.setEnvironment(null);
     this.terrain.dispose();

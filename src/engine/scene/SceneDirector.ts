@@ -1,4 +1,5 @@
 import { Group } from 'three';
+import { entryEase } from '@/animations/entry';
 import { TRANSITION } from '@/config/presentation';
 import type { QualitySettings } from '@/config/quality';
 import type { AssetLoader } from '@/engine/assets/AssetLoader';
@@ -241,6 +242,17 @@ export class SceneDirector {
     if (direction === 'jump' && previousIndex === -1) {
       this.deps.camera.snapTo(definition.pose);
       return 0;
+    }
+
+    // A crossing brings both its own length and its own motion signature. The
+    // ease is not a per-scene choice — every threshold in the deck is the same
+    // kind of move and reads wrong at the deck's default symmetric curve, which
+    // arrives at the doors travelling fastest. See `animations/entry.ts`.
+    if (direction === 'forward' && definition.crossing) {
+      return this.deps.camera.moveTo(definition.pose, {
+        seconds: definition.crossing.seconds,
+        ease: entryEase,
+      });
     }
 
     // Sequential navigation is paced by the move itself; only the jump cut

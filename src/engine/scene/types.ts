@@ -4,6 +4,7 @@ import type { AssetLoader } from '@/engine/assets/AssetLoader';
 import type { CameraPose } from '@/engine/camera/types';
 import type { World } from '@/engine/render/World';
 import type { FrameHandler, NavDirection } from '@/engine/types';
+import type { ZoneCrossing } from '@/engine/world/types';
 
 export interface SceneContext {
   /** DOM overlay layer for this scene. Removed automatically on exit. */
@@ -75,5 +76,20 @@ export interface SceneDefinition {
   readonly pose: CameraPose;
   /** Asset ids that must be resolved before entering. */
   readonly assets?: readonly string[];
+  /**
+   * Entering this scene crosses a designed threshold out of the previous zone.
+   *
+   * Declared on the arriving scene rather than the departing one because a
+   * crossing is a property of the boundary, and the boundary is only reached by
+   * going somewhere. Only honoured travelling forwards: a jump back through a
+   * door during questions wants to be a cut, not a set piece replayed at the
+   * presenter.
+   *
+   * Implies its own pacing. `TRANSITION.camera` rate-limits every ordinary move
+   * to 4.5 s, which is right for repositioning between two things the camera is
+   * looking at and far too short for one that has to cover an avenue, open a
+   * pair of doors and settle inside a building.
+   */
+  readonly crossing?: ZoneCrossing;
   create(): SceneInstance;
 }

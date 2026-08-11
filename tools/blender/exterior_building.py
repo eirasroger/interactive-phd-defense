@@ -18,6 +18,7 @@ OUTPUT = MODELS / "exterior-building.glb"
 CONSTRUCTION_OUTPUT = MODELS / "exterior-construction.glb"
 CANDIDATE_OUTPUT = MODELS / "facade-candidates.glb"
 SLOT_FILL_OUTPUT = MODELS / "facade-slot-fill.glb"
+DOOR_OUTPUT = MODELS / "exterior-doors.glb"
 PLANTING_OUTPUT = MODELS / "exterior-planting.glb"
 TEXTURES_OUT = PROJECT_ROOT / "src" / "assets" / "textures"
 WORK = PROJECT_ROOT / "work" / "blender"
@@ -66,6 +67,9 @@ SCENE = "exterior_build"
 # Sized for the finished presentation, not for a fast turnaround.
 BAKE_SIZE = 4096
 CANDIDATE_BAKE = 2048
+# A door leaf is 2.1 x 3.2 m of mostly glass. Anything larger is atlas spent on
+# the four metal edges that carry its only occlusion.
+DOOR_BAKE = 1024
 BAKE_SAMPLES = 320
 
 # How far occlusion reaches. Sized to the ground-floor setback, so the soffit
@@ -153,14 +157,110 @@ SCAFFOLD = {
 }
 
 ENTRANCE = {
-    "width": 6.4,
+    # Two full bays. It was 6.4 — a width derived independently of the column
+    # rhythm, which is the same fault `build_ground` already works around by
+    # skipping any column that lands inside the doorway. Two bays makes the
+    # opening a fact about the module instead of a hole punched through it, and
+    # the jamb columns then stand exactly on the bay lines and frame it.
+    "width": BAY * 2,
+    # Unchanged, and constrained rather than chosen: the canopy hangs at
+    # `height + frame + thickness/2` and the oversail soffit begins at
+    # `GROUND_H - 0.17`, so anything above ~3.2 drives the two through each
+    # other. Raising the opening means raising `GROUND_H`, which moves the whole
+    # upper mass and rebakes every Act I framing — a bigger change than the
+    # transition needs. The opening is widened instead, which suits a 16:9 frame
+    # and a deep oversail better than height would have.
     "height": 3.2,
     "leaf_gap": 0.06,
     "canopy_proud": 1.4,
-    "canopy_thickness": 0.26,
+    # 0.18, not 0.26, and this is a clearance rather than a taste.
+    #
+    # The canopy hangs off `height + frame` and the oversail soffit starts at
+    # `GROUND_H - 0.34` = 3.66. At 0.26 its top landed at 3.68 — *inside* the
+    # soffit — so the one element whose whole job is to break the unbroken
+    # horizontal of the oversail was welded to it, and had been since it was
+    # written. 0.18 leaves a 60 mm shadow gap. What reads at distance is the
+    # 1.4 m projection, not the gap, but the projection only reads as separate
+    # if there is a gap at all.
+    "canopy_thickness": 0.18,
     "frame": 0.22,
     "clear_bays": (2, 3, 4, 5),
+    # Fixed glazing at each end of the frame, and the pocket its active leaf
+    # parks over when open.
+    #
+    # **Leaf width must equal sidelight width**, and that is arithmetic rather
+    # than taste. A bi-parting slider covers `width - 2*sidelight` when shut and
+    # each leaf retracts by its own width, so it only clears the opening if it
+    # lands squarely on the fixed panel beside it: `2*leaf = width - 2*sidelight`
+    # with `leaf = sidelight` gives `sidelight = width/4`. Any other split either
+    # leaves the opening part-blocked or slides a leaf out past the jamb and
+    # across the shopfront glazing in the next bay, which reads as a mistake.
+    "sidelight": BAY / 2.0,
 }
+
+# Where the doors lead.
+#
+# There was no vestibule and, despite the docstring, no lobby either: the
+# emissive `lobby` panel sat 1.4 m behind the door line, and the entrance
+# boolean only cuts 0.3 m into `core_ground`, so the panel has always been
+# buried in solid brick. The opening read as a shallow dark recess because that
+# is exactly what it was.
+#
+# It is a real room now, because the camera goes through it. Two things about it
+# are load-bearing for the transition rather than for the architecture:
+#
+# **The ceiling is above the door head.** Passing under a 3.2 m opening into a
+# 3.9 m space is what makes the entry read as arriving somewhere rather than as
+# entering a tunnel, and it is visible from outside the moment the leaves part.
+#
+# **The back recess is deliberately unresolved.** It is a dark opening that says
+# the space continues, and it is where the corridor's mouth lands once the
+# pipeline plan exists. Until then it is depth rather than a hole to the sky.
+VESTIBULE = {
+    # Nine metres, and the depth is doing three jobs rather than one.
+    #
+    # It is what stops the back of the room being the whole picture: at 6.0 the
+    # far opening subtended most of the frame from the threshold and the lit
+    # side walls had nowhere to be, so the shot was a black rectangle with a
+    # bright edge. Depth is the only lever that shrinks the far wall without
+    # shrinking the way on.
+    #
+    # It is also real travel *inside* before the corridor starts, which is what
+    # the exterior needs in order to be released somewhere the audience cannot
+    # see it go.
+    "depth": 9.0,
+    "height": 3.9,
+    "width": 11.0,
+    "lining": 0.08,
+    # The finished floor, and it is thicker than the lining for a reason that is
+    # entirely about the runtime. The forecourt granite is rebuilt in Three.js
+    # as one plate that runs eight metres *under* the building so there is no
+    # seam at the facade, and its top face sits at 0.11. A vestibule floor at the
+    # lining's 0.08 loses to it, and what the camera sees on the way in is
+    # external paving carried straight through the lobby.
+    #
+    # 0.14 puts the interior floor above both the granite and the 0.12 doorstep,
+    # which is also what a real building does with its finished floor level.
+    "floor": 0.14,
+    # A hole reads as an opening only when the wall around it is narrower than
+    # the hole. 5.0 x 3.0 in an 11 m room read as a fireplace; 7.2 x 3.45 read
+    # as the back wall having been removed. This is the middle, and it is the
+    # depth above that does most of the work.
+    "recess": {"width": 6.2, "height": 3.2, "depth": 3.0},
+    # A slot in the ceiling rather than a lit panel. What has to read from
+    # outside is the *wash* down the side walls — a bright rectangle floating in
+    # the dark reads as a screen, and a lit wall reads as a room.
+    "wash": {"inset": 1.1, "width": 0.5},
+}
+
+# The two glazing planes of the entrance, both inside the 0.35 m reveal.
+#
+# The active leaf runs *outboard* of the fixed panel, which is how a slider is
+# actually built and is also the only way the leaf can cross the sidelight
+# without intersecting it. 0.14 m apart is enough for that at every angle Act I
+# reads the elevation from.
+SIDELIGHT_Y = GROUND_Y - 0.10
+DOOR_Y = GROUND_Y - 0.24
 
 SUN_VECTOR = Vector((-50.0, -64.0, 44.0))
 SUN_ENERGY = 3.3
@@ -193,10 +293,48 @@ PALETTE = {
     # plane reads as artificial turf, and it is the one surface large enough
     # that its hue sets the mood of every frame.
     "grass": ((0.098, 0.121, 0.064, 1.0), 0.90, 0.0),
+    # Pale, and much paler than anything else the building is made of. Nothing
+    # reaches inside the vestibule but the hemisphere ambient and its own wash,
+    # and albedo is the only term left to lift it with: brick at 0.078 in there
+    # is black. Read from full daylight it will still be dark, which is correct
+    # and is what makes the exposure lift on entry legible.
+    "vestibule": ((0.52, 0.505, 0.485, 1.0), 0.72, 0.0),
+    "vestibule_floor": ((0.16, 0.157, 0.152, 1.0), 0.36, 0.0),
+    # The far recess. Dark, but not the near-black it started at: a surface at
+    # 0.022 cannot show a falloff, and a falloff is the only thing that makes
+    # the opening read as depth rather than as a rectangle painted on the back
+    # wall. Still a fifth of the vestibule's albedo, which is the contrast that
+    # matters.
+    "recess": ((0.085, 0.088, 0.098, 1.0), 0.90, 0.0),
 }
 
 LOBBY_COLOR = (1.0, 0.86, 0.66)
 LOBBY_STRENGTH = 1.8
+
+# The vestibule's ceiling slots. Warmer and far stronger than `LOBBY_*`, which
+# only ever lit a panel nobody could see. This is a real light source in the
+# Cycles bake and an emissive surface in the browser, and it is the whole reason
+# there is anything to look at through the opening leaves.
+WASH_COLOR = (1.0, 0.88, 0.72)
+WASH_STRENGTH = 24.0
+
+# How much of the vestibule comes through the doors. Low enough that the glass
+# is still glass and still catches the sky, high enough that the lit back wall
+# is legible from the avenue.
+ENTRANCE_GLASS_ALPHA = 0.34
+
+# The far end of the recess, barely lit.
+#
+# Unlit, the recess read as a dark rectangle *painted on* the back wall — a
+# screen, not an opening, because a uniform black field seen square-on carries
+# no depth cue at all. A dim source at the far end is the cheapest one there is,
+# and it is cool against the vestibule's warm wash, which is the second cue: two
+# light temperatures in one frame say two spaces.
+#
+# Deliberately weak. This has to read as somewhere further on, not as a
+# destination, and the corridor's own look is not designed yet.
+GLOW_COLOR = (0.72, 0.80, 1.0)
+GLOW_STRENGTH = 7.0
 
 # Poly Haven map, real-world tile in metres, and how hard to pull the source
 # photograph toward the palette hue. The tile is the asset's own published
@@ -531,7 +669,12 @@ def build_ground(parts: Parts, target) -> None:
         (0.0, FRONT_Y + GROUND_SETBACK / 2.0, GROUND_H - 0.17),
     ))
 
-    clear = ENTRANCE["width"] / 2.0 + 0.6
+    # Strictly inside, so the columns standing *on* the entrance's own bay lines
+    # survive and frame it. With the opening at one bay wide and off-module this
+    # had to clear a margin either side; at two bays the jamb columns are the
+    # ones at x = ±BAY, and skipping them would leave the widest opening in the
+    # elevation with nothing holding up the mass above it.
+    clear = ENTRANCE["width"] / 2.0 - 0.05
     for index in range(BAYS + 1):
         x = -WIDTH / 2.0 + BAY * index
         if abs(x) < clear:
@@ -562,6 +705,11 @@ def build_entrance(parts: Parts, target) -> None:
     w = ENTRANCE["width"]
     h = ENTRANCE["height"]
 
+    # Two cuts, not one. The doorway is a slot through the skin at door height;
+    # the vestibule is a room behind it, taller and wider, and the camera passes
+    # from one into the other. Cutting them with a single box would make the
+    # vestibule's section the doorway's section, which is precisely the tunnel
+    # the taller ceiling exists to avoid.
     cutter = add_box(
         target, "entrance_cutter", (w, SKIN + 0.6, h),
         (0.0, GROUND_Y - SKIN / 2.0, h / 2.0),
@@ -570,6 +718,8 @@ def build_entrance(parts: Parts, target) -> None:
         if obj.name in ("ground_skin", "core_ground"):
             boolean_cut(obj, cutter)
     bpy.data.objects.remove(cutter, do_unlink=True)
+
+    build_vestibule(parts, target)
 
     frame = ENTRANCE["frame"]
     for side, offset in (("l", -1.0), ("r", 1.0)):
@@ -591,31 +741,195 @@ def build_entrance(parts: Parts, target) -> None:
         target, "entrance_canopy", (w + 3.0, depth, ENTRANCE["canopy_thickness"]),
         (0.0, GROUND_Y - depth / 2.0, h + frame + ENTRANCE["canopy_thickness"] / 2.0),
     ))
-    for side, offset in (("l", -1.0), ("r", 1.0)):
-        parts.put("metal", add_box(
-            target, f"entrance_hanger_{side}", (0.07, 0.07, 0.62),
-            (offset * (w + 2.4) / 2.0, FRONT_Y - proud + 0.3, h + frame + 0.55),
-        ))
+    # The hangers are gone. They were 0.62 m rods rising from the canopy top,
+    # which put them at 3.66–4.28 — entirely inside the soffit slab, invisible
+    # from every pose in the act, and paying for themselves in an atlas that is
+    # already 70% interior faces.
 
     parts.put("paving", add_box(
         target, "threshold", (w + 3.4, 3.2, 0.14), (0.0, GROUND_Y - 1.6, 0.05),
     ))
 
-    parts.put("lobby", add_box(
-        target, "lobby", (w - 0.3, 0.2, h - 0.3),
-        (0.0, GROUND_Y + 1.4, (h - 0.3) / 2.0 + 0.1),
+    # The fixed half of the entrance: a glazed panel at each end of the frame,
+    # with a mullion where it meets the clear opening. These are what the active
+    # leaves park over, so they are not decoration — remove them and the doors
+    # have nowhere to go. See `ENTRANCE["sidelight"]`.
+    side_w = ENTRANCE["sidelight"]
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("entrance_glass", add_box(
+            target, f"entrance_sidelight_{side}", (side_w - 0.12, 0.06, h - 0.10),
+            (offset * (w - side_w) / 2.0, SIDELIGHT_Y, h / 2.0),
+        ))
+        parts.put("frame", add_box(
+            target, f"entrance_mullion_{side}", (0.10, 0.13, h - 0.06),
+            (offset * (w / 2.0 - side_w), SIDELIGHT_Y, h / 2.0),
+        ))
+
+    # The track the leaves run on, and the only thing that says *sliding* while
+    # the doors are shut. It spans the whole frame because the leaves travel the
+    # whole frame.
+    parts.put("metal", add_box(
+        target, "entrance_track", (w - 0.04, 0.16, 0.11),
+        (0.0, DOOR_Y, h - 0.055),
     ))
 
-    leaf = (w - ENTRANCE["leaf_gap"]) / 2.0
+
+def build_vestibule(parts: Parts, target) -> None:
+    """The room behind the doors, and the far half of the Act I → Act II cut.
+
+    Cut out of `core_ground` and then lined, rather than left as raw boolean
+    faces. The lining costs six boxes and buys the one thing the cavity cannot
+    have on its own: its own materials. Brick at 0.078 albedo in an unlit room
+    is black, and this room is looked into from full daylight.
+    """
+    front = GROUND_Y
+    depth = VESTIBULE["depth"]
+    height = VESTIBULE["height"]
+    width = VESTIBULE["width"]
+    back = front + depth
+    recess = VESTIBULE["recess"]
+
+    cutter = add_box(
+        target, "vestibule_cutter", (width, depth + recess["depth"], height),
+        (0.0, front + (depth + recess["depth"]) / 2.0, height / 2.0),
+    )
+    for obj in parts.get("brick", []):
+        if obj.name == "core_ground":
+            boolean_cut(obj, cutter)
+    bpy.data.objects.remove(cutter, do_unlink=True)
+
+    lining = VESTIBULE["lining"]
+    floor = VESTIBULE["floor"]
+    parts.put("vestibule_floor", add_box(
+        target, "vestibule_floor", (width, depth, floor),
+        (0.0, front + depth / 2.0, floor / 2.0),
+    ))
+    parts.put("vestibule", add_box(
+        target, "vestibule_ceiling", (width, depth, lining),
+        (0.0, front + depth / 2.0, height - lining / 2.0),
+    ))
     for side, offset in (("l", -1.0), ("r", 1.0)):
-        parts.put("glass", add_box(
-            target, f"door_{side}", (leaf - 0.04, 0.07, h - 0.08),
-            (offset * (leaf + ENTRANCE["leaf_gap"]) / 2.0, GROUND_Y - 0.1, h / 2.0),
+        parts.put("vestibule", add_box(
+            target, f"vestibule_wall_{side}", (lining, depth, height),
+            (offset * (width - lining) / 2.0, front + depth / 2.0, height / 2.0),
+        ))
+
+    # The back wall, built as four pieces around the recess for the same reason
+    # `punched()` exists — a boolean here would cut the one surface whose edges
+    # the eye is actually on.
+    jamb = (width - recess["width"]) / 2.0
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("vestibule", add_box(
+            target, f"vestibule_back_{side}", (jamb, lining, height),
+            (offset * (width - jamb) / 2.0, back - lining / 2.0, height / 2.0),
+        ))
+    parts.put("vestibule", add_box(
+        target, "vestibule_back_over", (recess["width"], lining, height - recess["height"]),
+        (0.0, back - lining / 2.0, (height + recess["height"]) / 2.0),
+    ))
+
+    # Where the corridor will arrive. Lined in near-black and closed at the far
+    # end, so it reads as the space continuing rather than as a hole to the sky
+    # — which is what an unclosed opening in a building would be.
+    for name, size, location in (
+        ("floor", (recess["width"], recess["depth"], floor),
+         (0.0, back + recess["depth"] / 2.0, floor / 2.0)),
+        ("ceiling", (recess["width"], recess["depth"], lining),
+         (0.0, back + recess["depth"] / 2.0, recess["height"] - lining / 2.0)),
+        ("end", (recess["width"], lining, recess["height"]),
+         (0.0, back + recess["depth"] - lining / 2.0, recess["height"] / 2.0)),
+    ):
+        parts.put("recess", add_box(target, f"vestibule_recess_{name}", size, location))
+
+    # A concealed strip at the far end, not a lit end wall.
+    #
+    # Lighting the end wall itself put a uniform bright rectangle square-on to
+    # the camera, which is a screen — the exact failure the glow was added to
+    # fix, arriving from the other side. A source you cannot see, throwing a
+    # gradient down a wall you can, is the only version of this that reads as
+    # distance.
+    parts.put("glow", add_box(
+        target, "vestibule_recess_glow", (recess["width"] - 1.6, 0.30, 0.05),
+        (0.0, back + recess["depth"] - 0.55, recess["height"] - lining - 0.02),
+    ))
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("recess", add_box(
+            target, f"vestibule_recess_{side}", (lining, recess["depth"], recess["height"]),
+            (offset * (recess["width"] - lining) / 2.0,
+             back + recess["depth"] / 2.0, recess["height"] / 2.0),
+        ))
+
+    # Two slots in the ceiling, set in from the side walls so what reads is the
+    # light down the walls rather than the fitting itself.
+    wash = VESTIBULE["wash"]
+    for side, offset in (("l", -1.0), ("r", 1.0)):
+        parts.put("wash", add_box(
+            target, f"vestibule_wash_{side}", (wash["width"], depth - 1.2, 0.05),
+            (offset * (width / 2.0 - wash["inset"]), front + depth / 2.0, height - lining - 0.02),
+        ))
+
+
+def build_doors(target) -> Parts:
+    """The two active leaves, and nothing else.
+
+    Their own asset because they move, and because the building is one joined
+    mesh: `join_all` welds every part into a single object per export, so a leaf
+    left in `build_geometry` is unreachable from the runtime however carefully it
+    was named. `docs/blender/exterior_building.md` claimed the runtime could
+    swing two named leaves for as long as that has been false.
+
+    Exported closed and slid open at runtime, so the travel is `sidelight` in x
+    — outward for each leaf. The origin is the world origin, like every other
+    export, which is what lets the runtime translate them without first working
+    out where Blender thought their centres were.
+
+    Returned per leaf rather than as one group, because each is joined and baked
+    on its own — the same shape as `build_candidates`.
+    """
+    h = ENTRANCE["height"]
+    leaf = ENTRANCE["sidelight"]
+    gap = ENTRANCE["leaf_gap"]
+    leaves: list[tuple[str, Parts]] = []
+
+    for side, offset in (("left", -1.0), ("right", 1.0)):
+        parts = Parts()
+        leaves.append((side, parts))
+        centre = offset * leaf / 2.0
+        parts.put("entrance_glass", add_box(
+            target, f"door_{side}_pane", (leaf - gap, 0.05, h - 0.20),
+            (centre, DOOR_Y, h / 2.0 - 0.01),
+        ))
+        # A perimeter rather than a single stile. The meeting edge is what the
+        # eye tracks while the leaves part, and a bare glass edge has nothing to
+        # track — the whole animation reads as the reflection changing.
+        parts.put("metal", add_box(
+            target, f"door_{side}_meet", (0.07, 0.09, h - 0.14),
+            (offset * gap / 2.0, DOOR_Y, h / 2.0),
         ))
         parts.put("metal", add_box(
-            target, f"door_{side}_stile", (0.09, 0.1, h - 0.08),
-            (offset * ENTRANCE["leaf_gap"], GROUND_Y - 0.1, h / 2.0),
+            target, f"door_{side}_outer", (0.07, 0.09, h - 0.14),
+            (offset * (leaf - 0.035), DOOR_Y, h / 2.0),
         ))
+        for level, z in (("head", h - 0.10), ("foot", 0.05)):
+            parts.put("metal", add_box(
+                target, f"door_{side}_{level}", (leaf - gap, 0.09, 0.10),
+                (centre, DOOR_Y, z),
+            ))
+        # The pull. It is 3 cm of geometry and it is the only thing in the frame
+        # that states the leaf is a door rather than a pane of glass.
+        parts.put("metal", add_box(
+            target, f"door_{side}_pull", (0.05, 0.14, 1.05),
+            (offset * (leaf - 0.28), DOOR_Y - 0.09, 1.06),
+        ))
+
+    for _, parts in leaves:
+        for key, group in parts.items():
+            if key == "entrance_glass":
+                continue
+            for obj in group:
+                bevel(obj, width=0.006)
+
+    return leaves
 
 
 def build_roof(parts: Parts, target) -> None:
@@ -1375,8 +1689,10 @@ def build_geometry(target) -> Parts:
     build_entrance(parts, target)
     build_roof(parts, target)
 
+    # `wash` joins `glass` in skipping the bevel: the slots are 50 mm thick and
+    # the default 20 mm width would eat most of that from both sides.
     for key, group in parts.items():
-        if key == "glass":
+        if key in ("glass", "entrance_glass", "wash", "glow"):
             continue
         for obj in group:
             bevel(obj)
@@ -1550,6 +1866,30 @@ def glazing_material(name: str, strength: float):
     return material
 
 
+def entrance_glazing(name: str):
+    """The one glass in the building you are meant to see *through*.
+
+    A window at fifty metres reads by what it reflects, which is why the rest of
+    the elevation is a dark mirror and should stay one. The entrance is read
+    from three metres with a lit room behind it, and a dark mirror there is the
+    difference between a way in and a grey panel — which is exactly how the
+    rebuilt entrance came back from its first render.
+
+    **Alpha, not transmission**, and the reason is that this asset has to be two
+    things at once. Alpha renders as real transparency in Cycles, so the preview
+    tells the truth about what is visible through the doors; and it exports as
+    glTF `alphaMode: BLEND`, which three.js draws as an ordinary transparent
+    material. Transmission would be truer and would cost a separate render
+    target and a pass over the whole frame, for a difference no projector
+    resolves.
+    """
+    material = principled(name, (0.055, 0.070, 0.082, 1.0), 0.08)
+    bsdf = material.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Alpha"].default_value = ENTRANCE_GLASS_ALPHA
+    material.blend_method = 'BLEND'
+    return material
+
+
 def assign(objects, material) -> None:
     for obj in objects:
         obj.data.materials.clear()
@@ -1558,7 +1898,11 @@ def assign(objects, material) -> None:
 
 SPECIAL_MATERIALS = {
     "glass": lambda: glazing_material("glass", INTERIOR_STRENGTH),
-    "lobby": lambda: emissive_material("lobby", LOBBY_COLOR, LOBBY_STRENGTH),
+    "entrance_glass": lambda: entrance_glazing("entrance_glass"),
+    # `lobby` is gone with the panel it lit. It was emissive geometry buried in
+    # solid brick — see `VESTIBULE`. `wash` replaces it and is a real source.
+    "wash": lambda: emissive_material("wash", WASH_COLOR, WASH_STRENGTH),
+    "glow": lambda: emissive_material("glow", GLOW_COLOR, GLOW_STRENGTH),
     "brick": lambda: detail_material("brick"),
     "backing": lambda: detail_material("backing"),
     "soffit": lambda: detail_material("soffit"),
@@ -1701,6 +2045,16 @@ ENTRANCE_POSE = {
     "fov": 38.0,
 }
 
+# The transition's own frame: on the entrance axis at eye height, close enough
+# that the opening is most of the picture and the vestibule beyond it is
+# readable. This is the shot the whole rebuild is for, so it gets a pose rather
+# than being judged off an elevation study taken from 20 m.
+THRESHOLD_POSE = {
+    "location": Vector((0.0, -13.0, 1.9)),
+    "target": Vector((0.0, -6.4, 1.9)),
+    "fov": 46.0,
+}
+
 SCAFFOLD_POSE = {
     "location": Vector((22.0, -40.0, 7.0)),
     "target": Vector((10.5, -9.0, 9.0)),
@@ -1722,6 +2076,7 @@ POSES = {
     "site": SITE_POSE,
     "bay": BAY_POSE,
     "entrance": ENTRANCE_POSE,
+    "threshold": THRESHOLD_POSE,
     "scaffold": SCAFFOLD_POSE,
 }
 
@@ -1786,11 +2141,22 @@ def preview() -> Parts:
     site = build_site(target)
     construction = build_construction(target)
     candidates = build_candidates(target)
+    doors = build_doors(target)
     apply_palette(parts)
     apply_palette(site)
     apply_palette(construction)
     for panel in candidates:
         apply_palette(panel)
+    # `--open` previews the leaves parked over their sidelights, which is the
+    # state the transition spends most of its length in and the only one where
+    # the sidelight/leaf split can be judged at all.
+    parked = "--open" in sys.argv
+    for _, leaf in doors:
+        apply_palette(leaf)
+    if parked:
+        for side, leaf in doors:
+            for obj in leaf.all():
+                obj.location.x += (-1.0 if side == "left" else 1.0) * ENTRANCE["sidelight"]
     if "--filled" in sys.argv:
         fill = build_slot_fill(target)
         apply_palette(fill)
@@ -1799,6 +2165,7 @@ def preview() -> Parts:
 
     objects = parts.all() + site.all() + construction.all()
     objects += [obj for panel in candidates for obj in panel.all()]
+    objects += [obj for _, leaf in doors for obj in leaf.all()]
     total = sum(len(obj.data.polygons) for obj in objects)
     print(f"[exterior] parts: {len(objects)}  polys: {total}")
     print(f"[exterior] size: {WIDTH:.1f} x {DEPTH:.1f} x {TOP + PARAPET_H:.1f}")
@@ -2033,6 +2400,7 @@ def build_asset() -> None:
     construction = build_construction(target)
     candidates = build_candidates(target)
     fill = build_slot_fill(target)
+    doors = build_doors(target)
 
     apply_palette(parts)
     apply_palette(site)
@@ -2040,6 +2408,8 @@ def build_asset() -> None:
     apply_palette(fill)
     for panel in candidates:
         apply_palette(panel)
+    for _, leaf in doors:
+        apply_palette(leaf)
     light_scene(target)
 
     panels = []
@@ -2061,6 +2431,19 @@ def build_asset() -> None:
     bake_surface(scaffold, "construction")
     export(scaffold, CONSTRUCTION_OUTPUT)
     bpy.data.objects.remove(scaffold, do_unlink=True)
+
+    # Baked in place, so each leaf carries the reveal's occlusion, then removed
+    # before the building bake for the reason the scaffold is: they move. A door
+    # that slides open leaving its own shadow painted on the jamb behind it is
+    # the same class of fault as a struck scaffold whose shadow stays.
+    leaves = []
+    for side, leaf in doors:
+        obj = join_all(leaf.all(), f"door_{side}")
+        bake_surface(obj, f"door_{side}", DOOR_BAKE)
+        leaves.append(obj)
+    export(leaves, DOOR_OUTPUT)
+    for obj in leaves:
+        bpy.data.objects.remove(obj, do_unlink=True)
 
     building = join_all(parts.all(), "exterior_building")
     bake_surface(building, "exterior")

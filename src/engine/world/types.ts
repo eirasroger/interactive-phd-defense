@@ -28,8 +28,47 @@ export interface ZoneInstance {
    * snap-versus-move split the camera already uses.
    */
   setProgress?(progress: number, animate: boolean): void;
+  /**
+   * The presentation is leaving this zone through a designed threshold.
+   *
+   * Distinct from `setProgress`, which is world state derived from the deck and
+   * is true for as long as the scene is. This is a one-off event with a
+   * duration: the doors of a building opening as the camera comes down the
+   * avenue. `seconds` is the length of the camera move it happens inside, so a
+   * zone can phase itself against the move rather than against a clock of its
+   * own — and `seconds <= 0` means set the open state without animating, for a
+   * jump.
+   */
+  setThreshold?(open: boolean, seconds: number): void;
   update?(dt: number): void;
   dispose(): void;
+}
+
+/**
+ * A designed crossing between two zones, declared by the scene being entered.
+ *
+ * Without one, a zone change is a cut: the outgoing world is released, the new
+ * one is mounted, and light and air are set rather than eased, because there is
+ * nothing on screen for a tween to be continuous with. That is the right
+ * default and it is what every zone boundary in the deck used to be.
+ *
+ * A crossing says the opposite is true — that the camera travels from one world
+ * into the other through geometry that belongs to both, and that for a couple
+ * of seconds they are the same place.
+ */
+export interface ZoneCrossing {
+  /** Length of the camera move this happens inside. */
+  readonly seconds: number;
+  /**
+   * World z the camera passes through, at which the outgoing zone is released.
+   *
+   * A plane, not a moment, because what makes the release invisible is *where*
+   * the camera is and not how long it has been travelling: it has to be far
+   * enough inside that the outgoing world is behind the doorway. The whole deck
+   * is traversed along −Z, so the plane is crossed when the camera's z falls
+   * below this.
+   */
+  readonly releaseAtZ: number;
 }
 
 export interface ZoneDefinition {

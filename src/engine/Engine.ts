@@ -92,6 +92,7 @@ export class Engine {
       quality,
       this.atmosphere,
       this.assets,
+      this.cameraDirector,
     );
     this.zoneProgress = zoneProgressByIndex(options.scenes);
 
@@ -126,11 +127,18 @@ export class Engine {
    * building half specified or the light belonging to somewhere else.
    */
   private enterZone(state: SceneState): void {
+    // Forwards only. A crossing is a set piece — doors opening, two worlds
+    // briefly sharing a frame — and replaying it at a presenter who has jumped
+    // back through a door to answer a question is the wrong reading of what
+    // they asked for. Backwards is a cut, like every other jump.
+    const crossing = state.direction === 'forward' ? (state.definition.crossing ?? null) : null;
+
     this.zones.enter(
       zoneFor(state.definition.zone),
       state.definition.world,
       this.zoneProgress[state.index] ?? 0,
       state.direction !== 'jump',
+      crossing,
     );
   }
 

@@ -32,5 +32,12 @@ export interface CameraMoveOptions {
    * which in practice means the jump cut.
    */
   readonly seconds?: number;
-  readonly ease?: string;
+  /**
+   * A named GSAP ease, or a function of normalised time.
+   *
+   * The function form is what lets a move be authored as a *speed profile* and
+   * integrated rather than picked off the easing menu — see `animations/entry.ts`.
+   * Every ordinary move in the deck is one symmetric curve and should stay one.
+   */
+  readonly ease?: string | ((t: number) => number);
 }

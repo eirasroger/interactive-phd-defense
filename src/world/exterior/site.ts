@@ -401,7 +401,8 @@ export const BAY = 4.2;
  * rather than the face of the mass above it.
  */
 export const ENTRANCE = {
-  width: 6.4,
+  /** Two bays. Must agree with `ENTRANCE["width"]` in the Blender script. */
+  width: BAY * 2,
   height: 3.2,
   /** Centre of the opening, on the set-back ground-floor wall. */
   position: [0, 1.6, 6.4] as Vec3,
@@ -409,7 +410,65 @@ export const ENTRANCE = {
   oversail: 1.6,
   /** How far the canopy projects past the column line, toward the camera. */
   canopyProud: 1.4,
+  /**
+   * Fixed glazing at each end of the frame — and the travel of the leaf that
+   * parks over it, which is the same number because a bi-parting leaf only
+   * clears its own opening if it lands squarely on the panel beside it. The
+   * Blender script derives both from `BAY / 2`; this is the runtime's copy and
+   * the doors are slid by exactly this.
+   */
+  sidelight: BAY / 2,
 } as const;
+
+/**
+ * The room behind the doors — the far half of the Act I → Act II transition.
+ *
+ * Mirrors `VESTIBULE` in `tools/blender/exterior_building.py`, in web
+ * coordinates: Blender is Z-up facing −Y and glTF maps that to web +Z, so a
+ * Blender y of −6.4 is a web z of +6.4. Only what the runtime has to place —
+ * lights, and the plane the exterior is released on — is restated here.
+ *
+ * **Nothing in the exported building lights this room.** The wash slots are
+ * emissive geometry, which is a visible fitting and not a light source: in
+ * Cycles they illuminate, in three.js they do not. The same split the corridor
+ * bay already makes — the bake holds the spill, the runtime draws and drives the
+ * emitter — except that here there is no bake to hold anything, so the runtime
+ * owns the light itself. See `createEntrance`.
+ */
+export const VESTIBULE = {
+  /** The doorway plane, and the front of the room. */
+  front: 6.4,
+  depth: 9.0,
+  height: 3.9,
+  width: 11.0,
+  /** Where the ceiling slots run, inset from each side wall. */
+  washInset: 1.1,
+  recess: { width: 6.2, height: 3.2, depth: 3.0 },
+} as const;
+
+/** The back of the vestibule — where the corridor takes over. */
+export const VESTIBULE_BACK = VESTIBULE.front - VESTIBULE.depth;
+
+/**
+ * Where the exterior is released during the crossing.
+ *
+ * A plane rather than a moment on a clock, because what makes the release
+ * invisible is where the camera is standing and not how long it has been
+ * travelling.
+ *
+ * **Inside the recess, not inside the doorway.** The first version released two
+ * metres past the opening, which is far enough in that the vestibule fills the
+ * frame and is still nine metres short of where the corridor begins — so the
+ * camera crossed it, the whole building stopped being drawn, and for ten metres
+ * it flew through empty space with the corridor's lit mouth hanging in the
+ * middle of it. Releasing a zone early does not hide it; it makes a hole.
+ *
+ * Here the recess's own end wall is 2.1 m ahead and, at this focal length,
+ * overfills the frame in both axes. The outdoors stops being drawn behind a
+ * surface that is the entire picture, which is the one frame in the move where
+ * it can happen for free.
+ */
+export const THRESHOLD_Z = VESTIBULE_BACK - 0.9;
 
 /**
  * The specification slot — one bay of brick cladding never placed, and the only

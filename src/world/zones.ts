@@ -1,5 +1,6 @@
 import { ZONE_ORIGIN } from '@/config/layout';
 import type { ZoneDefinition } from '@/engine/world/types';
+import { corridorZone } from './corridor/CorridorZone';
 import { exteriorZone } from './exterior/ExteriorZone';
 
 /**
@@ -32,6 +33,7 @@ const demoZone: ZoneDefinition = {
 
 const registry: Record<string, ZoneDefinition> = {
   [exteriorZone.id]: exteriorZone,
+  [corridorZone.id]: corridorZone,
   [demoZone.id]: demoZone,
 };
 
