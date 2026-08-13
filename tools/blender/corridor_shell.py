@@ -122,7 +122,11 @@ SKY_STRENGTH = 4.6
 PREVIEW_VIEW = 'AgX'
 
 DETAIL_SIZE = 1024
-BAKE_SIZE = 4096
+# 2048, not 4096. This atlas carries occlusion only — a low-frequency term
+# that is happy at any density — and 4096 is four times the upload for a
+# difference no projector resolves. The upload lands in one frame when the
+# zone is warmed, so its size is a smoothness decision, not a sharpness one.
+BAKE_SIZE = 2048
 BAKE_SAMPLES = 256
 AO_DISTANCE = 3.0
 

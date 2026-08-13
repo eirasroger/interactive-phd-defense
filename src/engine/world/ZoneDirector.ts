@@ -1,4 +1,10 @@
-import { Group, type WebGLRenderer } from 'three';
+import {
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  type Texture,
+  type WebGLRenderer,
+} from 'three';
 import { TRANSITION } from '@/config/presentation';
 import type { QualitySettings } from '@/config/quality';
 import type { AssetLoader } from '@/engine/assets/AssetLoader';
@@ -171,12 +177,47 @@ export class ZoneDirector {
     this.world.zones.add(zone.group);
     this.active?.instance?.setBeyond?.(true);
 
+    this.upload(zone.group);
+
     void this.renderer
       .compileAsync(this.world.scene, this.camera.camera)
       .catch(() => {
         // A failed precompile costs a hitch, not a frame: the renderer will
         // compile on demand exactly as it did before.
       });
+  }
+
+  /**
+   * Push a zone's textures to the GPU before anything draws them.
+   *
+   * `compileAsync` builds shader *programs*; it does not upload textures, and
+   * a texture uploads on the first frame that samples it. For this zone that is
+   * a 4096 occlusion atlas plus its detail maps arriving in one frame, which is
+   * tens of megabytes of `texImage2D` on the main thread — the rest of the
+   * hitch after the recompile was moved off it.
+   */
+  private upload(group: Group): void {
+    const seen = new Set<Texture>();
+    group.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const material of materials) {
+        if (!(material instanceof MeshStandardMaterial)) continue;
+        for (const map of [
+          material.map,
+          material.normalMap,
+          material.roughnessMap,
+          material.metalnessMap,
+          material.aoMap,
+          material.emissiveMap,
+        ]) {
+          if (!map || seen.has(map)) continue;
+          seen.add(map);
+          this.renderer.initTexture(map);
+        }
+      }
+    });
   }
 
   private mount(definition: ZoneDefinition): ActiveZone {
