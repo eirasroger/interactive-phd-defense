@@ -3,6 +3,7 @@ import { AssetLoader, type AssetEntry } from '@/engine/assets/AssetLoader';
 import { CameraDirector } from '@/engine/camera/CameraDirector';
 import { CameraRig } from '@/engine/camera/CameraRig';
 import { Clock } from '@/engine/Clock';
+import { FrameLog } from '@/engine/diagnostics/FrameLog';
 import { PerformanceMonitor } from '@/engine/diagnostics/PerformanceMonitor';
 import {
   bindPointerIdle,
@@ -58,6 +59,8 @@ export class Engine {
   private readonly lifetime = new AbortController();
 
   private diagnosticsVisible = false;
+  /** Names what a long frame was doing. Dropped from production builds. */
+  private readonly frames: FrameLog | null;
   private contextLost = false;
 
   constructor(private readonly options: EngineOptions) {
@@ -99,6 +102,10 @@ export class Engine {
     this.performance = new PerformanceMonitor((scale) => {
       this.renderer.setPixelRatioScale(scale);
     });
+
+    this.frames = import.meta.env.DEV
+      ? new FrameLog(this.renderer.renderer, () => this.options.scenes[this.scenes.currentIndex]?.id ?? '—')
+      : null;
 
     this.assets.register(options.manifest);
 
@@ -144,11 +151,22 @@ export class Engine {
     this.warmNextZone(state);
   }
 
+  /**
+   * Stand the next zone up on the last beat before a crossing — and take it
+   * back down the moment that stops being where the deck is pointed.
+   *
+   * Every early return here is a navigation that has moved away from the
+   * crossing, including backwards, so each of them has to undo the warm rather
+   * than simply decline to repeat it.
+   */
   private warmNextZone(state: SceneState): void {
-    if (state.beat < 1) return;
-
     const next = this.options.scenes[state.index + 1];
-    if (!next || next.zone === state.definition.zone) return;
+    const crossing = next && next.zone !== state.definition.zone;
+
+    if (state.beat < 1 || !crossing) {
+      this.zones.unwarm();
+      return;
+    }
 
     this.zones.warm(zoneFor(next.zone));
   }
@@ -200,6 +218,7 @@ export class Engine {
     this.renderer.setExposure(this.atmosphere.state.exposure);
     this.zones.update(dt);
     this.performance.update(dt);
+    this.frames?.update(dt);
     this.pipeline.render();
 
     if (this.diagnosticsVisible) {

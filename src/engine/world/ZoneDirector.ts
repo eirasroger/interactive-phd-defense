@@ -50,6 +50,8 @@ export class ZoneDirector {
   private active: ActiveZone | null = null;
   private readonly built = new Map<string, ActiveZone>();
   private departing: Departing | null = null;
+  /** The zone standing behind the current one, waiting to be walked into. */
+  private warmed: ActiveZone | null = null;
   /** The zone a crossing is leaving, held only long enough to route through it. */
   private leaving: ZoneDefinition | null = null;
 
@@ -172,8 +174,12 @@ export class ZoneDirector {
    */
   warm(definition: ZoneDefinition): void {
     if (this.active?.definition.id === definition.id) return;
+    if (this.warmed?.definition.id === definition.id) return;
+
+    this.unwarm();
 
     const zone = this.built.get(definition.id) ?? this.build(definition);
+    this.warmed = zone;
     this.world.zones.add(zone.group);
     this.active?.instance?.setBeyond?.(true);
 
@@ -220,7 +226,30 @@ export class ZoneDirector {
     });
   }
 
+  /**
+   * Take a warmed zone back out of the graph.
+   *
+   * Warming is not a one-way door. A defence is not walked in a straight line:
+   * a question sends the presenter backwards, and a zone that was stood up for
+   * a crossing that then did not happen is a whole other world left standing
+   * behind the one on screen — the corridor visible through the entrance glass
+   * on every earlier Act I frame, with the recess plug still open for it.
+   * Whatever `warm` did, this undoes, including the state it asked the zone in
+   * front to hold.
+   */
+  unwarm(): void {
+    const warmed = this.warmed;
+    if (!warmed) return;
+    this.warmed = null;
+    this.world.zones.remove(warmed.group);
+    this.active?.instance?.setBeyond?.(false);
+  }
+
   private mount(definition: ZoneDefinition): ActiveZone {
+    // Being entered is not being unwarmed: the group stays in the graph, it
+    // just stops being something that can be taken back out.
+    if (this.warmed?.definition.id === definition.id) this.warmed = null;
+
     const zone = this.built.get(definition.id) ?? this.build(definition);
     this.world.zones.add(zone.group);
     // The shadow rig belongs to whichever zone is being *looked at*, which
