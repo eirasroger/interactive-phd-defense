@@ -13,6 +13,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
 
+    "resolveJsonModule": true,
+
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "moduleDetection": "force",
