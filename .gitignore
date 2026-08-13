@@ -2,6 +2,9 @@
 /docs/
 /CLAUDE.md
 
+# Local issue tracker (see docs/agents/issue-tracker.md)
+/.scratch/
+
 # Blender source scenes and preview renders. The committed .py scripts are the
 # authoritative definition; these are working artefacts of running them.
 /work/
