@@ -10,6 +10,19 @@ const stationAt = (column: number): number =>
 const laneAt = (lane: keyof typeof plan.laneY): number =>
   metres(plan.laneY[lane] - plan.laneY.axis);
 
+/**
+ * A station is the figure's box, extruded.
+ *
+ * `box` is 300 x 140 plan units, which at this scale is 11.1 m along the axis
+ * by 5.18 m across it, and the column pitch of 400 units leaves exactly 3.7 m
+ * between one box and the next. The corridor is therefore an enfilade the
+ * figure already drew: rooms on the columns, links in the gaps.
+ */
+export const ROOM = {
+  length: metres(plan.box.width),
+  width: metres(plan.box.height),
+} as const;
+
 export interface Station {
   readonly key: string;
   readonly z: number;
@@ -26,10 +39,14 @@ export const STATIONS: readonly Station[] = [
 
 const terminal = STATIONS[4] as Station;
 
-export const RUN = terminal.z + plan.terminal.depth / 2 + plan.tail;
+/** The back wall of the last room. There is nothing beyond it. */
+export const RUN = terminal.z + ROOM.length / 2;
+
+/** Half the widest moment: C3 and C4 face each other across the axis. */
+export const CROSS = Math.abs(laneAt('low')) + ROOM.width / 2;
 
 export const SECTION = plan.section;
-export const BAY = plan.bay;
-export const TERMINAL = plan.terminal;
+export const GARDEN = plan.garden;
+export const FLOW = plan.flow;
 
-export const PLAN_ASPECT = RUN / (laneAt('low') - laneAt('high') + BAY.depth * 2);
+export const PLAN_ASPECT = RUN / (CROSS * 2);

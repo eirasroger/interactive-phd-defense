@@ -82,6 +82,12 @@ TEXTURES = (
     # way to break the repeat of the first — one draw call, no extra surface.
     "sparse_grass",
     "gravel_floor",
+    # Act II. The corridor's material rhythm is oak in the links and plaster in
+    # the rooms, so those two carry the whole zone between them.
+    "oak_veneer_01",
+    "white_plaster_02",
+    "terrazzo_tiles",
+    "beige_wall_001",
 )
 
 # Real-world coverage of one tile, in metres, from the Poly Haven `info` API.
@@ -100,6 +106,10 @@ TEXTURE_METRES = {
     "river_small_rocks": 2.9,
     "sparse_grass": 2.0,
     "gravel_floor": 2.25,
+    "oak_veneer_01": 1.83,
+    "white_plaster_02": 1.0,
+    "terrazzo_tiles": 2.0,
+    "beige_wall_001": 3.0,
 }
 TEXTURE_RESOLUTION = "2k"
 MAPS = ("Diffuse", "nor_gl", "Rough")

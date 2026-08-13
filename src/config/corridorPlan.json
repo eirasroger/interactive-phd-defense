@@ -1,19 +1,46 @@
 {
-  "field": { "width": 1664, "height": 470 },
-  "columnX": [82, 482, 882, 1282],
-  "laneY": { "axis": 236, "high": 92, "low": 380 },
-  "box": { "width": 300, "height": 140 },
-  "metresPerUnit": 0.037,
-  "section": {
-    "width": 5.9,
-    "mouthHeight": 2.9,
-    "runHeight": 4.8,
-    "floor": 0.14,
-    "nest": 3.0,
-    "clerestorySill": 3.2
+  "field": {
+    "width": 1664,
+    "height": 470
   },
-  "bay": { "depth": 4.6, "opening": 4.0 },
-  "terminal": { "width": 18.0, "depth": 14.0 },
+  "columnX": [
+    82,
+    482,
+    882,
+    1282
+  ],
+  "laneY": {
+    "axis": 236,
+    "high": 92,
+    "low": 380
+  },
+  "box": {
+    "width": 300,
+    "height": 140
+  },
+  "metresPerUnit": 0.046,
   "lead": 2.0,
-  "tail": 5.0
+  "section": {
+    "mouthWidth": 5.9,
+    "linkWidth": 3.2,
+    "linkHeight": 2.7,
+    "roomHeight": 4.4,
+    "terminalHeight": 7.2,
+    "floor": 0.14,
+    "nest": 3.0
+  },
+  "flow": {
+    "sill": 1.28,
+    "head": 1.62,
+    "depth": 0.09
+  },
+  "garden": {
+    "depth": 5.4,
+    "wall": 5.2,
+    "margin": 1.2
+  },
+  "opening": {
+    "head": 0.42,
+    "return": 0.55
+  }
 }

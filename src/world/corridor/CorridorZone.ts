@@ -1,118 +1,184 @@
-import {
-  BoxGeometry,
-  Color,
-  InstancedMesh,
-  Matrix4,
-  Mesh,
-  MeshStandardMaterial,
-  PointLight,
-} from 'three';
-import { RUN, SECTION } from '@/config/corridor';
+import { Color, Group, Mesh, MeshStandardMaterial, Object3D, PointLight } from 'three';
+import { GARDEN, ROOM, SECTION, STATIONS } from '@/config/corridor';
 import { ZONE_ORIGIN } from '@/config/layout';
 import type { Atmosphere } from '@/engine/render/atmosphere';
 import type { ZoneContext, ZoneDefinition, ZoneInstance } from '@/engine/world/types';
+import { sharpen } from '@/world/exterior/building';
 
-const HEIGHT = SECTION.mouthHeight;
-const FLOOR = SECTION.floor;
-const NEST = SECTION.nest;
+export const SHELL_ASSET = 'corridorShell';
+export const CEILING_ASSET = 'corridorCeiling';
 
-const BAY = 6.0;
+export const CORRIDOR_ASSETS = [SHELL_ASSET, CEILING_ASSET] as const;
 
-const SLOT_COLOR = 0xb8ccff;
+/**
+ * How hard the shell's baked occlusion bites.
+ *
+ * Lower than the exterior's, because an enclosed section bakes far more
+ * occlusion than an elevation does — every surface in here can see the one
+ * opposite it — and the bounce that fills those corners in Cycles has no
+ * counterpart in a rasteriser.
+ */
+const OCCLUSION = 0.55;
 
-const CORRIDOR_ATMOSPHERE: Atmosphere = {
-  fogColor: 0x090b10,
-  fogNear: 6,
-  fogFar: 46,
-  skyColor: 0x2c3646,
-  groundColor: 0x090b10,
-  ambientIntensity: 0.35,
-  keyColor: 0xc8d6ff,
-  keyIntensity: 0.25,
-  keyOffset: [0, 20, 10],
-  environmentIntensity: 0.08,
-  backgroundIntensity: 0,
-  exposure: 1.28,
+/**
+ * How hard the exported cove strips glow.
+ *
+ * Blender writes the emissive strength its Cycles preview was lit by, and a
+ * value tuned as a *source* in a path tracer is a blown white bar in a
+ * rasteriser — you see the fitting instead of the wash it makes. The lamps
+ * below are the other half of `learnings.md` §33: emissive geometry illuminates
+ * nothing here, so every strip is paired with a point light. Points, never
+ * `RectAreaLight`, which compiles its LTC path into every standard material in
+ * the scene to light one corridor.
+ */
+const COVE_GLOW = 0.45;
+
+const COVE = {
+  color: 0xffdcb4,
+  intensity: 4.5,
+  distance: 14,
+  offset: SECTION.linkWidth / 2 - 0.3,
+  // Below the downstand, not level with it. A lamp beside the lip it hides
+  // behind lights the lip, which is the one surface that must stay unlit.
+  height: SECTION.floor + 1.95,
 };
 
+/**
+ * Rooms take their light from the courtyard, so their lamps only fill.
+ *
+ * Weak and far-reaching rather than strong and near: a point light close to a
+ * surface draws a hot pool on it and reads as a lamp, which is exactly what an
+ * interior lit by a window does not have.
+ */
+const ROOM_LIGHT = {
+  color: 0xffe0bb,
+  intensity: 7,
+  distance: 26,
+  height: SECTION.floor + 2.4,
+};
+
+/**
+ * Daylight, and it is the whole reason the rooms stopped being a cave.
+ *
+ * Each room opens onto a garden, and in Cycles that opening is what lights the
+ * room — bounce off the garden wall, in through the glass. A rasteriser has no
+ * bounce, so the opening lights nothing and the room goes black however bright
+ * the garden is. One lamp sitting *in* each garden, aimed in through its own
+ * opening, is that transport put back by hand.
+ */
+const DAYLIGHT = {
+  color: 0xf4efe4,
+  intensity: 34,
+  distance: 34,
+  height: SECTION.floor + 2.2,
+  reach: GARDEN.depth * 0.45,
+};
+
+const CORRIDOR_ATMOSPHERE: Atmosphere = {
+  fogColor: 0x1a1512,
+  fogNear: 14,
+  fogFar: 52,
+  skyColor: 0xcbc3b4,
+  groundColor: 0x241a12,
+  ambientIntensity: 0.34,
+  keyColor: 0xffeacb,
+  keyIntensity: 0.7,
+  keyOffset: [-14, 40, 34],
+  environmentIntensity: 0.26,
+  backgroundIntensity: 0,
+  exposure: 0.86,
+};
+
+function mount(source: Object3D): Object3D {
+  const object = source.clone(true);
+  object.traverse((child) => {
+    const mesh = child as Mesh;
+    if (!mesh.isMesh) return;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    for (const entry of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      if (!(entry instanceof MeshStandardMaterial)) continue;
+      entry.aoMapIntensity = OCCLUSION;
+      entry.envMapIntensity = 1;
+      if (entry.name.startsWith('cove')) entry.emissiveIntensity = COVE_GLOW;
+    }
+  });
+  return object;
+}
+
 class Corridor implements ZoneInstance {
-  private readonly shell: Mesh[] = [];
-  private readonly slots: InstancedMesh;
+  private readonly root = new Group();
+  private readonly panels: Object3D[];
   private readonly lights: PointLight[] = [];
 
   constructor(private readonly context: ZoneContext) {
-    const { stage } = context;
+    const { assets, quality, stage } = context;
 
-    const surfaces = new MeshStandardMaterial({ color: 0x14171d, roughness: 0.88 });
-    const underfoot = new MeshStandardMaterial({ color: 0x0d0f13, roughness: 0.55 });
+    const shell = assets.model(SHELL_ASSET);
+    const ceiling = assets.model(CEILING_ASSET);
+    sharpen(shell, quality.anisotropy);
+    sharpen(ceiling, quality.anisotropy);
 
-    const half = SECTION.width / 2;
-    const mid = -RUN / 2;
+    this.root.name = 'corridor';
+    this.root.add(mount(shell.scene));
 
-    const surface = (
-      name: string,
-      size: readonly [number, number, number],
-      at: readonly [number, number, number],
-      material: MeshStandardMaterial,
-    ): void => {
-      const mesh = new Mesh(new BoxGeometry(size[0], size[1], size[2]), material);
-      mesh.position.set(at[0], at[1], at[2]);
-      mesh.name = `corridor:${name}`;
-      stage.add(mesh);
-      this.shell.push(mesh);
-    };
+    this.panels = [...ceiling.scene.children]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((panel) => mount(panel));
+    if (this.panels.length === 0) throw new Error('corridor ceiling contains no panels.');
+    for (const panel of this.panels) this.root.add(panel);
 
-    const axis = FLOOR + HEIGHT / 2;
-    const deck = RUN - NEST;
-    surface('floor', [SECTION.width, 0.12, deck], [0, FLOOR - 0.06, -(NEST + deck / 2)], underfoot);
-    surface('ceiling', [SECTION.width, 0.12, RUN], [0, FLOOR + HEIGHT + 0.06, mid], surfaces);
-    surface('west', [0.12, HEIGHT, RUN], [-half, axis, mid], surfaces);
-    surface('east', [0.12, HEIGHT, RUN], [half, axis, mid], surfaces);
-    surface('end', [SECTION.width, HEIGHT, 0.12], [0, axis, -RUN], surfaces);
+    this.lightEnfilade();
+    stage.add(this.root);
+  }
 
-    const count = Math.floor(RUN / BAY);
-
-    this.slots = new InstancedMesh(
-      new BoxGeometry(SECTION.width - 2.2, 0.06, 0.34),
-      new MeshStandardMaterial({
-        color: 0x05070a,
-        emissive: new Color(SLOT_COLOR),
-        emissiveIntensity: 2.4,
-      }),
-      count,
-    );
-    const matrix = new Matrix4();
-    for (let i = 0; i < count; i += 1) {
-      matrix.makeTranslation(0, FLOOR + HEIGHT - 0.05, -(BAY * (i + 0.5)));
-      this.slots.setMatrixAt(i, matrix);
+  /**
+   * The coves are emissive geometry and light nothing, so the links are lit
+   * from where their coves are and the rooms from where their daylight is.
+   */
+  private lightEnfilade(): void {
+    const half = ROOM.length / 2;
+    const axis = [0, 1, 2, 4].map((index) => STATIONS[index]?.z ?? 0);
+    const links: number[] = [(SECTION.nest + axis[0]! - half) / 2, axis[2]!];
+    for (let index = 0; index + 1 < axis.length; index += 1) {
+      links.push((axis[index]! + half + axis[index + 1]! - half) / 2);
     }
-    this.slots.instanceMatrix.needsUpdate = true;
-    this.slots.frustumCulled = false;
-    stage.add(this.slots);
 
-    for (let i = 0; i < Math.min(count, 5); i += 1) {
-      const light = new PointLight(new Color(SLOT_COLOR), 11, BAY * 2.4, 2);
-      light.position.set(0, FLOOR + HEIGHT - 0.25, -(BAY * (i + 0.5)));
-      stage.add(light);
-      this.lights.push(light);
+    for (const z of links) {
+      for (const side of [-1, 1]) {
+        this.lamp(COVE, side * COVE.offset, COVE.height, -z);
+      }
+    }
+
+    for (const [index, station] of STATIONS.entries()) {
+      this.lamp(ROOM_LIGHT, station.x, ROOM_LIGHT.height, -(station.z - half * 0.4));
+      this.lamp(ROOM_LIGHT, station.x, ROOM_LIGHT.height, -(station.z + half * 0.4));
+
+      // Gardens alternate sides, matching the shell: C1 west, C2 east, C3 west,
+      // C4 east, C5 west.
+      const side = index === 1 || index === 3 ? 1 : -1;
+      const outside = station.x + side * (ROOM.width / 2 + DAYLIGHT.reach);
+      for (const offset of [-half * 0.45, half * 0.45]) {
+        this.lamp(DAYLIGHT, outside, DAYLIGHT.height, -(station.z + offset));
+      }
     }
   }
 
+  private lamp(spec: { color: number; intensity: number; distance: number },
+               x: number, y: number, z: number): void {
+    const light = new PointLight(new Color(spec.color), spec.intensity, spec.distance, 2);
+    light.position.set(x, y, z);
+    this.root.add(light);
+    this.lights.push(light);
+  }
+
   dispose(): void {
-    for (const mesh of this.shell) {
-      this.context.stage.remove(mesh);
-      mesh.geometry.dispose();
-    }
-    for (const material of new Set(this.shell.map((mesh) => mesh.material))) {
-      (material as MeshStandardMaterial).dispose();
-    }
-    this.context.stage.remove(this.slots);
-    this.slots.geometry.dispose();
-    (this.slots.material as MeshStandardMaterial).dispose();
-    for (const light of this.lights) {
-      this.context.stage.remove(light);
-      light.dispose();
-    }
+    this.context.stage.remove(this.root);
+    this.root.traverse((child) => {
+      const mesh = child as Mesh;
+      if (mesh.isMesh) mesh.geometry.dispose();
+    });
+    for (const light of this.lights) light.dispose();
   }
 }
 
@@ -120,6 +186,6 @@ export const corridorZone: ZoneDefinition = {
   id: 'corridor',
   origin: ZONE_ORIGIN.corridor,
   atmosphere: CORRIDOR_ATMOSPHERE,
-  shadow: { radius: SECTION.width, far: 40 },
+  shadow: { radius: 34, far: 140 },
   create: (context) => new Corridor(context),
 };
