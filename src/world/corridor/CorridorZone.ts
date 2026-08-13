@@ -44,20 +44,6 @@ const COVE = {
 };
 
 /**
- * Rooms take their light from the courtyard, so their lamps only fill.
- *
- * Weak and far-reaching rather than strong and near: a point light close to a
- * surface draws a hot pool on it and reads as a lamp, which is exactly what an
- * interior lit by a window does not have.
- */
-const ROOM_LIGHT = {
-  color: 0xffe0bb,
-  intensity: 7,
-  distance: 26,
-  height: SECTION.floor + 2.4,
-};
-
-/**
  * Daylight, and it is the whole reason the rooms stopped being a cave.
  *
  * Each room opens onto a garden, and in Cycles that opening is what lights the
@@ -68,8 +54,8 @@ const ROOM_LIGHT = {
  */
 const DAYLIGHT = {
   color: 0xf4efe4,
-  intensity: 34,
-  distance: 34,
+  intensity: 46,
+  distance: 40,
   height: SECTION.floor + 2.2,
   reach: GARDEN.depth * 0.45,
 };
@@ -144,23 +130,20 @@ class Corridor implements ZoneInstance {
       links.push((axis[index]! + half + axis[index + 1]! - half) / 2);
     }
 
+    // One lamp per member, not two. Every light in a scene is compiled into
+    // every material in it and costs a term per fragment forever, so the count
+    // is a budget rather than a placement question — thirty was three times
+    // what this zone can see the benefit of.
     for (const z of links) {
-      for (const side of [-1, 1]) {
-        this.lamp(COVE, side * COVE.offset, COVE.height, -z);
-      }
+      this.lamp(COVE, 0, COVE.height, -z);
     }
 
     for (const [index, station] of STATIONS.entries()) {
-      this.lamp(ROOM_LIGHT, station.x, ROOM_LIGHT.height, -(station.z - half * 0.4));
-      this.lamp(ROOM_LIGHT, station.x, ROOM_LIGHT.height, -(station.z + half * 0.4));
-
       // Gardens alternate sides, matching the shell: C1 west, C2 east, C3 west,
       // C4 east, C5 west.
       const side = index === 1 || index === 3 ? 1 : -1;
       const outside = station.x + side * (ROOM.width / 2 + DAYLIGHT.reach);
-      for (const offset of [-half * 0.45, half * 0.45]) {
-        this.lamp(DAYLIGHT, outside, DAYLIGHT.height, -(station.z + offset));
-      }
+      this.lamp(DAYLIGHT, outside, DAYLIGHT.height, -station.z);
     }
   }
 

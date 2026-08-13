@@ -144,12 +144,39 @@ export class ZoneDirector {
     this.built.clear();
   }
 
+  /**
+   * Stand the next zone up a beat early, and pay its GPU cost while it is.
+   *
+   * Building the zone early was never the whole story. Adding a group to the
+   * scene graph does no GPU work; the work happens on the **first frame that
+   * draws it**, and all of it lands in one frame — every material compiles its
+   * program against the new light count, and every texture uploads. That is a
+   * few hundred milliseconds of blocked main thread whichever beat it falls on,
+   * and it fell on the click that plays the contributions morph.
+   *
+   * `compileAsync` does exactly that work, off the critical path, and resolves
+   * when the zone is ready to draw for free. There is a whole beat of speaking
+   * time to do it in.
+   *
+   * It compiles the **whole scene**, not just the new group, and that is the
+   * part that matters: a material's program is built against the scene's light
+   * count, so the corridor's lamps arriving invalidate every material the
+   * exterior is still drawing with. Compiling the group alone would leave the
+   * larger half of the recompile to land on the same frame as before.
+   */
   warm(definition: ZoneDefinition): void {
     if (this.active?.definition.id === definition.id) return;
 
     const zone = this.built.get(definition.id) ?? this.build(definition);
     this.world.zones.add(zone.group);
     this.active?.instance?.setBeyond?.(true);
+
+    void this.renderer
+      .compileAsync(this.world.scene, this.camera.camera)
+      .catch(() => {
+        // A failed precompile costs a hitch, not a frame: the renderer will
+        // compile on demand exactly as it did before.
+      });
   }
 
   private mount(definition: ZoneDefinition): ActiveZone {
