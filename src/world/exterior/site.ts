@@ -463,12 +463,11 @@ export const VESTIBULE_BACK = VESTIBULE.front - VESTIBULE.depth;
  * it flew through empty space with the corridor's lit mouth hanging in the
  * middle of it. Releasing a zone early does not hide it; it makes a hole.
  *
- * Here the recess's own end wall is 2.1 m ahead and, at this focal length,
- * overfills the frame in both axes. The outdoors stops being drawn behind a
- * surface that is the entire picture, which is the one frame in the move where
- * it can happen for free.
+ * Past the recess rather than inside it: the floor hands over at the recess's
+ * far end, so releasing before that line takes the floor out from under the next
+ * two metres.
  */
-export const THRESHOLD_Z = VESTIBULE_BACK - 0.9;
+export const THRESHOLD_Z = VESTIBULE_BACK - VESTIBULE.recess.depth - 0.1;
 
 /**
  * The specification slot — one bay of brick cladding never placed, and the only

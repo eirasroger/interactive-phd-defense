@@ -40,7 +40,9 @@ export interface ZoneInstance {
    * jump.
    */
   setThreshold?(open: boolean, seconds: number): void;
+  setBeyond?(present: boolean): void;
   update?(dt: number): void;
+  suspend?(): void;
   dispose(): void;
 }
 

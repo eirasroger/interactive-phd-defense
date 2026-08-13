@@ -1,0 +1,19 @@
+{
+  "field": { "width": 1664, "height": 470 },
+  "columnX": [82, 482, 882, 1282],
+  "laneY": { "axis": 236, "high": 92, "low": 380 },
+  "box": { "width": 300, "height": 140 },
+  "metresPerUnit": 0.037,
+  "section": {
+    "width": 5.9,
+    "mouthHeight": 2.9,
+    "runHeight": 4.8,
+    "floor": 0.14,
+    "nest": 3.0,
+    "clerestorySill": 3.2
+  },
+  "bay": { "depth": 4.6, "opening": 4.0 },
+  "terminal": { "width": 18.0, "depth": 14.0 },
+  "lead": 2.0,
+  "tail": 5.0
+}

@@ -24,8 +24,9 @@ interface Departing {
 /**
  * Owns the built world's lifetime.
  *
- * A zone is mounted when the presentation enters its run of scenes and released
- * when it leaves, which is a far coarser cadence than scene changes.
+ * A zone is mounted when the presentation enters its run of scenes and taken out
+ * of the scene graph when it leaves, which is a far coarser cadence than scene
+ * changes.
  *
  * **Teardown is immediate unless the scene declares a crossing.** The original
  * reasoning was that a zone boundary is always a designed transition — walking
@@ -34,9 +35,14 @@ interface Departing {
  * worlds are on screen at once, and the frame in which the outside can stop
  * being drawn is a place in the geometry rather than a moment on a clock. A
  * `ZoneCrossing` is what says which case this is.
+ *
+ * A zone is built once and then parked, never rebuilt. Parking removes the group
+ * from the scene graph and leaves the instance alive; `dispose` is the end of
+ * the deck. See `learnings.md` §39.
  */
 export class ZoneDirector {
   private active: ActiveZone | null = null;
+  private readonly built = new Map<string, ActiveZone>();
   private departing: Departing | null = null;
   /** The zone a crossing is leaving, held only long enough to route through it. */
   private leaving: ZoneDefinition | null = null;
@@ -81,7 +87,7 @@ export class ZoneDirector {
         this.leaving = outgoing.definition;
         this.departing = { zone: outgoing, releaseAtZ: crossing.releaseAtZ };
       } else if (outgoing) {
-        this.release(outgoing);
+        this.park(outgoing);
       }
 
       this.active = this.mount(definition);
@@ -132,16 +138,23 @@ export class ZoneDirector {
 
   dispose(): void {
     this.releaseDeparting();
-    if (this.active) this.release(this.active);
+    if (this.active) this.park(this.active);
     this.active = null;
+    for (const zone of this.built.values()) zone.instance?.dispose();
+    this.built.clear();
+  }
+
+  warm(definition: ZoneDefinition): void {
+    if (this.active?.definition.id === definition.id) return;
+
+    const zone = this.built.get(definition.id) ?? this.build(definition);
+    this.world.zones.add(zone.group);
+    this.active?.instance?.setBeyond?.(true);
   }
 
   private mount(definition: ZoneDefinition): ActiveZone {
-    const group = new Group();
-    group.name = `zone:${definition.id}`;
-    group.position.set(...definition.origin);
-    this.world.zones.add(group);
-
+    const zone = this.built.get(definition.id) ?? this.build(definition);
+    this.world.zones.add(zone.group);
     // The shadow rig belongs to whichever zone is being *looked at*, which
     // during a crossing is still the one being left. Refitting it on mount
     // dropped a 58 m frustum to a 6 m one at the moment the crossing began —
@@ -149,6 +162,13 @@ export class ZoneDirector {
     // still fifty metres away looking straight at it. It is handed over with
     // the release instead.
     if (!this.departing) this.aim(definition);
+    return zone;
+  }
+
+  private build(definition: ZoneDefinition): ActiveZone {
+    const group = new Group();
+    group.name = `zone:${definition.id}`;
+    group.position.set(...definition.origin);
 
     const instance =
       definition.create?.({
@@ -159,7 +179,9 @@ export class ZoneDirector {
         assets: this.assets,
       }) ?? null;
 
-    return { definition, instance, group };
+    const zone = { definition, instance, group };
+    this.built.set(definition.id, zone);
+    return zone;
   }
 
   /** Points the key light and its shadow frustum at a zone. */
@@ -172,13 +194,13 @@ export class ZoneDirector {
     const departing = this.departing;
     if (!departing) return;
     this.departing = null;
-    this.release(departing.zone);
+    this.park(departing.zone);
     // Deferred to here rather than done at mount — see `mount`.
     if (this.active) this.aim(this.active.definition);
   }
 
-  private release(zone: ActiveZone): void {
-    zone.instance?.dispose();
+  private park(zone: ActiveZone): void {
+    zone.instance?.suspend?.();
     this.world.zones.remove(zone.group);
   }
 }

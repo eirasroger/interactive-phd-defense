@@ -147,6 +147,7 @@ class Exterior implements ZoneInstance {
   private scaffolded = true;
   private strike: gsap.core.Tween | null = null;
   private threshold: gsap.core.Tween | null = null;
+  private beyond = false;
 
   constructor(private readonly context: ZoneContext) {
     const { assets, stage } = context;
@@ -346,6 +347,12 @@ class Exterior implements ZoneInstance {
     // `setThreshold` owns it — but the *closed* state is what every Act I scene
     // is entitled to, and re-entering the exterior has to restore it.
     this.entrance.open(0, 0);
+    this.entrance.seal(!this.beyond);
+  }
+
+  setBeyond(present: boolean): void {
+    this.beyond = present;
+    this.entrance.seal(!present);
   }
 
   /**
@@ -364,12 +371,15 @@ class Exterior implements ZoneInstance {
    * travelling towards.
    */
   setThreshold(open: boolean, seconds: number): void {
+    this.entrance.seal(!open && !this.beyond);
+
+    this.threshold?.kill();
+
     if (!open || seconds <= 0) {
       this.entrance.open(open ? 1 : 0, 0);
       return;
     }
 
-    this.threshold?.kill();
     this.threshold = gsap.delayedCall(scaled(seconds * DOORS_AT), () => {
       this.entrance.open(1, ENTRANCE_TRAVEL_SECONDS);
     });
@@ -381,6 +391,13 @@ class Exterior implements ZoneInstance {
     this.woodland.update(dt);
     this.lake.update(dt);
     this.river.update(dt);
+  }
+
+  suspend(): void {
+    this.threshold?.kill();
+    this.strike?.kill();
+    for (const candidate of this.candidates) gsap.killTweensOf(candidate.object.position);
+    this.beyond = false;
   }
 
   dispose(): void {

@@ -1,5 +1,14 @@
 import gsap from 'gsap';
-import { Color, Group, PointLight, type Object3D } from 'three';
+import {
+  BoxGeometry,
+  Color,
+  Group,
+  LinearSRGBColorSpace,
+  Mesh,
+  MeshStandardMaterial,
+  PointLight,
+  type Object3D,
+} from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { seconds as scaled } from '@/animations/timing';
 import { createBakedPart, findParts } from './building';
@@ -37,6 +46,7 @@ export interface Entrance {
   readonly object: Object3D;
   /** 0 shut, 1 parked over the sidelights. */
   open(fraction: number, seconds: number): void;
+  seal(sealed: boolean): void;
   dispose(): void;
 }
 
@@ -81,10 +91,17 @@ export function createEntrance(gltf: GLTF): Entrance {
   const lights = createVestibuleLights();
   object.add(lights);
 
+  const plug = createRecessPlug();
+  object.add(plug);
+
   let fraction = 0;
 
   return {
     object,
+
+    seal(sealed: boolean): void {
+      plug.visible = sealed;
+    },
 
     open(target: number, travelSeconds: number): void {
       if (target === fraction) return;
@@ -124,12 +141,29 @@ export function createEntrance(gltf: GLTF): Entrance {
       lights.traverse((child) => {
         if (child instanceof PointLight) child.dispose();
       });
+      plug.geometry.dispose();
+      (plug.material as MeshStandardMaterial).dispose();
     },
   };
 }
 
 export const ENTRANCE_TRAVEL_SECONDS = TRAVEL_SECONDS;
 export const ENTRANCE_LEAF_STAGGER = LEAF_STAGGER;
+
+/** Closes the bore through the building while the corridor is not there. */
+function createRecessPlug(): Mesh {
+  const { recess } = VESTIBULE;
+  const plug = new Mesh(
+    new BoxGeometry(recess.width + 0.1, recess.height + 0.1, 0.08),
+    new MeshStandardMaterial({
+      color: new Color().setRGB(0.085, 0.088, 0.098, LinearSRGBColorSpace),
+      roughness: 0.9,
+    }),
+  );
+  plug.name = 'vestibule:recess-plug';
+  plug.position.set(0, recess.height / 2, VESTIBULE_BACK - recess.depth);
+  return plug;
+}
 
 /**
  * Two warm sources under the ceiling slots, and one cool one deep in the recess.

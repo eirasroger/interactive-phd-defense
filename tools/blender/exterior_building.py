@@ -789,14 +789,24 @@ def build_vestibule(parts: Parts, target) -> None:
     back = front + depth
     recess = VESTIBULE["recess"]
 
-    cutter = add_box(
-        target, "vestibule_cutter", (width, depth + recess["depth"], height),
-        (0.0, front + (depth + recess["depth"]) / 2.0, height / 2.0),
+    # The bore carries the corridor through to the rear elevation. It starts at
+    # the recess mouth rather than its far end: flush with the cavity's own end
+    # face is two coplanar faces, which the boolean silently declines to
+    # resolve. See `learnings.md` §37.
+    bore_from = back
+    bore_to = BACK_Y + 2.0
+    cuts = (
+        ("vestibule_cutter", (width, depth + recess["depth"], height),
+         (0.0, front + (depth + recess["depth"]) / 2.0, height / 2.0)),
+        ("vestibule_bore", (recess["width"], bore_to - bore_from, recess["height"]),
+         (0.0, (bore_from + bore_to) / 2.0, recess["height"] / 2.0)),
     )
-    for obj in parts.get("brick", []):
-        if obj.name == "core_ground":
-            boolean_cut(obj, cutter)
-    bpy.data.objects.remove(cutter, do_unlink=True)
+    for name, size, location in cuts:
+        cutter = add_box(target, name, size, location)
+        for obj in parts.get("brick", []):
+            if name == "vestibule_bore" or obj.name == "core_ground":
+                boolean_cut(obj, cutter)
+        bpy.data.objects.remove(cutter, do_unlink=True)
 
     lining = VESTIBULE["lining"]
     floor = VESTIBULE["floor"]
@@ -828,16 +838,13 @@ def build_vestibule(parts: Parts, target) -> None:
         (0.0, back - lining / 2.0, (height + recess["height"]) / 2.0),
     ))
 
-    # Where the corridor will arrive. Lined in near-black and closed at the far
-    # end, so it reads as the space continuing rather than as a hole to the sky
-    # — which is what an unclosed opening in a building would be.
+    # Open at the far end: the corridor is what is on the other side. The floor
+    # is the exterior's for the length of the recess and the corridor's beyond it.
     for name, size, location in (
         ("floor", (recess["width"], recess["depth"], floor),
          (0.0, back + recess["depth"] / 2.0, floor / 2.0)),
         ("ceiling", (recess["width"], recess["depth"], lining),
          (0.0, back + recess["depth"] / 2.0, recess["height"] - lining / 2.0)),
-        ("end", (recess["width"], lining, recess["height"]),
-         (0.0, back + recess["depth"] - lining / 2.0, recess["height"] / 2.0)),
     ):
         parts.put("recess", add_box(target, f"vestibule_recess_{name}", size, location))
 

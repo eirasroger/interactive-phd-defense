@@ -28,7 +28,9 @@ export const ZONE_ORIGIN = {
    * overlap is what removes the gap: the two worlds are continuous the whole way
    * through the handover, and the exterior can be released anywhere inside it
    * without a metre of nothing appearing. The corridor's section is 200 mm
-   * under the recess's so the two sets of surfaces never contend.
+   * under the recess's, so over the overlap its walls and ceiling are the ones
+   * seen and neither pair contends. The floor hands over at the recess's far
+   * end instead — see `SECTION.nest`.
    *
    * Nothing else in the deck may rely on the two being separable. `ZoneDirector`
    * mounts both only for the crossing and releases the exterior as the camera

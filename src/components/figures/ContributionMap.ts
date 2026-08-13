@@ -1,5 +1,6 @@
 import gsap from 'gsap';
 import { EASE, seconds } from '@/animations/timing';
+import plan from '@/config/corridorPlan.json';
 import { el } from '@/utilities/dom';
 import './contribution-map.css';
 
@@ -69,7 +70,7 @@ export const PLAN = 1;
  * beyond what the plan needs is dead air under the papers, and it reads as the
  * row having come loose from the heading above it.
  */
-const FIELD = { width: 1664, height: 470 } as const;
+const FIELD = plan.field;
 
 /**
  * Five across, as published.
@@ -81,24 +82,14 @@ const FIELD = { width: 1664, height: 470 } as const;
  */
 const ROW = { width: 310, height: 382, pitch: 338, sheet: 133 } as const;
 
-/**
- * The corridor plan. The column pitch leaves 100 units between cards, which is
- * the run every elbow has to turn in — narrow it and the fan out of C2 stops
- * reading as two routes and starts reading as one thick line.
- */
-/**
- * Height is the station name at this width plus its key, and nothing more. The
- * first pass carried the row's proportions into the plan and every node had a
- * third of itself empty — which is what makes a diagram look like a layout that
- * did not fit rather than one that was drawn.
- */
-const PLAN_BOX = { width: 300, height: 140, sheet: 46 } as const;
-const COLUMN_X = [82, 482, 882, 1282] as const;
+/** Plan geometry lives in `config/corridorPlan.json` — see `config/corridor.ts`. */
+const PLAN_BOX = { ...plan.box, sheet: 46 } as const;
+const COLUMN_X = plan.columnX;
 /**
  * The axis lane is clear between the two branch lanes, which is what lets
  * C2 → C5 run straight through the middle rather than around anything.
  */
-const LANE_Y: Record<Lane, number> = { axis: 236, high: 92, low: 380 };
+const LANE_Y: Record<Lane, number> = plan.laneY;
 
 /** Elbow corner radius. A plan drawing turns corners; it does not kink. */
 const BEND = 16;

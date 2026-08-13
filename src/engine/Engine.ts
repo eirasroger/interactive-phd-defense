@@ -140,6 +140,17 @@ export class Engine {
       state.direction !== 'jump',
       crossing,
     );
+
+    this.warmNextZone(state);
+  }
+
+  private warmNextZone(state: SceneState): void {
+    if (state.beat < 1) return;
+
+    const next = this.options.scenes[state.index + 1];
+    if (!next || next.zone === state.definition.zone) return;
+
+    this.zones.warm(zoneFor(next.zone));
   }
 
   start(): void {
