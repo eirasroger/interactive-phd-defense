@@ -254,8 +254,9 @@ class Surfaces:
         return image
 
     def detail_material(self, key: str):
-        """Surface detail as a tiling map on a real UV set, not as a baked atlas."""
-        asset, tile, tint = self.detail[key]
+        """Tiling detail on a world-scale UV set. Fourth field False = relief only."""
+        asset, tile, tint = self.detail[key][:3]
+        diffuse = self.detail[key][3] if len(self.detail[key]) > 3 else True
         base_color, roughness, metallic = self.palette[key]
         material = principled(key, base_color, roughness, metallic)
         tree = material.node_tree
@@ -265,11 +266,12 @@ class Surfaces:
         coords.uv_map = DETAIL_UV
         coords.location = (-1000, 100)
 
-        base = tree.nodes.new("ShaderNodeTexImage")
-        base.image = self.detail_image(key, "Diffuse", tint, colour=True)
-        base.location = (-700, 220)
-        tree.links.new(coords.outputs["UV"], base.inputs["Vector"])
-        tree.links.new(base.outputs["Color"], bsdf.inputs["Base Color"])
+        if diffuse:
+            base = tree.nodes.new("ShaderNodeTexImage")
+            base.image = self.detail_image(key, "Diffuse", tint, colour=True)
+            base.location = (-700, 220)
+            tree.links.new(coords.outputs["UV"], base.inputs["Vector"])
+            tree.links.new(base.outputs["Color"], bsdf.inputs["Base Color"])
 
         if self.rough:
             node = tree.nodes.new("ShaderNodeTexImage")
@@ -290,7 +292,7 @@ class Surfaces:
         tree.links.new(shaper.outputs["Normal"], bsdf.inputs["Normal"])
 
         print(f"[{self.tag}] detail {key}: {asset} at {tile:.2f} m "
-              f"({self.size / tile:.0f} texels/m)")
+              f"({self.size / tile:.0f} texels/m){'' if diffuse else ', relief only'}")
         return material
 
     def project(self, obj) -> None:
@@ -401,11 +403,12 @@ def bake_into(obj, image, samples: int, distance: float) -> None:
     bpy.ops.object.bake(type='AO', use_clear=True)
 
 
-def bake_image(name: str, size: int):
+def bake_image(name: str, size: int, hdr: bool = False):
+    """Removed before creation (§6b). `hdr` is required if it will be measured (§47)."""
     existing = bpy.data.images.get(name)
     if existing:
         bpy.data.images.remove(existing, do_unlink=True)
-    return bpy.data.images.new(name, size, size)
+    return bpy.data.images.new(name, size, size, float_buffer=hdr)
 
 
 def report_levels(tag: str, name: str, image) -> None:
@@ -426,6 +429,96 @@ def isolate_materials(obj) -> None:
     for slot in obj.material_slots:
         if slot.material:
             slot.material = slot.material.copy()
+
+
+def bake_irradiance(obj, image, samples: int) -> None:
+    """Irradiance: DIFFUSE direct + indirect with the colour pass off."""
+    scene = bpy.context.scene
+    scene.render.engine = 'CYCLES'
+    scene.cycles.samples = samples
+    scene.cycles.use_denoising = True
+    scene.cycles.max_bounces = 8
+    scene.render.bake.margin = 10
+    scene.render.bake.margin_type = 'ADJACENT_FACES'
+    scene.render.bake.use_pass_direct = True
+    scene.render.bake.use_pass_indirect = True
+    scene.render.bake.use_pass_color = False
+
+    set_bake_target(obj, image)
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.bake(type='DIFFUSE', use_clear=True)
+
+
+def surface_area(obj) -> float:
+    return float(sum(polygon.area for polygon in obj.data.polygons))
+
+
+def atlas_size(area: float, texels: int, smallest: int, largest: int) -> int:
+    """Atlas side for a target texels-per-metre over a measured area."""
+    want = math.sqrt(max(area, 0.01)) * texels
+    size = smallest
+    while size < want and size < largest:
+        size *= 2
+    return size
+
+
+LIGHT_PERCENTILES = (50.0, 75.0, 90.0, 99.0)
+
+
+def report_light(tag: str, name: str, image) -> dict[float, float]:
+    """Percentiles of a radiance bake. Grade against p75, not the max: §46."""
+    import numpy
+
+    pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
+    image.pixels.foreach_get(pixels)
+    values = pixels.reshape(-1, 4)[:, :3].max(axis=1)
+    lit = values[values > 0.004]
+
+    marks = {p: float(numpy.percentile(lit, p)) for p in LIGHT_PERCENTILES}
+    report = "  ".join(f"p{int(p)} {value:.3f}" for p, value in marks.items())
+    print(f"[{tag}] {name} light: mean {values.mean():.3f}  {report}  "
+          f"max {values.max():.3f}  clipped {(values > 0.995).mean() * 100.0:.2f}%")
+    return marks
+
+
+def rescale(image, gain: float) -> None:
+    import numpy
+
+    pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
+    image.pixels.foreach_get(pixels)
+    rgba = pixels.reshape(-1, 4)
+    rgba[:, :3] = numpy.clip(rgba[:, :3] * gain, 0.0, 1.0)
+    image.pixels.foreach_set(rgba.reshape(-1))
+
+
+def bake_lightmap(surfaces: Surfaces, obj, name: str, size: int, samples: int,
+                  anchor: float = 75.0, target: float = 0.56,
+                  gain: float | None = None) -> float:
+    """Lightmap into glTF's occlusion channel. Pass `gain` to share one exposure."""
+    surfaces.project(obj)
+    unwrap_occlusion(obj)
+    isolate_materials(obj)
+
+    area = surface_area(obj)
+    print(f"[{surfaces.tag}] {name} atlas: {size} over {area:.0f} m2 "
+          f"({size / math.sqrt(max(area, 0.01)):.0f} texels/m)")
+
+    light = bake_image(f"{name}_light", size, hdr=True)
+    bake_irradiance(obj, light, samples)
+    marks = report_light(surfaces.tag, name, light)
+
+    if gain is None:
+        reference = marks.get(anchor, 0.0)
+        gain = target / reference if reference > 0.0 else 1.0
+        print(f"[{surfaces.tag}] {name} exposure: p{int(anchor)} -> {target}, gain {gain:.3f}")
+    rescale(light, gain)
+    report_light(surfaces.tag, f"{name} graded", light)
+
+    wire_occlusion(obj, light)
+    light.pack()
+    return gain
 
 
 def bake_surface(surfaces: Surfaces, obj, name: str, size: int,

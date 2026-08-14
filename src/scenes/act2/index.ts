@@ -1,4 +1,4 @@
-import { ROOM, SECTION, STATIONS } from '@/config/corridor';
+import { ROOM, SECTION, SPINE, STATIONS, WING } from '@/config/corridor';
 import { ZONE_ORIGIN } from '@/config/layout';
 import { AT_THRESHOLD, DOORS_AT } from '@/animations/entry';
 import { act2Captions } from '@/content/act2';
@@ -23,34 +23,37 @@ const at = ([x, y, z]: Vec3): Vec3 => [
 ];
 
 /**
- * One slide per contribution, one pose per contribution.
+ * One pose per contribution, authored in corridor coordinates: the mouth is
+ * z 0 and a station `z` metres in sits at `-z`.
  *
- * The camera moves when the *subject* changes and at no other time. Re-framing
- * between beats of one claim reads as the room being toured rather than the
- * argument being made, and a presenter mid-sentence has no use for a camera
- * that has decided to look somewhere else.
- *
- * Poses are authored in corridor coordinates: the mouth is z 0 and a station
- * `z` metres in sits at `-z`.
+ * Poses stand on the axis and only the aim varies, so travel between stations
+ * cannot clip a link wall.
  */
 const station = (index: number): CameraPose => {
   const entry = STATIONS[index];
   const z = -(entry?.z ?? 0);
   const x = entry?.x ?? 0;
+  const wing = entry?.wing ?? 0;
 
-  // The two rooms of the cross are entered sideways from the low spine between
-  // them, so they are framed across the axis rather than along it.
   if (x !== 0) {
     return {
-      position: at([-Math.sign(x) * 1.1, EYE, z + 2.2]),
-      target: at([x * 1.4, EYE - 0.16, z - 1.4]),
-      fov: 58,
+      position: at([0, EYE, z + HALF - 2.0]),
+      target: at([x * 1.02, EYE - 0.12, z - 0.6]),
+      fov: 60,
+    };
+  }
+
+  if (wing !== 0) {
+    return {
+      position: at([0, EYE, z + HALF - 1.0]),
+      target: at([wing * 2.2, EYE - 0.14, z - HALF * 0.5]),
+      fov: 54,
     };
   }
 
   return {
-    position: at([0, EYE, z + HALF - 0.6]),
-    target: at([0, EYE - 0.12, z - HALF - 2]),
+    position: at([0, EYE, z + HALF - 1.2]),
+    target: at([0, EYE + 0.35, z - HALF - 2]),
     fov: 54,
   };
 };
@@ -100,10 +103,16 @@ function assertDoorsClear(seconds: number): void {
 /** Every pose has to stand inside the shell, not in the wall behind it. */
 function assertInside(scenes: readonly SceneDefinition[]): void {
   const back = (STATIONS[4]?.z ?? 0) + HALF;
-  for (const entry of scenes) {
+  for (const [index, entry] of scenes.entries()) {
+    const home = STATIONS[index];
     const z = entry.pose.position[2] - ZONE_ORIGIN.corridor[2];
+    const x = entry.pose.position[0] - ZONE_ORIGIN.corridor[0];
     if (z > 0 || -z > back) {
       throw new Error(`Act II: ${entry.id} stands at z ${z.toFixed(2)}, outside 0..-${back}.`);
+    }
+    const reach = home && home.x !== 0 ? SPINE : ROOM.width / 2 + WING.depth;
+    if (Math.abs(x) > reach) {
+      throw new Error(`Act II: ${entry.id} stands at x ${x.toFixed(2)}, outside ±${reach}.`);
     }
   }
 }

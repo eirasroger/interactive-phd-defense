@@ -34,13 +34,10 @@
     "head": 1.62,
     "depth": 0.09
   },
-  "garden": {
-    "depth": 5.4,
-    "wall": 5.2,
-    "margin": 1.2
-  },
-  "opening": {
-    "head": 0.42,
+  "wing": {
+    "depth": 4.6,
+    "alcove": 2.9,
+    "inset": 2.2,
     "return": 0.55
   }
 }

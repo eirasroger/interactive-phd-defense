@@ -1,5 +1,5 @@
 import { Color, Group, Mesh, MeshStandardMaterial, Object3D, PointLight } from 'three';
-import { GARDEN, ROOM, SECTION, STATIONS } from '@/config/corridor';
+import { ROOM, SECTION, STATIONS } from '@/config/corridor';
 import { ZONE_ORIGIN } from '@/config/layout';
 import type { Atmosphere } from '@/engine/render/atmosphere';
 import type { ZoneContext, ZoneDefinition, ZoneInstance } from '@/engine/world/types';
@@ -10,54 +10,17 @@ export const CEILING_ASSET = 'corridorCeiling';
 
 export const CORRIDOR_ASSETS = [SHELL_ASSET, CEILING_ASSET] as const;
 
-/**
- * How hard the shell's baked occlusion bites.
- *
- * Lower than the exterior's, because an enclosed section bakes far more
- * occlusion than an elevation does — every surface in here can see the one
- * opposite it — and the bounce that fills those corners in Cycles has no
- * counterpart in a rasteriser.
- */
-const OCCLUSION = 0.55;
+/** The bake travels in glTF's occlusion slot; `mount` rebinds it to `lightMap`. */
+const LIGHTMAP = 0.85;
 
-/**
- * How hard the exported cove strips glow.
- *
- * Blender writes the emissive strength its Cycles preview was lit by, and a
- * value tuned as a *source* in a path tracer is a blown white bar in a
- * rasteriser — you see the fitting instead of the wash it makes. The lamps
- * below are the other half of `learnings.md` §33: emissive geometry illuminates
- * nothing here, so every strip is paired with a point light. Points, never
- * `RectAreaLight`, which compiles its LTC path into every standard material in
- * the scene to light one corridor.
- */
 const COVE_GLOW = 0.45;
 
 const COVE = {
   color: 0xffdcb4,
-  intensity: 4.5,
+  intensity: 2.2,
   distance: 14,
   offset: SECTION.linkWidth / 2 - 0.3,
-  // Below the downstand, not level with it. A lamp beside the lip it hides
-  // behind lights the lip, which is the one surface that must stay unlit.
   height: SECTION.floor + 1.95,
-};
-
-/**
- * Daylight, and it is the whole reason the rooms stopped being a cave.
- *
- * Each room opens onto a garden, and in Cycles that opening is what lights the
- * room — bounce off the garden wall, in through the glass. A rasteriser has no
- * bounce, so the opening lights nothing and the room goes black however bright
- * the garden is. One lamp sitting *in* each garden, aimed in through its own
- * opening, is that transport put back by hand.
- */
-const DAYLIGHT = {
-  color: 0xf4efe4,
-  intensity: 46,
-  distance: 40,
-  height: SECTION.floor + 2.2,
-  reach: GARDEN.depth * 0.45,
 };
 
 const CORRIDOR_ATMOSPHERE: Atmosphere = {
@@ -66,13 +29,13 @@ const CORRIDOR_ATMOSPHERE: Atmosphere = {
   fogFar: 52,
   skyColor: 0xcbc3b4,
   groundColor: 0x241a12,
-  ambientIntensity: 0.34,
+  ambientIntensity: 0.10,
   keyColor: 0xffeacb,
   keyIntensity: 0.7,
   keyOffset: [-14, 40, 34],
-  environmentIntensity: 0.26,
+  environmentIntensity: 0.18,
   backgroundIntensity: 0,
-  exposure: 0.86,
+  exposure: 0.72,
 };
 
 function mount(source: Object3D): Object3D {
@@ -84,9 +47,15 @@ function mount(source: Object3D): Object3D {
     mesh.receiveShadow = true;
     for (const entry of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
       if (!(entry instanceof MeshStandardMaterial)) continue;
-      entry.aoMapIntensity = OCCLUSION;
+      if (entry.aoMap) {
+        entry.lightMap = entry.aoMap;
+        entry.lightMapIntensity = LIGHTMAP;
+        entry.aoMap = null;
+      }
       entry.envMapIntensity = 1;
-      if (entry.name.startsWith('cove')) entry.emissiveIntensity = COVE_GLOW;
+      if (entry.name.startsWith('cove') || entry.name.startsWith('wash')) {
+        entry.emissiveIntensity = COVE_GLOW;
+      }
     }
   });
   return object;
@@ -118,10 +87,7 @@ class Corridor implements ZoneInstance {
     stage.add(this.root);
   }
 
-  /**
-   * The coves are emissive geometry and light nothing, so the links are lit
-   * from where their coves are and the rooms from where their daylight is.
-   */
+  /** Only the links carry lamps; every gallery's light is in the bake. */
   private lightEnfilade(): void {
     const half = ROOM.length / 2;
     const axis = [0, 1, 2, 4].map((index) => STATIONS[index]?.z ?? 0);
@@ -130,20 +96,8 @@ class Corridor implements ZoneInstance {
       links.push((axis[index]! + half + axis[index + 1]! - half) / 2);
     }
 
-    // One lamp per member, not two. Every light in a scene is compiled into
-    // every material in it and costs a term per fragment forever, so the count
-    // is a budget rather than a placement question — thirty was three times
-    // what this zone can see the benefit of.
     for (const z of links) {
       this.lamp(COVE, 0, COVE.height, -z);
-    }
-
-    for (const [index, station] of STATIONS.entries()) {
-      // Gardens alternate sides, matching the shell: C1 west, C2 east, C3 west,
-      // C4 east, C5 west.
-      const side = index === 1 || index === 3 ? 1 : -1;
-      const outside = station.x + side * (ROOM.width / 2 + DAYLIGHT.reach);
-      this.lamp(DAYLIGHT, outside, DAYLIGHT.height, -station.z);
     }
   }
 

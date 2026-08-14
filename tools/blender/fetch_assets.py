@@ -85,6 +85,8 @@ TEXTURES = (
     # Act II. The corridor's material rhythm is oak in the links and plaster in
     # the rooms, so those two carry the whole zone between them.
     "oak_veneer_01",
+    "herringbone_parquet",
+    "rectangular_parquet",
     "white_plaster_02",
     "terrazzo_tiles",
     "beige_wall_001",
@@ -107,6 +109,8 @@ TEXTURE_METRES = {
     "sparse_grass": 2.0,
     "gravel_floor": 2.25,
     "oak_veneer_01": 1.83,
+    "herringbone_parquet": 3.4,
+    "rectangular_parquet": 2.25,
     "white_plaster_02": 1.0,
     "terrazzo_tiles": 2.0,
     "beige_wall_001": 3.0,
