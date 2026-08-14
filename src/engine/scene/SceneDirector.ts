@@ -255,6 +255,10 @@ export class SceneDirector {
       });
     }
 
+    if (direction === 'forward' && definition.travel) {
+      return this.deps.camera.moveTo(definition.pose, definition.travel);
+    }
+
     // Sequential navigation is paced by the move itself; only the jump cut
     // holds to a fixed length, because its whole job is to feel like one.
     return this.deps.camera.moveTo(

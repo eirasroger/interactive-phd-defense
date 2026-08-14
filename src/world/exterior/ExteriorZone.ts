@@ -1,10 +1,17 @@
 import gsap from 'gsap';
-import { PMREMGenerator, type Texture } from 'three';
+import { PMREMGenerator, type Object3D, type Texture } from 'three';
 import { ZONE_ORIGIN } from '@/config/layout';
 import { TRANSITION } from '@/config/presentation';
 import type { Atmosphere } from '@/engine/render/atmosphere';
 import type { ZoneContext, ZoneDefinition, ZoneInstance } from '@/engine/world/types';
-import { createBakedPart, createBuilding, findParts, sharpen, type Building } from './building';
+import {
+  createBakedPart,
+  createBuilding,
+  findByMaterial,
+  findParts,
+  sharpen,
+  type Building,
+} from './building';
 import { createCanopyField } from './canopy';
 import { createEntrance, ENTRANCE_TRAVEL_SECONDS, type Entrance } from './entrance';
 import { createLake, type Lake } from './lake';
@@ -134,6 +141,8 @@ class Exterior implements ZoneInstance {
   private readonly parkland: Parkland;
   private readonly outcrop: StoneField;
   private readonly building: Building;
+  /** The vestibule recess's dark lining, wanted only while nothing is behind it. */
+  private readonly lining: Object3D[];
   private readonly construction: Building;
   private readonly slotFill: Building;
   private readonly candidates: readonly Building[];
@@ -227,6 +236,7 @@ class Exterior implements ZoneInstance {
     }
 
     this.building = createBuilding(assets.model(EXTERIOR_ASSET));
+    this.lining = findByMaterial(this.building.object, 'recess');
     this.construction = createBuilding(assets.model(CONSTRUCTION_ASSET));
     this.slotFill = createBuilding(assets.model(SLOT_FILL_ASSET));
     this.candidates = findParts(assets.model(CANDIDATES_ASSET), REVIEW.count).map(createBakedPart);
@@ -338,6 +348,36 @@ class Exterior implements ZoneInstance {
     });
   }
 
+  /**
+   * The recess lining, and why the corridor makes it wrong rather than redundant.
+   *
+   * The recess is lined in a dark material so that from the forecourt it reads
+   * as a space that continues rather than a rectangle painted on the back wall.
+   * That is its whole job, and it is finished the moment the space that
+   * continues is actually standing there: the corridor nests three metres into
+   * the recess, its own walls and ceiling sit *inside* the lining's, and its
+   * floor is **coplanar with the lining's** at 0.14. Two floors in one plane,
+   * and the one that wins is a 0.085-albedo slab lying across the parquet — a
+   * dark band three metres deep, right where the camera is about to walk. It
+   * reads as a hole in the floor, which is exactly what it looks like.
+   *
+   * `ZONE_ORIGIN.corridor` says the two sections are 200 mm apart so neither
+   * pair contends. That is true of the walls and the ceiling and it is not true
+   * of the floor, because a floor cannot be inset from another floor.
+   */
+  private setLining(): void {
+    for (const part of this.lining) part.visible = !this.beyond;
+  }
+
+  /**
+   * Re-installed rather than set once at build time: the corridor clears both,
+   * so coming back out here has to put them back.
+   */
+  takeSky(): void {
+    this.context.world.setBackground(this.sky);
+    this.context.world.setEnvironment(this.environment);
+  }
+
   setProgress(progress: number, animate: boolean): void {
     const onStage = progress >= REVIEW.from && progress <= REVIEW.to;
     this.setReview(onStage ? 1 : 0, animate);
@@ -348,11 +388,13 @@ class Exterior implements ZoneInstance {
     // is entitled to, and re-entering the exterior has to restore it.
     this.entrance.open(0, 0);
     this.entrance.seal(!this.beyond);
+    this.setLining();
   }
 
   setBeyond(present: boolean): void {
     this.beyond = present;
     this.entrance.seal(!present);
+    this.setLining();
   }
 
   /**

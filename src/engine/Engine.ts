@@ -146,6 +146,7 @@ export class Engine {
       this.zoneProgress[state.index] ?? 0,
       state.direction !== 'jump',
       crossing,
+      state.definition.air ?? null,
     );
 
     this.warmNextZone(state);

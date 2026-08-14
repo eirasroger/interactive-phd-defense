@@ -32,7 +32,10 @@
   "flow": {
     "sill": 1.28,
     "head": 1.62,
-    "depth": 0.09
+    "depth": 0.09,
+    "width": 0.52,
+    "foundation": 3.4,
+    "fan": 0.84
   },
   "wing": {
     "depth": 4.6,

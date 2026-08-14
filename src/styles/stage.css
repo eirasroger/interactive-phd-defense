@@ -115,6 +115,30 @@
   );
 }
 
+/* A plan is a wide figure lying across the middle of the frame, so its text
+   sits above it and the scrim comes down from the top only. The default
+   gradient is anchored to the text side, which here would put its darkest stop
+   over the first two stations. */
+.scene-layer[data-align='plan'] {
+  align-content: start;
+}
+
+/* A banner over a wide figure, not a column beside one: the claim runs across
+   the top on a long measure so it resolves in three lines instead of five and
+   never reaches down into the drawing. */
+.scene-layer[data-align='plan'] .caption {
+  max-width: 86rem;
+}
+
+.scene-layer[data-align='plan']::before {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--c-base) 90%, transparent) 0%,
+    color-mix(in srgb, var(--c-base) 58%, transparent) 24%,
+    transparent 48%
+  );
+}
+
 /* The dark stop is held across the middle before falling away: a radial
    gradient fading from 0% reaches its stated opacity at one point only. */
 .scene-layer[data-align='center']::before {

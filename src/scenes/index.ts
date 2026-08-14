@@ -1,6 +1,7 @@
 import type { SceneDefinition } from '@/engine/scene/types';
 import { act1Scenes } from './act1';
 import { act2Scenes } from './act2';
+import { act3Scenes } from './act3';
 import { AssemblyScene } from './demo/AssemblyScene';
 import { CorridorScene } from './demo/CorridorScene';
 import { STATION_IDS, stationPose } from './demo/corridor';
@@ -27,6 +28,11 @@ export const scenes: readonly SceneDefinition[] = [
   // scene declares it, and entering it opens the building's doors and carries
   // the camera through them in one move. See `scenes/act2/index.ts`.
   ...act2Scenes,
+  // Act III opens where Act II ends and in the same zone: the camera climbs out
+  // of C5 and reads the corridor from above as the figure it has been all along.
+  // Contiguous with Act II by necessity — the two share the corridor's scene run,
+  // and the ceiling opens on the last of it.
+  ...act3Scenes,
   {
     id: 'origin',
     title: 'A Continuous World',

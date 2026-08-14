@@ -41,6 +41,22 @@ export interface ZoneInstance {
    */
   setThreshold?(open: boolean, seconds: number): void;
   setBeyond?(present: boolean): void;
+  /**
+   * This zone is now the one being *looked at*, so it owns the sky.
+   *
+   * Background and environment map are global and there is exactly one of each,
+   * so they belong to whichever zone the camera is in — which during a crossing
+   * is still the one being left, for as long as it is still on screen. Called
+   * on mount for an ordinary zone change, and **deferred to the release** for a
+   * crossing, alongside the shadow rig and for the same reason: taking the sky
+   * off the exterior at the start of the move strips it while the whole of it
+   * is still in frame.
+   *
+   * A zone with nothing to install still implements this — clearing is a state,
+   * not an absence, and inheriting the last zone's sky is what happens to
+   * anything that declines to say.
+   */
+  takeSky?(): void;
   update?(dt: number): void;
   suspend?(): void;
   dispose(): void;

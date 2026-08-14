@@ -37,6 +37,28 @@ export function createBuilding(gltf: GLTF): Building {
 }
 
 /**
+ * The meshes an exported object carries a given material on.
+ *
+ * The exporter writes one primitive per material, so a material name is the only
+ * handle a part has once it is inside a glTF — and a name that stops matching
+ * has to fail here rather than quietly return nothing, because what it is used
+ * for is *hiding* something. See `learnings.md` §7e.
+ */
+export function findByMaterial(object: Object3D, material: string): Object3D[] {
+  const found: Object3D[] = [];
+  object.traverse((child) => {
+    const mesh = child as Mesh;
+    if (!mesh.isMesh) return;
+    const carried = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    if (carried.some((entry) => entry.name.startsWith(material))) found.push(mesh);
+  });
+  if (found.length === 0) {
+    throw new Error(`exterior: no mesh carries a '${material}' material.`);
+  }
+  return found;
+}
+
+/**
  * One exported object, with every material it carries.
  *
  * Cloned rather than reparented: the GLTF belongs to the asset cache and is

@@ -10,7 +10,7 @@ import type { QualitySettings } from '@/config/quality';
 import type { AssetLoader } from '@/engine/assets/AssetLoader';
 import type { CameraDirector } from '@/engine/camera/CameraDirector';
 import type { AtmosphereDirector } from '@/engine/render/AtmosphereDirector';
-import { recessed } from '@/engine/render/atmosphere';
+import { recessed, type Atmosphere } from '@/engine/render/atmosphere';
 import type { World } from '@/engine/render/World';
 import type { RenderMode } from '@/engine/scene/types';
 import type { ZoneCrossing, ZoneDefinition, ZoneInstance } from './types';
@@ -76,6 +76,7 @@ export class ZoneDirector {
     progress: number,
     animate: boolean,
     crossing: ZoneCrossing | null = null,
+    air: ((base: Atmosphere) => Atmosphere) | null = null,
   ): void {
     const changed = this.active?.definition.id !== definition.id;
 
@@ -103,7 +104,8 @@ export class ZoneDirector {
 
     this.active?.instance?.setProgress?.(progress, animate && !changed);
 
-    const target = mode === 'recessed' ? recessed(definition.atmosphere) : definition.atmosphere;
+    const base = air ? air(definition.atmosphere) : definition.atmosphere;
+    const target = mode === 'recessed' ? recessed(base) : base;
 
     // Light and air ease across a crossing and are set otherwise. A crossing
     // goes via the world it is leaving, at full strength, before it goes
@@ -258,7 +260,7 @@ export class ZoneDirector {
     // so the sunlit building lost every shadow it had while the camera was
     // still fifty metres away looking straight at it. It is handed over with
     // the release instead.
-    if (!this.departing) this.aim(definition);
+    if (!this.departing) this.aim(zone);
     return zone;
   }
 
@@ -281,10 +283,15 @@ export class ZoneDirector {
     return zone;
   }
 
-  /** Points the key light and its shadow frustum at a zone. */
-  private aim(definition: ZoneDefinition): void {
+  /**
+   * Hands a zone everything that belongs to whichever one is being looked at:
+   * the key light's target, its shadow frustum, and the sky.
+   */
+  private aim(zone: ActiveZone): void {
+    const { definition } = zone;
     this.world.setLightTarget(definition.origin);
     this.world.fitShadow(definition.shadow.radius, definition.shadow.far);
+    zone.instance?.takeSky?.();
   }
 
   private releaseDeparting(): void {
@@ -293,7 +300,7 @@ export class ZoneDirector {
     this.departing = null;
     this.park(departing.zone);
     // Deferred to here rather than done at mount — see `mount`.
-    if (this.active) this.aim(this.active.definition);
+    if (this.active) this.aim(this.active);
   }
 
   private park(zone: ActiveZone): void {
