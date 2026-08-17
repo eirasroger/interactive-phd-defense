@@ -43,7 +43,6 @@
   text-transform: uppercase;
 }
 
-
 .leverage-fill[data-series='ability'] {
   fill: color-mix(in srgb, var(--c-circular) 13%, transparent);
 }

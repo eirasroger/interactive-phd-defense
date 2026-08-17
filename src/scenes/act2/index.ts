@@ -1,7 +1,7 @@
-import { ROOM, SECTION, SPINE, STATIONS, WING } from '@/config/corridor';
+import { CROSS, ROOM, SHOT, STATIONS, shotAt } from '@/config/corridor';
 import { ZONE_ORIGIN } from '@/config/layout';
 import { AT_THRESHOLD, DOORS_AT } from '@/animations/entry';
-import { act2Captions } from '@/content/act2';
+import { act2Captions, act2Figures } from '@/content/act2';
 import type { CameraPose, Vec3 } from '@/engine/camera/types';
 import type { SceneDefinition } from '@/engine/scene/types';
 import { CORRIDOR_ASSETS, corridorZone } from '@/world/corridor/CorridorZone';
@@ -13,7 +13,6 @@ const CHAPTER = 'Act II — The Corridor';
 
 const ENTRY_SECONDS = 9.0;
 
-const EYE = SECTION.floor + 1.58;
 const HALF = ROOM.length / 2;
 
 const at = ([x, y, z]: Vec3): Vec3 => [
@@ -22,47 +21,21 @@ const at = ([x, y, z]: Vec3): Vec3 => [
   z + ZONE_ORIGIN.corridor[2],
 ];
 
-/**
- * One pose per contribution, authored in corridor coordinates: the mouth is
- * z 0 and a station `z` metres in sits at `-z`.
- *
- * Poses stand on the axis and only the aim varies, so travel between stations
- * cannot clip a link wall.
- */
 const station = (index: number): CameraPose => {
-  const entry = STATIONS[index];
-  const z = -(entry?.z ?? 0);
-  const x = entry?.x ?? 0;
-  const wing = entry?.wing ?? 0;
-
-  if (x !== 0) {
-    return {
-      position: at([0, EYE, z + HALF - 2.0]),
-      target: at([x * 1.02, EYE - 0.12, z - 0.6]),
-      fov: 60,
-    };
-  }
-
-  if (wing !== 0) {
-    return {
-      position: at([0, EYE, z + HALF - 1.0]),
-      target: at([wing * 2.2, EYE - 0.14, z - HALF * 0.5]),
-      fov: 54,
-    };
-  }
-
+  const shot = shotAt(index);
   return {
-    position: at([0, EYE, z + HALF - 1.2]),
-    target: at([0, EYE + 0.35, z - HALF - 2]),
-    fov: 54,
+    position: at(shot.position as Vec3),
+    target: at(shot.target as Vec3),
+    fov: SHOT.fov,
+    approach: 'lead',
+    via: at(shot.via as Vec3),
   };
 };
 
 const slide = (
-  id: string,
+  id: keyof typeof act2Captions,
   title: string,
   index: number,
-  caption: (typeof act2Captions)[keyof typeof act2Captions],
 ): SceneDefinition => ({
   id,
   title,
@@ -71,21 +44,21 @@ const slide = (
   world: 'foreground',
   pose: station(index),
   assets: [...CORRIDOR_ASSETS],
-  create: () => new StationScene(caption),
+  create: () => new StationScene({ caption: act2Captions[id], figures: act2Figures[id] }),
 });
 
 export const act2Scenes: readonly SceneDefinition[] = [
   {
-    ...slide('c1', 'Decision framework', 0, act2Captions.c1),
+    ...slide('c1', 'Decision framework', 0),
     crossing: {
       seconds: ENTRY_SECONDS,
       releaseAtZ: THRESHOLD_Z + ZONE_ORIGIN.exterior[2],
     },
   },
-  slide('c2', 'Empirical characterisation', 1, act2Captions.c2),
-  slide('c3', 'Screening agent', 2, act2Captions.c3),
-  slide('c4', 'Inference', 3, act2Captions.c4),
-  slide('c5', 'Context-adaptive recommender', 4, act2Captions.c5),
+  slide('c2', 'Empirical characterisation', 1),
+  slide('c3', 'Screening agent', 2),
+  slide('c4', 'Inference', 3),
+  slide('c5', 'Context-adaptive recommender', 4),
 ];
 
 function assertDoorsClear(seconds: number): void {
@@ -100,19 +73,16 @@ function assertDoorsClear(seconds: number): void {
   }
 }
 
-/** Every pose has to stand inside the shell, not in the wall behind it. */
 function assertInside(scenes: readonly SceneDefinition[]): void {
   const back = (STATIONS[4]?.z ?? 0) + HALF;
-  for (const [index, entry] of scenes.entries()) {
-    const home = STATIONS[index];
+  for (const entry of scenes) {
     const z = entry.pose.position[2] - ZONE_ORIGIN.corridor[2];
     const x = entry.pose.position[0] - ZONE_ORIGIN.corridor[0];
     if (z > 0 || -z > back) {
       throw new Error(`Act II: ${entry.id} stands at z ${z.toFixed(2)}, outside 0..-${back}.`);
     }
-    const reach = home && home.x !== 0 ? SPINE : ROOM.width / 2 + WING.depth;
-    if (Math.abs(x) > reach) {
-      throw new Error(`Act II: ${entry.id} stands at x ${x.toFixed(2)}, outside ±${reach}.`);
+    if (Math.abs(x) > CROSS) {
+      throw new Error(`Act II: ${entry.id} stands at x ${x.toFixed(2)}, outside ±${CROSS}.`);
     }
   }
 }

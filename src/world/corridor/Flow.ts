@@ -19,21 +19,16 @@ const CORNER = { radius: 1.5, samples: 8 } as const;
 /**
  * A channel, and what travels in it.
  *
- * Every route here is inference-time — material handed to C5 for each
- * recommendation — so every one of them carries discrete tokens moving at a
- * legible speed, and branches. The design-time edge, C2 → C5, is not in this
- * file at all, and is not currently drawn anywhere: see `decisions.md` §40 for
- * why a channel could not carry it and `world_design.md` §8.1 for the open
- * question of the floor's two layers, which is where it belongs.
+ * Every route here is inference-time, so each carries discrete tokens moving at
+ * a legible speed, and branches. The design-time edge C2 -> C5 is not drawn:
+ * see `decisions.md` §40 and `world_design.md` §8.1.
  *
- * **Inlaid in the floor, where the earlier design had it at eye level.**
- * `world_design.md` §1 asks for channels at eye level, which is a rule authored
- * for a groove recessed in a wall. What the runtime draws is a ribbon lying in
- * the horizontal plane, and a horizontal ribbon 27 cm under the camera does not
- * read as a channel at eye level — it passes beneath the lens and floods the
- * bottom of every station shot in Act II. Inlaid, both scales work: at standing
- * height it is a lit strip running away down the middle of the floor, and from
- * the overlook it is a line on a drawing.
+ * Drawn only once the roof is off. Ambient and always on, it put a saturated
+ * teal strip down the middle of every station shot - a claim about the whole
+ * pipeline made five times while the presenter talks about one contribution.
+ *
+ * Inlaid in the floor rather than at eye level: a horizontal ribbon 27 cm under
+ * the camera floods the bottom of the frame (`learnings.md` §52).
  */
 const CHANNEL = {
   y: SECTION.floor + 0.03,
@@ -78,6 +73,7 @@ uniform float uTrace;
 uniform float uEdge;
 uniform float uFade;
 uniform float uSpan;
+uniform float uReveal;
 uniform vec3 fogColor;
 uniform float fogNear;
 uniform float fogFar;
@@ -94,7 +90,7 @@ void main() {
   float trace = uTrace * (1.0 - smoothstep(0.0, wake, abs(lead)));
   float level = uBase + token * token * uLead + trace * trace * 3.0;
   float haze = 1.0 - smoothstep(fogNear, fogFar, vDepth);
-  float alpha = core * ends * haze;
+  float alpha = core * ends * haze * uReveal;
   if (alpha < 0.004) discard;
   gl_FragColor = vec4(uColor * level, alpha);
 }
@@ -104,8 +100,10 @@ export interface Flow {
   readonly object: Group;
   update(dt: number): void;
   /**
-   * Releases one token at the mouth and follows it to C5 through both branches.
-   * `settle` puts it at rest for a beat reached backwards or by jump.
+   * Draws the network and releases one token at the mouth, following it to C5
+   * through both branches. Off, the ribbons are not drawn at all — in Act II
+   * the flow does not exist. `settle` puts it at rest for a beat reached
+   * backwards or by jump.
    */
   trace(on: boolean, settle: boolean): void;
   suspend(): void;
@@ -113,20 +111,14 @@ export interface Flow {
 }
 
 /**
- * The pipeline, running.
- *
- * Ambient and always on, so the landing frame at C1 is alive before a word is
- * spoken and the plan view reveals a system already in motion rather than a
- * diagram being drawn. It belongs to the zone rather than to any scene for the
- * same reason: sixteen scenes look at it and none of them owns it.
- *
- * One ribbon per route, animated entirely in the fragment shader against a
- * shared clock. Nothing is stepped on the CPU, so the overhead pose — where
- * every route is on screen at once — costs exactly what a station pose costs.
+ * The pipeline, running. One ribbon per route, animated entirely in the fragment
+ * shader against a shared clock, so the overhead pose costs what a station pose
+ * costs. It belongs to the zone rather than any scene: sixteen scenes look at it.
  */
 export function createFlow(): Flow {
   const object = new Group();
   object.name = 'flow';
+  object.visible = false;
 
   const lengths = new Map<number, number>();
   const built = FLOW_ROUTES.map((route) => {
@@ -155,12 +147,39 @@ export function createFlow(): Flow {
   const network = reached;
   let clock = 0;
   let running: gsap.core.Tween | null = null;
+  const shown = { level: 0 };
+  let fading: gsap.core.Tween | null = null;
 
   const set = (name: string, value: number): void => {
     for (const material of materials) {
       const uniform = material.uniforms[name];
       if (uniform) uniform.value = value;
     }
+  };
+
+  const show = (on: boolean, settle: boolean): void => {
+    fading?.kill();
+    fading = null;
+
+    if (!on || settle) {
+      shown.level = on ? 1 : 0;
+      set('uReveal', shown.level);
+      object.visible = on;
+      return;
+    }
+
+    object.visible = true;
+    fading = gsap.fromTo(
+      shown,
+      { level: 0 },
+      {
+        level: 1,
+        duration: REVEAL.seconds,
+        delay: REVEAL.delay,
+        ease: 'power2.out',
+        onUpdate: () => set('uReveal', shown.level),
+      },
+    );
   };
 
   return {
@@ -172,12 +191,12 @@ export function createFlow(): Flow {
     },
 
     trace(on, settle) {
-      // Asked for on every scene entry, so a pass already under way is left
-      // alone rather than restarted from the mouth each time.
       if (on && running) return;
 
       running?.kill();
       running = null;
+
+      show(on, settle);
 
       if (!on) {
         set('uTrace', 0);
@@ -186,10 +205,6 @@ export function createFlow(): Flow {
 
       set('uTrace', 1);
 
-      // Repeating, and released at the mouth every time. A single pass leaves
-      // the beat with nothing on screen the moment it lands, and this is the
-      // beat the presenter talks over: what the audience should be able to look
-      // back at is the pass, not the fact that one happened.
       const head = { at: -TRACE_WAKE };
       running = gsap.fromTo(
         head,
@@ -209,10 +224,13 @@ export function createFlow(): Flow {
     suspend() {
       running?.kill();
       running = null;
+      fading?.kill();
+      fading = null;
     },
 
     dispose() {
       running?.kill();
+      fading?.kill();
       for (const material of materials) material.dispose();
       for (const { geometry } of built) geometry.dispose();
     },
@@ -223,6 +241,8 @@ const TRACE_SECONDS = 6.4;
 const TRACE_REST = 1.4;
 /** How far the pulse's tail reaches behind it, and how far it starts outside. */
 const TRACE_WAKE = 12;
+
+const REVEAL = { delay: 3.0, seconds: 1.8 } as const;
 
 function channel(origin: number, span: number): ShaderMaterial {
   const spec = CHANNEL;
@@ -244,6 +264,7 @@ function channel(origin: number, span: number): ShaderMaterial {
         uEdge: { value: spec.edge },
         uFade: { value: spec.fade },
         uSpan: { value: span },
+        uReveal: { value: 0 },
       },
     ]),
     vertexShader: VERTEX,

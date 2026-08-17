@@ -1,3 +1,4 @@
+import { STAGE } from './presentation';
 import plan from './corridorPlan.json';
 
 const SCALE = plan.metresPerUnit;
@@ -236,3 +237,162 @@ export const RISE = {
   opens: 1,
   lift: 24,
 } as const;
+
+export interface Screen {
+  readonly key: string;
+  readonly centre: PlanPoint3;
+  readonly normal: PlanPoint3;
+  readonly width: number;
+  readonly height: number;
+  readonly ceiling: number;
+  readonly depth: number;
+  readonly clear: { readonly across: readonly [number, number]; readonly head: number };
+}
+
+export type PlanPoint3 = readonly [number, number, number];
+
+/** Slide size is fixed and the camera distance derived, so every station lands on the same pixels. */
+export const SLIDE = {
+  height: 2.9,
+  y: 1.83,
+} as const;
+
+export const SHOT = { fov: 52, fill: 0.86 } as const;
+
+const DEGREES = Math.PI / 180;
+const HALF_V = Math.tan((SHOT.fov / 2) * DEGREES);
+const HALF_FRAME = HALF_V * (STAGE.width / STAGE.height);
+
+const SLIDE_WIDTH = (SLIDE.height * 16) / 9;
+
+export const SHOT_DISTANCE = SLIDE_WIDTH / (2 * SHOT.fill * HALF_FRAME);
+
+export const EYE = SECTION.floor + 1.58;
+
+/** Where the projected quad lands on screen, as fractions of the stage rather than pixels. */
+export const SLIDE_RECT = (() => {
+  const halfHeight = SLIDE.height / 2 / SHOT_DISTANCE / HALF_V;
+  const centreY = (SLIDE.y - EYE) / SHOT_DISTANCE / HALF_V;
+  return {
+    left: (1 - SHOT.fill) / 2,
+    top: (1 - (centreY + halfHeight)) / 2,
+    width: SHOT.fill,
+    height: halfHeight,
+  };
+})();
+
+/** Clear band on a room wall, between the bronze reveal and the lit trough. */
+const CLEAR = { foot: SECTION.floor + 0.19, headroom: 0.78 } as const;
+
+const roomHead = SECTION.floor + SECTION.roomHeight - CLEAR.headroom;
+
+const along = (stationZ: number): number => -stationZ;
+
+const wallScreen = (
+  key: string,
+  x: number,
+  stationZ: number,
+  inset: number,
+  depth: number,
+): Screen => {
+  const half = ROOM.length / 2 - inset;
+  return {
+    key,
+    centre: [x, SLIDE.y, along(stationZ)],
+    normal: [x < 0 ? 1 : -1, 0, 0],
+    width: SLIDE_WIDTH,
+    height: SLIDE.height,
+    ceiling: SECTION.floor + SECTION.roomHeight,
+    depth,
+    clear: { across: [along(stationZ + half), along(stationZ - half)], head: roomHead },
+  };
+};
+
+const TERMINAL_DROP = 1.5;
+
+const terminalScreen = (): Screen => ({
+  key: 'C5',
+  centre: [0, SLIDE.y, along(RUN)],
+  normal: [0, 0, 1],
+  width: SLIDE_WIDTH,
+  height: SLIDE.height,
+  ceiling: SECTION.floor + SECTION.terminalHeight,
+  depth: ROOM.length,
+  clear: {
+    across: [-ROOM.width / 2, ROOM.width / 2],
+    head: SECTION.floor + SECTION.terminalHeight - TERMINAL_DROP,
+  },
+});
+
+export const SCREENS: readonly Screen[] = [
+  wallScreen('C1', wingWall(-1), (STATIONS[0] as Station).z, WING.return, WING.depth + ROOM.width),
+  wallScreen('C2', wingWall(1), (STATIONS[1] as Station).z, WING.return, WING.depth + ROOM.width),
+  wallScreen('C3', laneAt('high') - HALF_WIDTH, (STATIONS[2] as Station).z, 0, ROOM.width),
+  wallScreen('C4', laneAt('low') + HALF_WIDTH, (STATIONS[3] as Station).z, 0, ROOM.width),
+  terminalScreen(),
+];
+
+/** Square-on and level: aiming up at the slide would keystone the wall it is thrown on. */
+export const shotAt = (
+  index: number,
+): { position: PlanPoint3; target: PlanPoint3; via: PlanPoint3 } => {
+  const screen = SCREENS[index];
+  if (!screen) throw new Error(`Corridor: no screen at station ${index}.`);
+
+  const [sx, , sz] = screen.centre;
+  const [nx, , nz] = screen.normal;
+  const position: PlanPoint3 = [sx + nx * SHOT_DISTANCE, EYE, sz + nz * SHOT_DISTANCE];
+
+  const via: PlanPoint3 = nz !== 0 ? position : [0, EYE, sz];
+
+  return { position, target: [sx, EYE, sz], via };
+};
+
+function assertOnWall(screens: readonly Screen[]): void {
+  for (const screen of screens) {
+    const top = screen.centre[1] + screen.height / 2;
+    const foot = screen.centre[1] - screen.height / 2;
+    if (foot < CLEAR.foot || top > screen.clear.head) {
+      throw new Error(
+        `Corridor: screen ${screen.key} spans ${foot.toFixed(2)}..${top.toFixed(2)} m high, ` +
+          `outside the clear band ${CLEAR.foot.toFixed(2)}..${screen.clear.head.toFixed(2)} m.`,
+      );
+    }
+
+    const axis = Math.abs(screen.normal[0]) > 0.5 ? 2 : 0;
+    const [low, high] = screen.clear.across;
+    const near = (screen.centre[axis] as number) - screen.width / 2;
+    const far = (screen.centre[axis] as number) + screen.width / 2;
+    if (near < Math.min(low, high) || far > Math.max(low, high)) {
+      throw new Error(
+        `Corridor: screen ${screen.key} runs ${near.toFixed(2)}..${far.toFixed(2)} along a ` +
+          `wall clear only over ${Math.min(low, high).toFixed(2)}..${Math.max(low, high).toFixed(2)}.`,
+      );
+    }
+  }
+}
+
+function assertPairedWithStations(screens: readonly Screen[]): void {
+  const stations = STATIONS.map((station) => station.key).join(',');
+  const keys = screens.map((screen) => screen.key).join(',');
+  if (stations !== keys) {
+    throw new Error(`Corridor: screens [${keys}] do not match stations [${stations}].`);
+  }
+}
+
+function assertStandingRoom(screens: readonly Screen[]): void {
+  const clearance = 0.4;
+  for (const screen of screens) {
+    if (SHOT_DISTANCE + clearance > screen.depth) {
+      throw new Error(
+        `Corridor: ${screen.key} is composed from ${SHOT_DISTANCE.toFixed(2)} m off its wall, ` +
+          `but only ${screen.depth.toFixed(2)} m of room stands behind that point. ` +
+          `Raise SHOT.fill, narrow SHOT.fov, or shrink SLIDE.height.`,
+      );
+    }
+  }
+}
+
+assertOnWall(SCREENS);
+assertPairedWithStations(SCREENS);
+assertStandingRoom(SCREENS);

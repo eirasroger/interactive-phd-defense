@@ -2,7 +2,7 @@ import gsap from 'gsap';
 import type { PerspectiveCamera } from 'three';
 import { CAMERA_DEFAULTS, TRANSITION } from '@/config/presentation';
 import { EASE, seconds } from '@/animations/timing';
-import type { CameraRig } from './CameraRig';
+import { LEAD, levelTravel, turnOffAt, type CameraRig } from './CameraRig';
 import type { CameraMoveOptions, CameraPose, Vec3 } from './types';
 
 /**
@@ -49,7 +49,7 @@ export class CameraDirector {
     }
 
     s.arc = pose.arc ?? 0;
-    this.rig.beginMove(pose);
+    this.rig.beginMove(pose, duration);
 
     // Only the position, the lens and the progress are tweened. The look
     // target is the rig's own business for the length of the move — see
@@ -90,12 +90,30 @@ export class CameraDirector {
 function paceOf(from: CameraPose, to: CameraPose): number {
   const { metresPerSecond, degreesPerSecond, minSeconds, maxSeconds } = TRANSITION.camera;
 
-  const travel = length(delta(from.position, to.position));
-  const swing = (Math.acos(dot(headingOf(from), headingOf(to))) * 180) / Math.PI;
+  const distance = to.via
+    ? length(delta(from.position, to.via)) + length(delta(to.via, to.position))
+    : length(delta(from.position, to.position));
 
-  const wanted = Math.max(travel / metresPerSecond, swing / degreesPerSecond);
-  return Math.min(maxSeconds, Math.max(minSeconds, wanted));
+  const lead = to.approach === 'lead' ? levelTravel(from.position, to.position) : null;
+
+  if (!lead) {
+    const swing = arcBetween(headingOf(from), headingOf(to));
+    const wanted = Math.max(distance / metresPerSecond, swing / degreesPerSecond);
+    return Math.min(maxSeconds, Math.max(minSeconds, wanted));
+  }
+
+  const arriving = arcBetween(lead, headingOf(to));
+  const turnsOnArrival = arriving > (LEAD.minArrival * 180) / Math.PI;
+  const offAt = turnOffAt(from.position, to.position);
+
+  const onto = arcBetween(headingOf(from), lead) / (LEAD.degreesPerSecond * LEAD.onto);
+  const off = turnsOnArrival ? arriving / (LEAD.degreesPerSecond * (1 - offAt)) : 0;
+
+  const wanted = Math.max(distance / metresPerSecond, onto, off);
+  return Math.min(LEAD.maxSeconds, Math.max(minSeconds, wanted));
 }
+
+const arcBetween = (a: Vec3, b: Vec3): number => (Math.acos(dot(a, b)) * 180) / Math.PI;
 
 function headingOf(pose: CameraPose): Vec3 {
   const heading = delta(pose.position, pose.target);

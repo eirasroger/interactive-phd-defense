@@ -26,10 +26,8 @@ LENS_MM = 28.0
 
 ACCENT = (0.10, 0.66, 0.80)
 
-
 def station_y(index: int) -> float:
     return APPROACH_END + STATION_GAP * index
-
 
 def purge() -> None:
     """Empty the scene without `read_factory_settings`, which unregisters
@@ -38,7 +36,6 @@ def purge() -> None:
         for datablock in list(collection):
             collection.remove(datablock, do_unlink=True)
     bpy.context.scene.unit_settings.scale_length = 1.0
-
 
 def make_material(name, colour, roughness=0.8, metallic=0.0, emission=None, strength=4.0):
     material = bpy.data.materials.new(f"mat_{name}")
@@ -52,7 +49,6 @@ def make_material(name, colour, roughness=0.8, metallic=0.0, emission=None, stre
         bsdf.inputs["Emission Strength"].default_value = strength
     return material
 
-
 def make_box(name, size, location, material):
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=location)
     box = bpy.context.active_object
@@ -62,12 +58,10 @@ def make_box(name, size, location, material):
     box.data.materials.append(material)
     return box
 
-
 def build_floor(material) -> None:
     near = APPROACH_RUNUP
     far = station_y(len(STATIONS) - 1) - HORIZON_RUNOFF
     make_box("floor", (CORRIDOR_WIDTH + 12.0, near - far, 0.4), (0, (near + far) / 2.0, -0.2), material)
-
 
 def build_station(index: int, frame, edge) -> None:
     sid = STATIONS[index]
@@ -85,7 +79,6 @@ def build_station(index: int, frame, edge) -> None:
     make_box(f"{sid}_edge_t", (CORRIDOR_WIDTH - POST, inset, inset), (0, face, CORRIDOR_HEIGHT - POST * 0.5), edge)
     make_box(f"{sid}_sill", (CORRIDOR_WIDTH + POST, POST, 0.12), (0, y, 0.06), edge)
 
-
 def add_light(name: str, y: float, energy: float) -> None:
     data = bpy.data.lights.new(name, type='AREA')
     data.energy = energy
@@ -95,7 +88,6 @@ def add_light(name: str, y: float, energy: float) -> None:
     # Above the lintel: at station height the fixture itself is in shot.
     lamp.location = (0, y, CORRIDOR_HEIGHT + 1.6)
     bpy.context.collection.objects.link(lamp)
-
 
 def build_world() -> None:
     scene = bpy.context.scene
@@ -125,7 +117,6 @@ def build_world() -> None:
         if hasattr(scene.eevee, attribute):
             setattr(scene.eevee, attribute, value)
 
-
 def add_camera(y: float) -> bpy.types.Object:
     data = bpy.data.cameras.new("presenter")
     data.lens = LENS_MM
@@ -138,7 +129,6 @@ def add_camera(y: float) -> bpy.types.Object:
     bpy.context.collection.objects.link(camera)
     bpy.context.scene.camera = camera
     return camera
-
 
 def build() -> None:
     purge()
@@ -158,7 +148,6 @@ def build() -> None:
     build_world()
     add_camera(-12.0)
 
-
 def render(path: Path) -> None:
     scene = bpy.context.scene
     scene.render.filepath = str(path)
@@ -169,7 +158,6 @@ def render(path: Path) -> None:
     bpy.ops.render.render(write_still=True)
     print(f"[corridor] wrote {path}")
 
-
 def main() -> None:
     build()
     print(f"[corridor] stations at y: {[station_y(i) for i in range(len(STATIONS))]}")
@@ -178,7 +166,6 @@ def main() -> None:
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     if "--render" in argv:
         render(Path(argv[argv.index("--render") + 1]).resolve())
-
 
 if __name__ == "__main__":
     main()

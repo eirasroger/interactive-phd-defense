@@ -7,6 +7,8 @@ import type { ZoneContext, ZoneDefinition, ZoneInstance } from '@/engine/world/t
 import { sharpen } from '@/world/exterior/building';
 import { createFlow, type Flow } from './Flow';
 import { createPlanDrawing, type PlanDrawing } from './PlanDrawing';
+import { createProjection, type Projection } from './Projection';
+import { createProjector, type Projector } from './Projector';
 
 export const SHELL_ASSET = 'corridorShell';
 export const CEILING_ASSET = 'corridorCeiling';
@@ -169,6 +171,8 @@ class Corridor implements ZoneInstance {
   private readonly lights: PointLight[] = [];
   private readonly flow: Flow;
   private readonly plan: PlanDrawing;
+  private readonly projection: Projection;
+  private readonly projector: Projector;
   private readonly shell: Object3D;
   private readonly skins: readonly Skin[];
   private readonly drain = { level: 0 };
@@ -203,7 +207,14 @@ class Corridor implements ZoneInstance {
 
     this.flow = createFlow();
     this.plan = createPlanDrawing();
-    this.root.add(this.flow.object, this.plan.object);
+    this.projection = createProjection();
+    this.projector = createProjector();
+    this.root.add(
+      this.flow.object,
+      this.plan.object,
+      this.projection.object,
+      this.projector.object,
+    );
 
     this.lightEnfilade();
     stage.add(this.root);
@@ -269,6 +280,8 @@ class Corridor implements ZoneInstance {
     const open = progress >= RISE.opens;
     this.setCeiling(!open, animate);
     this.flow.trace(open, !animate);
+    this.projection.setProgress(progress, animate);
+    this.projector.setProgress(progress, animate);
   }
 
   private setCeiling(closed: boolean, animate: boolean): void {
@@ -360,6 +373,8 @@ class Corridor implements ZoneInstance {
       skin.material.emissiveIntensity = skin.emissive * (1 - level);
     }
     for (const light of this.lights) light.intensity = COVE.intensity * (1 - level);
+    this.projection.setLevel(1 - level);
+    this.projector.setLevel(1 - level);
     // A drained shell is a black solid standing over a drawing lying on the
     // floor, and it hides most of it. Once it is carrying no information it
     // stops being drawn at all — at 0.97 of the way to black there is nothing
@@ -381,6 +396,8 @@ class Corridor implements ZoneInstance {
     gsap.killTweensOf(this.drain);
     this.flow.dispose();
     this.plan.dispose();
+    this.projection.dispose();
+    this.projector.dispose();
     this.root.traverse((child) => {
       const mesh = child as Mesh;
       if (mesh.isMesh) mesh.geometry.dispose();

@@ -21,7 +21,6 @@ LAYERS = [
     ("cladding", 0.16, (0.82, 0.84, 0.87), 0.35, 0.1),
 ]
 
-
 def reset_scene() -> None:
     """Empty the scene without resetting the application."""
     for collection in (bpy.data.objects, bpy.data.meshes, bpy.data.materials):
@@ -32,7 +31,6 @@ def reset_scene() -> None:
     # inheriting whatever the running Blender happens to be set to.
     bpy.context.scene.unit_settings.scale_length = 1.0
 
-
 def make_material(name: str, colour: tuple[float, float, float], roughness: float, metallic: float):
     material = bpy.data.materials.new(name=f"mat_{name}")
     material.use_nodes = True
@@ -41,7 +39,6 @@ def make_material(name: str, colour: tuple[float, float, float], roughness: floa
     bsdf.inputs["Roughness"].default_value = roughness
     bsdf.inputs["Metallic"].default_value = metallic
     return material
-
 
 def make_panel(name: str, thickness: float, z: float, material) -> None:
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.0, 0.0, z))
@@ -60,7 +57,6 @@ def make_panel(name: str, thickness: float, z: float, material) -> None:
     panel.data.materials.append(material)
     bpy.ops.object.shade_smooth_by_angle(angle=0.523599)
 
-
 def build() -> None:
     reset_scene()
 
@@ -69,7 +65,6 @@ def build() -> None:
         z += thickness / 2.0
         make_panel(name, thickness, z, make_material(name, colour, roughness, metallic))
         z += thickness / 2.0
-
 
 def export() -> None:
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
@@ -85,11 +80,9 @@ def export() -> None:
     )
     print(f"[assembly] wrote {OUTPUT} ({OUTPUT.stat().st_size / 1024:.1f} KB)")
 
-
 def main() -> None:
     build()
     export()
-
 
 if __name__ == "__main__":
     try:

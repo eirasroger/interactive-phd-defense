@@ -38,12 +38,10 @@ WANTED = {
 # Flowers read as purple in the albedo, not as a separate slot.
 FLOWER_NAMES = ("flower", "blossom", "petal", "bloom")
 
-
 def clear() -> None:
     for collection in (bpy.data.objects, bpy.data.meshes, bpy.data.materials, bpy.data.images):
         for item in list(collection):
             collection.remove(item)
-
 
 def load(asset: str) -> list:
     blends = sorted((ASSET_DIR / asset).glob("*.blend"))
@@ -54,7 +52,6 @@ def load(asset: str) -> list:
     with bpy.data.libraries.load(str(blends[0]), link=False) as (source, loaded):
         loaded.objects = list(source.objects)
     return [obj for obj in loaded.objects if obj and obj.type == 'MESH']
-
 
 def seat(objects, name: str) -> None:
     """Drop the group to the origin, base on the ground, transforms applied."""
@@ -82,12 +79,10 @@ def seat(objects, name: str) -> None:
         obj.location -= Vector((centre.x, centre.y, low))
     bpy.ops.object.transform_apply(location=True)
 
-
 # A lamp post is a pole and a lantern. Anything past this is scan detail nobody
 # reads at the four metres a lamp is ever seen from.
 PROP_BUDGET = 5000
 CARD_FLOOR = 1500
-
 
 def thin(objects, budget: int) -> int:
     removed = 0
@@ -103,7 +98,6 @@ def thin(objects, budget: int) -> int:
         bpy.ops.object.modifier_apply(modifier="thin")
         removed += faces - len(obj.data.polygons)
     return removed
-
 
 def grade(objects) -> int:
     seen: set[str] = set()
@@ -135,7 +129,6 @@ def grade(objects) -> int:
                 # thrown away.
                 image.pack()
     return tinted
-
 
 def main() -> None:
     clear()
@@ -183,7 +176,6 @@ def main() -> None:
         export_jpeg_quality=72,
     )
     print(f"[park] wrote {OUTPUT} ({OUTPUT.stat().st_size / 1e6:.1f} MB)")
-
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-import { PerspectiveCamera, Vector3 } from 'three';
+import { CatmullRomCurve3, PerspectiveCamera, Vector3 } from 'three';
 import { CAMERA_DEFAULTS, ORIGIN_POSE } from '@/config/presentation';
 import type { CameraPose, Vec3 } from './types';
 
@@ -44,10 +44,17 @@ export class CameraRig {
   private readonly heading = new Vector3();
   private readonly from = new Vector3();
   private readonly to = new Vector3();
+  private readonly via = new Vector3();
   private readonly destination = new Vector3();
   private fromReach = 1;
   private toReach = 1;
   private moving = false;
+  private leading = false;
+  private offAt: number = LEAD.off;
+  private ontoAt: number = LEAD.onto;
+  private route: CatmullRomCurve3 | null = null;
+  private readonly waypoint = new Vector3();
+  private parkedVia: Vec3 | null = null;
 
   constructor(aspect: number) {
     this.camera = new PerspectiveCamera(
@@ -71,7 +78,7 @@ export class CameraRig {
    * pose, so a move interrupted halfway sweeps on from where the camera
    * actually is instead of from where it was last told to be.
    */
-  beginMove(pose: CameraPose): void {
+  beginMove(pose: CameraPose, duration = 0): void {
     const s = this.state;
     this.fromReach = reach(this.from.set(s.tx - s.px, s.ty - s.py, s.tz - s.pz));
     this.toReach = reach(
@@ -81,15 +88,54 @@ export class CameraRig {
         pose.target[2] - pose.position[2],
       ),
     );
+    const here: Vec3 = [s.px, s.py, s.pz];
+    this.route = this.routeFor(here, pose);
+    this.parkedVia = pose.via ?? null;
+
+    const travel = levelTravel(here, pose.position);
+    if (travel) this.via.set(travel[0], travel[1], travel[2]);
+    if (travel && this.route) {
+      this.route.getTangentAt(0.5, this.waypoint);
+      this.waypoint.y = 0;
+      if (this.waypoint.lengthSq() > 1e-6) this.via.copy(this.waypoint).normalize();
+    }
+
+    this.leading = pose.approach === 'lead' && travel !== null;
+
+    const turnsOnArrival = angleBetween(this.via, this.to) > LEAD.minArrival;
+    this.offAt = turnsOnArrival ? turnOffAt(here, pose.position) : 1;
+    this.ontoAt = turnsOnArrival
+      ? Math.min(LEAD.onto, this.offAt - LEAD.minHold)
+      : turnShare(angleBetween(this.from, this.via), duration);
+
     this.destination.set(pose.target[0], pose.target[1], pose.target[2]);
     this.moving = true;
     s.phase = 0;
+  }
+
+  private routeFor(from: Vec3, pose: CameraPose): CatmullRomCurve3 | null {
+    if (!pose.via) return null;
+
+    const points = [new Vector3(from[0], from[1], from[2])];
+    const push = (point: Vec3): void => {
+      const next = new Vector3(point[0], point[1], point[2]);
+      const last = points[points.length - 1] as Vector3;
+      if (next.distanceTo(last) > 0.05) points.push(next);
+    };
+
+    if (this.parkedVia) push(this.parkedVia);
+    push(pose.via);
+    push(pose.position);
+
+    if (points.length < 3) return null;
+    return new CatmullRomCurve3(points, false, 'catmullrom', 0.05);
   }
 
   /** Lands on the declared target exactly, whatever the last frame rounded to. */
   endMove(): void {
     const s = this.state;
     this.moving = false;
+    this.route = null;
     s.arc = 0;
     s.phase = 0;
     s.tx = this.destination.x;
@@ -101,13 +147,20 @@ export class CameraRig {
   apply(): void {
     const s = this.state;
 
+    if (this.moving && this.route) {
+      this.route.getPointAt(Math.min(Math.max(s.phase, 0), 1), this.waypoint);
+      s.px = this.waypoint.x;
+      s.py = this.waypoint.y;
+      s.pz = this.waypoint.z;
+    }
+
     // A half-sine arc peaks mid-move and vanishes at both ends, so the lift
     // never displaces the declared start or end pose.
     const lift = s.arc === 0 ? 0 : Math.sin(s.phase * Math.PI) * s.arc;
     this.camera.position.set(s.px, s.py + lift, s.pz);
 
     if (this.moving) {
-      slerp(this.from, this.to, s.phase, this.heading);
+      this.sweep(s.phase);
       this.lookTarget
         .copy(this.camera.position)
         .addScaledVector(this.heading, this.fromReach + (this.toReach - this.fromReach) * s.phase);
@@ -128,6 +181,22 @@ export class CameraRig {
     }
   }
 
+  private sweep(phase: number): void {
+    if (!this.leading) {
+      slerp(this.from, this.to, phase, this.heading);
+      return;
+    }
+
+    const { ontoAt, offAt: off } = this;
+    if (phase <= ontoAt) {
+      slerp(this.from, this.via, settle(phase / ontoAt), this.heading);
+    } else if (phase < off) {
+      this.heading.copy(this.via);
+    } else {
+      slerp(this.via, this.to, settle((phase - off) / (1 - off)), this.heading);
+    }
+  }
+
   /** Writes a pose immediately, with no interpolation. */
   snapTo(pose: CameraPose): void {
     const s = this.state;
@@ -138,6 +207,8 @@ export class CameraRig {
     s.arc = 0;
     s.phase = 0;
     this.moving = false;
+    this.route = null;
+    this.parkedVia = pose.via ?? null;
     this.apply();
   }
 
@@ -151,6 +222,48 @@ export class CameraRig {
     };
   }
 }
+
+export const LEAD = {
+  onto: 0.3,
+  turnWithin: 10,
+  off: 0.5,
+  offMax: 0.9,
+  minTravel: 1.5,
+  degreesPerSecond: 70,
+  maxSeconds: 6,
+  minArrival: 0.15,
+  turnFirst: 0.7,
+  minHold: 0.15,
+} as const;
+
+export function levelTravel(from: Vec3, to: Vec3): Vec3 | null {
+  const dx = to[0] - from[0];
+  const dz = to[2] - from[2];
+  const flat = Math.hypot(dx, dz);
+  if (flat < LEAD.minTravel) return null;
+  return [dx / flat, 0, dz / flat];
+}
+
+function turnShare(turn: number, duration: number): number {
+  if (duration <= 0) return LEAD.onto;
+  const seconds = (turn * 180) / Math.PI / LEAD.degreesPerSecond;
+  return Math.min(LEAD.turnFirst, Math.max(LEAD.onto, seconds / duration));
+}
+
+export function angleBetween(a: Vector3, b: Vector3): number {
+  return Math.acos(Math.min(Math.max(a.dot(b), -1), 1));
+}
+
+export function turnOffAt(from: Vec3, to: Vec3): number {
+  const flat = Math.hypot(to[0] - from[0], to[2] - from[2]);
+  const wanted = 1 - LEAD.turnWithin / Math.max(flat, 1e-3);
+  return Math.min(LEAD.offMax, Math.max(LEAD.off, wanted));
+}
+
+const settle = (t: number): number => {
+  const clamped = Math.min(Math.max(t, 0), 1);
+  return clamped * clamped * (3 - 2 * clamped);
+};
 
 /** Normalises in place and returns the length it had. */
 function reach(vector: Vector3): number {
@@ -171,12 +284,20 @@ function reach(vector: Vector3): number {
  * when they are nearly opposed, where the arc is not unique. Neither case has a
  * visible difference; both have a division by zero.
  */
+const UP = new Vector3(0, 1, 0);
+const SIDE = new Vector3(1, 0, 0);
+
 function slerp(from: Vector3, to: Vector3, t: number, out: Vector3): Vector3 {
   const cosine = Math.min(Math.max(from.dot(to), -1), 1);
   const theta = Math.acos(cosine);
 
-  if (theta < 1e-3 || Math.PI - theta < 1e-3) {
-    return out.copy(from).lerp(to, t).normalize();
+  if (theta < 1e-3) {
+    return out.copy(to);
+  }
+
+  if (Math.PI - theta < 1e-3) {
+    const axis = Math.abs(from.y) > 0.99 ? SIDE : UP;
+    return out.copy(from).applyAxisAngle(axis, Math.PI * t);
   }
 
   const sine = Math.sin(theta);

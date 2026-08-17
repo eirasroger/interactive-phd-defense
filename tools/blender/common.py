@@ -20,6 +20,8 @@ RENDERS = WORK / "renders"
 
 DETAIL_SIZE = 2048
 DETAIL_NORMAL_STRENGTH = 0.9
+
+BAKE_MARGIN = 10
 DETAIL_UV = "detail"
 OCCLUSION_UV = "occlusion"
 GLTF_SETTINGS = "glTF Material Output"
@@ -27,14 +29,12 @@ GLTF_SETTINGS = "glTF Material Output"
 DETAIL_AXES = ((1, 2), (0, 2), (0, 1))
 LUMA = (0.2126, 0.7152, 0.0722)
 
-
 def use_scene(name: str):
     """Own the scene rather than inheriting whatever the file was last used for."""
     scene = bpy.data.scenes.get(name) or bpy.data.scenes.new(name)
     if bpy.context.window:
         bpy.context.window.scene = scene
     return scene
-
 
 def collection(scene_name: str, name: str):
     """An emptied collection inside this script's own scene."""
@@ -50,7 +50,6 @@ def collection(scene_name: str, name: str):
     if name not in scene.collection.children:
         scene.collection.children.link(existing)
     return existing
-
 
 def add_box(target, name: str, size, location, rotation=None):
     """An axis-aligned box with outward normals."""
@@ -81,13 +80,11 @@ def add_box(target, name: str, size, location, rotation=None):
     target.objects.link(obj)
     return obj
 
-
 def add_span(target, name: str, x, y, z, rotation=None):
     """A box given as three (low, high) intervals rather than a size and a centre."""
     size = (x[1] - x[0], y[1] - y[0], z[1] - z[0])
     centre = ((x[0] + x[1]) / 2.0, (y[0] + y[1]) / 2.0, (z[0] + z[1]) / 2.0)
     return add_box(target, name, size, centre, rotation)
-
 
 def boolean_cut(obj, cutter) -> None:
     modifier = obj.modifiers.new(name="cut", type="BOOLEAN")
@@ -97,7 +94,6 @@ def boolean_cut(obj, cutter) -> None:
     with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
         bpy.ops.object.modifier_apply(modifier=modifier.name)
 
-
 def bevel(obj, width: float = 0.02, segments: int = 2) -> None:
     modifier = obj.modifiers.new(name="bevel", type="BEVEL")
     modifier.width = width
@@ -106,7 +102,6 @@ def bevel(obj, width: float = 0.02, segments: int = 2) -> None:
     modifier.angle_limit = 0.785
     with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
         bpy.ops.object.modifier_apply(modifier=modifier.name)
-
 
 class Parts(dict):
     """Objects grouped by the material key they take."""
@@ -120,7 +115,6 @@ class Parts(dict):
 
     def all(self) -> list:
         return [obj for group in self.values() for obj in group]
-
 
 def join_all(parts: list, name: str):
     """One multi-material object with its origin at the world origin."""
@@ -136,7 +130,6 @@ def join_all(parts: list, name: str):
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     return obj
 
-
 def principled(name: str, base_color, roughness: float, metallic: float = 0.0):
     material = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     material.use_nodes = True
@@ -146,7 +139,6 @@ def principled(name: str, base_color, roughness: float, metallic: float = 0.0):
     bsdf.inputs["Metallic"].default_value = metallic
     return material
 
-
 def emissive_material(name: str, color, strength: float):
     material = principled(name, (0.0, 0.0, 0.0, 1.0), 1.0)
     bsdf = material.node_tree.nodes["Principled BSDF"]
@@ -154,14 +146,12 @@ def emissive_material(name: str, color, strength: float):
     bsdf.inputs["Emission Strength"].default_value = strength
     return material
 
-
 def glazing_material(name: str, base_color, alpha: float, roughness: float = 0.06):
     material = principled(name, base_color, roughness)
     bsdf = material.node_tree.nodes["Principled BSDF"]
     bsdf.inputs["Alpha"].default_value = alpha
     material.blend_method = 'BLEND'
     return material
-
 
 def apply_tint(image, color, amount: float = 1.0, relevel: bool = False) -> None:
     """Take luminance from the texture and hue from the palette."""
@@ -187,7 +177,6 @@ def apply_tint(image, color, amount: float = 1.0, relevel: bool = False) -> None
     rgba[:, :3] = numpy.clip(rgba[:, :3] * (1.0 - amount) + tinted * amount, 0.0, 1.0)
 
     image.pixels.foreach_set(rgba.reshape(-1))
-
 
 class Surfaces:
     """A script's palette: flat colours, tiling detail maps, and the UVs that address them."""
@@ -328,23 +317,26 @@ class Surfaces:
             for obj in group:
                 self.project(obj)
 
-
-def unwrap_occlusion(obj) -> None:
+def unwrap_occlusion(obj, size: int = 4096) -> None:
+    """Smart-project into an atlas of `size`. The UV gutter is derived from
+    BAKE_MARGIN rather than fixed, or it encodes an atlas size it never sees.
+    """
     mesh = obj.data
     layer = mesh.uv_layers.get(OCCLUSION_UV) or mesh.uv_layers.new(name=OCCLUSION_UV)
     mesh.uv_layers.active = layer
+
+    margin = (BAKE_MARGIN + 2) / float(size)
 
     bpy.ops.object.select_all(action='DESELECT')
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.006)
+    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=margin)
     bpy.ops.object.mode_set(mode='OBJECT')
 
     if mesh.uv_layers[0].name != DETAIL_UV:
         raise RuntimeError(f"{obj.name}: detail UVs must be first, got {mesh.uv_layers[0].name}")
-
 
 def gltf_settings_tree():
     """The one node group Blender's glTF exporter reads occlusion out of."""
@@ -355,7 +347,6 @@ def gltf_settings_tree():
     tree.interface.new_socket("Occlusion", in_out='INPUT', socket_type='NodeSocketFloat')
     tree.nodes.new("NodeGroupInput")
     return tree
-
 
 def wire_occlusion(obj, image) -> None:
     for material in obj.data.materials:
@@ -374,7 +365,6 @@ def wire_occlusion(obj, image) -> None:
         settings.location = (-380, -700)
         tree.links.new(node.outputs["Color"], settings.inputs["Occlusion"])
 
-
 def set_bake_target(obj, image) -> None:
     for material in obj.data.materials:
         tree = material.node_tree
@@ -386,13 +376,12 @@ def set_bake_target(obj, image) -> None:
         node.location = (-500, 320)
         tree.nodes.active = node
 
-
 def bake_into(obj, image, samples: int, distance: float) -> None:
     scene = bpy.context.scene
     scene.render.engine = 'CYCLES'
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
-    scene.render.bake.margin = 10
+    scene.render.bake.margin = BAKE_MARGIN
     scene.render.bake.margin_type = 'ADJACENT_FACES'
     scene.world.light_settings.distance = distance
 
@@ -402,14 +391,12 @@ def bake_into(obj, image, samples: int, distance: float) -> None:
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.bake(type='AO', use_clear=True)
 
-
 def bake_image(name: str, size: int, hdr: bool = False):
     """Removed before creation (§6b). `hdr` is required if it will be measured (§47)."""
     existing = bpy.data.images.get(name)
     if existing:
         bpy.data.images.remove(existing, do_unlink=True)
     return bpy.data.images.new(name, size, size, float_buffer=hdr)
-
 
 def report_levels(tag: str, name: str, image) -> None:
     """What an occlusion bake is worth checking for."""
@@ -423,13 +410,11 @@ def report_levels(tag: str, name: str, image) -> None:
           f"open {(values > 0.9).mean() * 100.0:.1f}%  "
           f"closed {(values < 0.1).mean() * 100.0:.1f}%")
 
-
 def isolate_materials(obj) -> None:
     """Give this asset private copies of every material it uses."""
     for slot in obj.material_slots:
         if slot.material:
             slot.material = slot.material.copy()
-
 
 def bake_irradiance(obj, image, samples: int) -> None:
     """Irradiance: DIFFUSE direct + indirect with the colour pass off."""
@@ -438,7 +423,7 @@ def bake_irradiance(obj, image, samples: int) -> None:
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     scene.cycles.max_bounces = 8
-    scene.render.bake.margin = 10
+    scene.render.bake.margin = BAKE_MARGIN
     scene.render.bake.margin_type = 'ADJACENT_FACES'
     scene.render.bake.use_pass_direct = True
     scene.render.bake.use_pass_indirect = True
@@ -450,10 +435,8 @@ def bake_irradiance(obj, image, samples: int) -> None:
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.bake(type='DIFFUSE', use_clear=True)
 
-
 def surface_area(obj) -> float:
     return float(sum(polygon.area for polygon in obj.data.polygons))
-
 
 def atlas_size(area: float, texels: int, smallest: int, largest: int) -> int:
     """Atlas side for a target texels-per-metre over a measured area."""
@@ -463,9 +446,7 @@ def atlas_size(area: float, texels: int, smallest: int, largest: int) -> int:
         size *= 2
     return size
 
-
 LIGHT_PERCENTILES = (50.0, 75.0, 90.0, 99.0)
-
 
 def report_light(tag: str, name: str, image) -> dict[float, float]:
     """Percentiles of a radiance bake. Grade against p75, not the max: §46."""
@@ -480,8 +461,10 @@ def report_light(tag: str, name: str, image) -> dict[float, float]:
     report = "  ".join(f"p{int(p)} {value:.3f}" for p, value in marks.items())
     print(f"[{tag}] {name} light: mean {values.mean():.3f}  {report}  "
           f"max {values.max():.3f}  clipped {(values > 0.995).mean() * 100.0:.2f}%")
+    coverage = float(lit.size) / float(max(values.size, 1))
+    print(f"[{tag}] {name} atlas coverage: {coverage * 100.0:.1f}% used, "
+          f"effective side {int(round((coverage ** 0.5) * (len(pixels) // 4) ** 0.5))}")
     return marks
-
 
 def rescale(image, gain: float) -> None:
     import numpy
@@ -492,13 +475,12 @@ def rescale(image, gain: float) -> None:
     rgba[:, :3] = numpy.clip(rgba[:, :3] * gain, 0.0, 1.0)
     image.pixels.foreach_set(rgba.reshape(-1))
 
-
 def bake_lightmap(surfaces: Surfaces, obj, name: str, size: int, samples: int,
                   anchor: float = 75.0, target: float = 0.56,
                   gain: float | None = None) -> float:
     """Lightmap into glTF's occlusion channel. Pass `gain` to share one exposure."""
     surfaces.project(obj)
-    unwrap_occlusion(obj)
+    unwrap_occlusion(obj, size)
     isolate_materials(obj)
 
     area = surface_area(obj)
@@ -520,12 +502,11 @@ def bake_lightmap(surfaces: Surfaces, obj, name: str, size: int, samples: int,
     light.pack()
     return gain
 
-
 def bake_surface(surfaces: Surfaces, obj, name: str, size: int,
                  samples: int, distance: float):
     """Bake what real-time light cannot reach, and only that."""
     surfaces.project(obj)
-    unwrap_occlusion(obj)
+    unwrap_occlusion(obj, size)
     isolate_materials(obj)
 
     occlusion = bake_image(f"{name}_occlusion", size)
@@ -536,7 +517,6 @@ def bake_surface(surfaces: Surfaces, obj, name: str, size: int,
     occlusion.pack()
     print(f"[{surfaces.tag}] {name} polys: {len(obj.data.polygons)}")
     return occlusion
-
 
 def verify_export(destination: Path) -> None:
     """Assert the exporter kept the occlusion map and its own UV set."""
@@ -552,7 +532,6 @@ def verify_export(destination: Path) -> None:
     coords = {m["occlusionTexture"].get("texCoord", 0) for m in materials}
     if coords != {1}:
         raise RuntimeError(f"{destination.name}: occlusion reads TEXCOORD {sorted(coords)}, want 1")
-
 
 def export(tag: str, objects, destination: Path, occluded: bool = True) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -585,9 +564,7 @@ def export(tag: str, objects, destination: Path, occluded: bool = True) -> None:
         verify_export(destination)
     print(f"[{tag}] wrote {destination.name} ({destination.stat().st_size / 1024:.1f} KB)")
 
-
 _TEMPLATES: dict[str, list] = {}
-
 
 def asset_template(name: str) -> list:
     """The mesh objects of one Poly Haven blend, appended once and reused."""
@@ -614,7 +591,6 @@ def asset_template(name: str) -> list:
     whole.sort(key=lambda obj: -len(obj.data.polygons))
     _TEMPLATES[name] = whole
     return whole
-
 
 def place_asset(target, name: str, location, rotation, height: float,
                 variant: int = 0):
@@ -644,7 +620,6 @@ def place_asset(target, name: str, location, rotation, height: float,
           f"{len(source.data.polygons)} faces")
     return obj
 
-
 def add_sun(target, vector: Vector, energy: float, color, angle: float = 0.02) -> None:
     light = bpy.data.lights.new("sun", type='SUN')
     light.energy = energy
@@ -657,7 +632,6 @@ def add_sun(target, vector: Vector, energy: float, color, angle: float = 0.02) -
     lamp.rotation_euler = (-direction).to_track_quat('-Z', 'Y').to_euler()
     target.objects.link(lamp)
 
-
 def set_sky(name: str, color, strength: float) -> None:
     """A fresh world datablock, never the one the file was last used with."""
     world = bpy.data.worlds.new(name)
@@ -667,7 +641,6 @@ def set_sky(name: str, color, strength: float) -> None:
     background = world.node_tree.nodes["Background"]
     background.inputs["Color"].default_value = (*color, 1.0)
     background.inputs["Strength"].default_value = strength
-
 
 def add_camera(target, pose):
     data = bpy.data.cameras.get("preview_cam") or bpy.data.cameras.new("preview_cam")
@@ -688,7 +661,6 @@ def add_camera(target, pose):
     bpy.context.scene.camera = cam
     return cam
 
-
 def configure_cycles(samples: int = 64, exposure: float = 0.0,
                      view: str = 'Standard') -> None:
     scene = bpy.context.scene
@@ -707,7 +679,6 @@ def configure_cycles(samples: int = 64, exposure: float = 0.0,
     scene.view_settings.look = 'None'
     scene.view_settings.exposure = exposure
 
-
 def render(tag: str, target, name: str, pose, samples: int = 48,
            exposure: float = 0.0, view: str = 'Standard') -> Path:
     """Render to a file and read the file — the viewport screenshot is not a render."""
@@ -721,7 +692,6 @@ def render(tag: str, target, name: str, pose, samples: int = 48,
     bpy.ops.render.render(write_still=True)
     print(f"[{tag}] rendered {destination}")
     return destination
-
 
 def save_blend(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,7 @@
 import type { CaptionContent } from '@/components/Caption';
+import type { FigureContent } from '@/components/SlideFigure';
+import fig4Url from '@/assets/figures/fig4.png?url';
+import fig6Url from '@/assets/figures/fig6.svg?url';
 
 /**
  * Act II copy: one slide per contribution.
@@ -43,3 +46,10 @@ export const act2Captions = {
     'The ranking depends on the composition of the candidate set.',
   ),
 } satisfies Record<string, CaptionContent>;
+
+export const act2Figures: Partial<Record<keyof typeof act2Captions, readonly FigureContent[]>> = {
+  c1: [
+    { src: fig4Url, alt: 'Paper 1, figure 4.' },
+    { src: fig6Url, alt: 'Paper 1, figure 6.' },
+  ],
+};

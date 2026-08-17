@@ -351,11 +351,9 @@ DETAIL_NORMAL_STRENGTH = 0.9
 DETAIL_UV = "detail"
 OCCLUSION_UV = "occlusion"
 
-
 # --------------------------------------------------------------------------
 # scene plumbing
 # --------------------------------------------------------------------------
-
 
 def use_scene() -> bpy.types.Scene:
     scene = bpy.data.scenes.get(SCENE)
@@ -364,7 +362,6 @@ def use_scene() -> bpy.types.Scene:
     if bpy.context.window:
         bpy.context.window.scene = scene
     return scene
-
 
 def collection() -> bpy.types.Collection:
     scene = use_scene()
@@ -379,7 +376,6 @@ def collection() -> bpy.types.Collection:
     if COLLECTION not in scene.collection.children:
         scene.collection.children.link(existing)
     return existing
-
 
 def add_box(target, name: str, size, location, rotation=None):
     mesh = bpy.data.meshes.new(name)
@@ -409,7 +405,6 @@ def add_box(target, name: str, size, location, rotation=None):
     target.objects.link(obj)
     return obj
 
-
 def boolean_cut(obj, cutter) -> None:
     modifier = obj.modifiers.new(name="cut", type="BOOLEAN")
     modifier.operation = 'DIFFERENCE'
@@ -417,7 +412,6 @@ def boolean_cut(obj, cutter) -> None:
     modifier.solver = 'EXACT'
     with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
         bpy.ops.object.modifier_apply(modifier=modifier.name)
-
 
 def bevel(obj, width: float = 0.02, segments: int = 2) -> None:
     modifier = obj.modifiers.new(name="bevel", type="BEVEL")
@@ -428,11 +422,9 @@ def bevel(obj, width: float = 0.02, segments: int = 2) -> None:
     with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
         bpy.ops.object.modifier_apply(modifier=modifier.name)
 
-
 # --------------------------------------------------------------------------
 # facade assembly
 # --------------------------------------------------------------------------
-
 
 class Parts(dict):
     def put(self, key: str, obj):
@@ -445,22 +437,17 @@ class Parts(dict):
     def all(self) -> list:
         return [obj for group in self.values() for obj in group]
 
-
 def bay_x(index: int) -> float:
     return -WIDTH / 2.0 + BAY * (index + 0.5)
-
 
 def level_base(level: int) -> float:
     return GROUND_H + level * STOREY
 
-
 def place(axis: str, u: float, t: float, v: float):
     return (u, t, v) if axis == "y" else (t, u, v)
 
-
 def spans(axis: str, along: float, through: float, up: float):
     return (along, through, up) if axis == "y" else (through, along, up)
-
 
 def punched(parts: Parts, target, name: str, axis: str, u: float, face: float,
             base: float, along: float, height: float, inward: float) -> None:
@@ -495,13 +482,11 @@ def punched(parts: Parts, target, name: str, axis: str, u: float, face: float,
         place(axis, u, face + inward * GLASS_RECESS, (sill + head) / 2.0),
     ))
 
-
 def pier_bay(parts: Parts, target, index: int, level: int) -> None:
     punched(
         parts, target, f"bay{index}_l{level}", "y",
         bay_x(index), FRONT_Y, level_base(level), BAY, STOREY, 1.0,
     )
-
 
 def slot_bay(parts: Parts, target, index: int, level: int) -> None:
     """One bay of brick cladding never placed."""
@@ -548,7 +533,6 @@ def slot_bay(parts: Parts, target, index: int, level: int) -> None:
                 ),
             ))
 
-
 def balcony_bay(parts: Parts, target, index: int, level: int) -> None:
     base = level_base(level)
     x = bay_x(index)
@@ -586,7 +570,6 @@ def balcony_bay(parts: Parts, target, index: int, level: int) -> None:
         (x, nose + 0.08, base + 0.26 + 1.1),
     ))
 
-
 def screen_bay(parts: Parts, target, index: int, level: int) -> None:
     base = level_base(level)
     x = bay_x(index)
@@ -609,14 +592,12 @@ def screen_bay(parts: Parts, target, index: int, level: int) -> None:
             (x + offset * (BAY - 0.5) / 2.0, FRONT_Y - 0.14, base + 0.15 + (STOREY - 0.3) / 2.0),
         ))
 
-
 BAY_BUILDERS = {
     "pier": pier_bay,
     "slot": slot_bay,
     "balcony": balcony_bay,
     "screen": screen_bay,
 }
-
 
 def build_core(parts: Parts, target) -> None:
     inner = WIDTH - 2 * SKIN
@@ -632,13 +613,11 @@ def build_core(parts: Parts, target) -> None:
         (0.0, (GROUND_Y + upper_back) / 2.0, GROUND_H / 2.0),
     ))
 
-
 def build_front(parts: Parts, target) -> None:
     for index, kind in enumerate(BAY_TYPES):
         builder = BAY_BUILDERS[kind]
         for level in range(UPPER):
             builder(parts, target, index, level)
-
 
 def build_flanks(parts: Parts, target) -> None:
     columns = 3
@@ -655,13 +634,11 @@ def build_flanks(parts: Parts, target) -> None:
                     u, x, level_base(level), step, STOREY, inward,
                 )
 
-
 def build_back(parts: Parts, target) -> None:
     parts.put("brick", add_box(
         target, "back_skin", (WIDTH, SKIN, TOP),
         (0.0, BACK_Y - SKIN / 2.0, TOP / 2.0),
     ))
-
 
 def build_ground(parts: Parts, target) -> None:
     parts.put("soffit", add_box(
@@ -699,7 +676,6 @@ def build_ground(parts: Parts, target) -> None:
             target, f"ground_glass_{index}", (BAY - 1.2, 0.06, 2.3),
             (bay_x(index), GROUND_Y - GLASS_RECESS, 1.55),
         ))
-
 
 def build_entrance(parts: Parts, target) -> None:
     w = ENTRANCE["width"]
@@ -772,7 +748,6 @@ def build_entrance(parts: Parts, target) -> None:
         target, "entrance_track", (w - 0.04, 0.16, 0.11),
         (0.0, DOOR_Y, h - 0.055),
     ))
-
 
 def build_vestibule(parts: Parts, target) -> None:
     """The room behind the doors, and the far half of the Act I → Act II cut.
@@ -875,7 +850,6 @@ def build_vestibule(parts: Parts, target) -> None:
             (offset * (width / 2.0 - wash["inset"]), front + depth / 2.0, height - lining - 0.02),
         ))
 
-
 def build_doors(target) -> Parts:
     """The two active leaves, and nothing else.
 
@@ -938,7 +912,6 @@ def build_doors(target) -> Parts:
 
     return leaves
 
-
 def build_roof(parts: Parts, target) -> None:
     parts.put("brick", add_box(
         target, "parapet", (WIDTH + 0.12, DEPTH + 0.12, PARAPET_H),
@@ -953,7 +926,6 @@ def build_roof(parts: Parts, target) -> None:
         (5.6, 1.6, TOP + 1.1),
     ))
 
-
 def add_blob(target, name: str, radius: float, location, scale, subdivisions: int = 1):
     mesh = bpy.data.meshes.new(name)
     bm = bmesh.new()
@@ -967,7 +939,6 @@ def add_blob(target, name: str, radius: float, location, scale, subdivisions: in
     obj.scale = scale
     target.objects.link(obj)
     return obj
-
 
 def add_taper(target, name: str, bottom: float, top: float, depth: float, location):
     mesh = bpy.data.meshes.new(name)
@@ -985,7 +956,6 @@ def add_taper(target, name: str, bottom: float, top: float, depth: float, locati
     target.objects.link(obj)
     return obj
 
-
 APRON = {"x": 25.0, "near": -17.0}
 BED_DEPTH = 5.6
 BED_NEAR = APRON["near"] - BED_DEPTH
@@ -998,13 +968,11 @@ VERGE_DEPTH = 3.0
 
 MEADOW_NEAR = PROMENADE_NEAR - 34.0
 
-
 def band(site: Parts, target, key: str, name: str, near: float, far: float,
          width: float, height: float, z: float = 0.0) -> None:
     site.put(key, add_box(
         target, name, (width, far - near, height), (0.0, (near + far) / 2.0, z),
     ))
-
 
 def build_paving(site: Parts, target) -> None:
     site.put("paving", add_box(
@@ -1028,10 +996,7 @@ def build_paving(site: Parts, target) -> None:
             (offset * 62.0, PROMENADE_NEAR - VERGE_DEPTH / 2.0, 0.01),
         ))
 
-
-
 _TEMPLATES: dict[str, list] = {}
-
 
 def asset_template(name: str) -> list:
     if name in _TEMPLATES:
@@ -1048,19 +1013,15 @@ def asset_template(name: str) -> list:
     _TEMPLATES[name] = [obj for obj in loaded.objects if obj and obj.type == 'MESH']
     return _TEMPLATES[name]
 
-
 def split_lod(name: str) -> tuple[str, str]:
     head, _, tail = name.rpartition("_")
     return (head, tail) if head and tail.startswith("LOD") else (name, "")
 
-
 _VARIANTS: dict[str, list] = {}
-
 
 def is_part(name: str) -> bool:
     """Whether this object is a component of a plant rather than a whole one."""
     return any(hint in name for hint in PART_NAMES)
-
 
 def asset_variants(name: str) -> list:
     """One placeable object per plant variant."""
@@ -1115,7 +1076,6 @@ def asset_variants(name: str) -> list:
     _VARIANTS[name] = whole
     return whole
 
-
 def reduce_mesh(obj, ratio: float) -> None:
     """Decimate a template in place, before anything instances it."""
     root = bpy.context.scene.collection
@@ -1126,10 +1086,8 @@ def reduce_mesh(obj, ratio: float) -> None:
         bpy.ops.object.modifier_apply(modifier=modifier.name)
     root.objects.unlink(obj)
 
-
 def have_assets() -> bool:
     return any(asset_variants(name) for name in HEDGE_ASSETS + TREE_ASSETS)
-
 
 def blocks_review(name: str, x: float, y: float) -> bool:
     """Whether a plant would stand in the review row's sightline."""
@@ -1137,7 +1095,6 @@ def blocks_review(name: str, x: float, y: float) -> bool:
         return False
     return (REVIEW_CLEAR["x"][0] <= x <= REVIEW_CLEAR["x"][1]
             and REVIEW_CLEAR["y"][0] <= y <= REVIEW_CLEAR["y"][1])
-
 
 def place_asset(site: Parts, target, name: str, location, rotation: float,
                 metres: float, rng) -> None:
@@ -1163,7 +1120,6 @@ def place_asset(site: Parts, target, name: str, location, rotation: float,
     target.objects.link(obj)
     site.put("flora", obj)
 
-
 def spread(site: Parts, target, assets, count: int, bounds, height, rng) -> None:
     """`height` is a range in metres — the height the plant should stand."""
     x0, x1, y0, y1 = bounds
@@ -1176,7 +1132,6 @@ def spread(site: Parts, target, assets, count: int, bounds, height, rng) -> None
             rng.uniform(low, high),
             rng,
         )
-
 
 def scatter_planting(site: Parts, target, rng) -> None:
     near = APRON["near"]
@@ -1221,7 +1176,6 @@ def scatter_planting(site: Parts, target, rng) -> None:
         (-135.0, 90.0, MEADOW_NEAR + 6.0, PROMENADE_NEAR - VERGE_DEPTH - 1.5), (0.4, 0.9), rng,
     )
 
-
 def add_shrub(site: Parts, target, name: str, x: float, y: float, radius: float, rng) -> None:
     for index in range(3):
         site.put("foliage", add_blob(
@@ -1234,7 +1188,6 @@ def add_shrub(site: Parts, target, name: str, x: float, y: float, radius: float,
             (rng.uniform(0.8, 1.3), rng.uniform(0.8, 1.2), rng.uniform(0.6, 0.95)),
         ))
 
-
 def build_hedge(site: Parts, target, rng) -> None:
     y = (APRON["near"] + BED_NEAR) / 2.0
     for side, offset in (("w", -1.0), ("e", 1.0)):
@@ -1246,7 +1199,6 @@ def build_hedge(site: Parts, target, rng) -> None:
                 site, target, f"shrub_{side}_{index}", x,
                 y + rng.uniform(-1.3, 1.3), rng.uniform(0.75, 1.15), rng,
             )
-
 
 def add_tree(site: Parts, target, name: str, x: float, y: float, height: float, rng) -> None:
     trunk = height * 0.42
@@ -1266,7 +1218,6 @@ def add_tree(site: Parts, target, name: str, x: float, y: float, height: float, 
             subdivisions=2,
         ))
 
-
 def build_trees(site: Parts, target, rng) -> None:
     placements = (
         (-15.5, BED_NEAR + 2.2, 8.6),
@@ -1276,7 +1227,6 @@ def build_trees(site: Parts, target, rng) -> None:
     )
     for index, (x, y, height) in enumerate(placements):
         add_tree(site, target, f"tree_{index}", x, y, height, rng)
-
 
 FLORA_TEXTURE = 1024
 # Normal is worth its payload under real-time light — it is what stops a canopy
@@ -1293,13 +1243,11 @@ FOLIAGE_NAMES = (
 )
 BARK_NAMES = ("branch", "trunk", "bark", "stem", "wood", "twig", "root")
 
-
 def is_foliage(name: str) -> bool:
     lowered = name.lower()
     if any(hint in lowered for hint in BARK_NAMES):
         return False
     return any(hint in lowered for hint in FOLIAGE_NAMES)
-
 
 def simplify_flora(objects) -> None:
     """Trim planting materials, and grade the foliage to summer."""
@@ -1339,7 +1287,6 @@ def simplify_flora(objects) -> None:
     print(f"[exterior] planting: {len(seen)} materials, {len(images)} textures, "
           f"{tinted} graded to summer")
 
-
 def build_site(target) -> Parts:
     rng = random.Random(20260802)
     site = Parts()
@@ -1353,7 +1300,6 @@ def build_site(target) -> Parts:
         build_trees(site, target, rng)
     return site
 
-
 def scaffold_extent() -> tuple[float, float, int, float]:
     first, last = SCAFFOLD["bays"]
     over = SCAFFOLD["overhang"]
@@ -1361,7 +1307,6 @@ def scaffold_extent() -> tuple[float, float, int, float]:
     end = -WIDTH / 2.0 + BAY * last + over
     count = max(round((end - start) / SCAFFOLD["spacing"]), 1)
     return start, end, count, (end - start) / count
-
 
 def build_scaffold(parts: Parts, target) -> None:
     """Tube-and-fitting scaffold over the slot bay and its neighbours."""
@@ -1445,7 +1390,6 @@ def build_scaffold(parts: Parts, target) -> None:
                  level * lift - 0.4),
             ))
 
-
 def build_hoarding(parts: Parts, target) -> None:
     """Encloses the active work zone at the east end only.
 
@@ -1461,7 +1405,6 @@ def build_hoarding(parts: Parts, target) -> None:
         parts.put("steel", add_box(
             target, f"hoarding_post_{index}", (0.09, 0.09, 2.5), (x + 1.2, y - 0.06, 1.25),
         ))
-
 
 def build_props(parts: Parts, target, rng) -> None:
     for stack in range(3):
@@ -1496,12 +1439,10 @@ def build_props(parts: Parts, target, rng) -> None:
             ),
         ))
 
-
 def candidate_place(index: int) -> float:
     """Evenly along the review row, centred on `REVIEW`."""
     span = (len(CANDIDATE_BUILDERS) - 1) * REVIEW["spacing"]
     return REVIEW["centre"] - span / 2.0 + index * REVIEW["spacing"]
-
 
 def candidate_frame(parts: Parts, target, name: str, x: float) -> tuple[float, float]:
     """A thin carrier edge so each option reads as a discrete panel."""
@@ -1523,7 +1464,6 @@ def candidate_frame(parts: Parts, target, name: str, x: float) -> tuple[float, f
         ))
     return base, y - thickness / 2.0
 
-
 def candidate_flat(parts: Parts, target, name: str, x: float) -> None:
     base, _ = candidate_frame(parts, target, name, x)
     parts.put("brick", add_box(
@@ -1531,7 +1471,6 @@ def candidate_flat(parts: Parts, target, name: str, x: float) -> None:
         (CANDIDATE["width"], CANDIDATE["thickness"], CANDIDATE["height"]),
         (x, REVIEW["y"], base + CANDIDATE["height"] / 2.0),
     ))
-
 
 def candidate_relief(parts: Parts, target, name: str, x: float) -> None:
     base, face = candidate_frame(parts, target, name, x)
@@ -1556,7 +1495,6 @@ def candidate_relief(parts: Parts, target, name: str, x: float) -> None:
                 target, f"{name}_header_{row}_{column}", (unit - 0.03, proud, course - 0.03),
                 (cx, face - proud / 2.0, base + course * 1.5 + row * course * 3),
             ))
-
 
 def candidate_screen(parts: Parts, target, name: str, x: float) -> None:
     base, _ = candidate_frame(parts, target, name, x)
@@ -1588,7 +1526,6 @@ def candidate_screen(parts: Parts, target, name: str, x: float) -> None:
                 target, f"{name}_course_{row}", (inner, thickness, course - 0.008),
                 (x, REVIEW["y"], z),
             ))
-
 
 def candidate_demountable(parts: Parts, target, name: str, x: float) -> None:
     """Panelised and unbonded: the option that can be taken back off."""
@@ -1630,14 +1567,12 @@ def candidate_demountable(parts: Parts, target, name: str, x: float) -> None:
                     ),
                 ))
 
-
 CANDIDATE_BUILDERS = (
     ("flat", candidate_flat),
     ("relief", candidate_relief),
     ("screen", candidate_screen),
     ("demountable", candidate_demountable),
 )
-
 
 def build_candidates(target) -> list[Parts]:
     """Four full-size mock-up panels standing in a row on open promenade."""
@@ -1651,7 +1586,6 @@ def build_candidates(target) -> list[Parts]:
                 bevel(obj, width=0.006)
         panels.append(parts)
     return panels
-
 
 def build_slot_fill(target) -> Parts:
     """The cladding that fills the vacant bay once it has been specified.
@@ -1669,7 +1603,6 @@ def build_slot_fill(target) -> Parts:
             bevel(obj)
     return parts
 
-
 def build_construction(target) -> Parts:
     rng = random.Random(20260803)
     parts = Parts()
@@ -1683,7 +1616,6 @@ def build_construction(target) -> Parts:
             bevel(obj, width=0.008)
 
     return parts
-
 
 def build_geometry(target) -> Parts:
     parts = Parts()
@@ -1706,11 +1638,9 @@ def build_geometry(target) -> Parts:
 
     return parts
 
-
 # --------------------------------------------------------------------------
 # materials and lighting
 # --------------------------------------------------------------------------
-
 
 def principled(name: str, base_color, roughness: float, metallic: float = 0.0):
     material = bpy.data.materials.get(name) or bpy.data.materials.new(name)
@@ -1720,7 +1650,6 @@ def principled(name: str, base_color, roughness: float, metallic: float = 0.0):
     bsdf.inputs["Roughness"].default_value = roughness
     bsdf.inputs["Metallic"].default_value = metallic
     return material
-
 
 def detail_texture(key: str, slot: str, tint: float) -> Path:
     """A web-sized, palette-graded copy of one Poly Haven map."""
@@ -1744,7 +1673,6 @@ def detail_texture(key: str, slot: str, tint: float) -> Path:
     bpy.data.images.remove(image)
     return destination
 
-
 def detail_image(key: str, slot: str, tint: float, colour: bool):
     label = f"{key}_{slot}"
     existing = bpy.data.images.get(label)
@@ -1756,7 +1684,6 @@ def detail_image(key: str, slot: str, tint: float, colour: bool):
     if not colour:
         image.colorspace_settings.name = 'Non-Color'
     return image
-
 
 def detail_material(key: str):
     """Surface detail as a tiling map on a real UV set, not as a baked atlas."""
@@ -1791,7 +1718,6 @@ def detail_material(key: str):
           f"({DETAIL_SIZE / tile:.0f} texels/m)")
     return material
 
-
 def tint_node(tree, source, color, amount: float):
     """Keep the texture's luminance detail, take the hue from the palette."""
     mix = tree.nodes.new("ShaderNodeMix")
@@ -1802,7 +1728,6 @@ def tint_node(tree, source, color, amount: float):
     mix.inputs[7].default_value = color
     tree.links.new(source, mix.inputs[6])
     return mix.outputs[2]
-
 
 def textured_material(name: str, texture: str, tile: float, fallback, tint: float = 0.0):
     """Ground surfaces, tiled in world metres so the scale is not guesswork."""
@@ -1855,14 +1780,12 @@ def textured_material(name: str, texture: str, tile: float, fallback, tint: floa
 
     return material
 
-
 def emissive_material(name: str, color, strength: float):
     material = principled(name, (0.0, 0.0, 0.0, 1.0), 1.0)
     bsdf = material.node_tree.nodes["Principled BSDF"]
     bsdf.inputs["Emission Color"].default_value = (*color, 1.0)
     bsdf.inputs["Emission Strength"].default_value = strength
     return material
-
 
 def glazing_material(name: str, strength: float):
     """Near-mirror, because glass reads by what it reflects."""
@@ -1871,7 +1794,6 @@ def glazing_material(name: str, strength: float):
     bsdf.inputs["Emission Color"].default_value = (*INTERIOR_COLOR, 1.0)
     bsdf.inputs["Emission Strength"].default_value = strength
     return material
-
 
 def entrance_glazing(name: str):
     """The one glass in the building you are meant to see *through*.
@@ -1896,12 +1818,10 @@ def entrance_glazing(name: str):
     material.blend_method = 'BLEND'
     return material
 
-
 def assign(objects, material) -> None:
     for obj in objects:
         obj.data.materials.clear()
         obj.data.materials.append(material)
-
 
 SPECIAL_MATERIALS = {
     "glass": lambda: glazing_material("glass", INTERIOR_STRENGTH),
@@ -1923,7 +1843,6 @@ SPECIAL_MATERIALS = {
     "paving": lambda: detail_material("paving"),
 }
 
-
 def apply_palette(parts: Parts) -> None:
     for key, group in parts.items():
         if key == "flora":
@@ -1942,7 +1861,6 @@ def apply_palette(parts: Parts) -> None:
         for obj in group:
             project_detail_uv(obj)
 
-
 def add_sun(target) -> None:
     light = bpy.data.lights.new("sun", type='SUN')
     light.energy = SUN_ENERGY
@@ -1954,7 +1872,6 @@ def add_sun(target) -> None:
     lamp.location = direction * 150.0
     lamp.rotation_euler = (-direction).to_track_quat('-Z', 'Y').to_euler()
     target.objects.link(lamp)
-
 
 def split_camera_ray(tree, lighting, display) -> None:
     """Light the scene at one sky strength and show the camera another."""
@@ -1968,7 +1885,6 @@ def split_camera_ray(tree, lighting, display) -> None:
     tree.links.new(lighting.outputs["Background"], mix.inputs[1])
     tree.links.new(display.outputs["Background"], mix.inputs[2])
     tree.links.new(mix.outputs["Shader"], output.inputs["Surface"])
-
 
 def set_sky() -> None:
     world = bpy.data.worlds.new("exterior_sky")
@@ -2010,23 +1926,19 @@ def set_sky() -> None:
     for node in (lighting, display):
         tree.links.new(sky.outputs["Color"], node.inputs["Color"])
 
-
 def add_shadow_catcher(target):
     ground = add_box(target, "bake_ground", (600.0, 600.0, 0.2), (0.0, 0.0, -0.1))
     assign([ground], textured_material("grass", "leafy_grass", 2.5, PALETTE["grass"], tint=0.85))
     return ground
-
 
 def light_scene(target) -> None:
     add_sun(target)
     add_shadow_catcher(target)
     set_sky()
 
-
 # --------------------------------------------------------------------------
 # preview rendering
 # --------------------------------------------------------------------------
-
 
 PREVIEW_POSE = {
     "location": Vector((-24.0, -58.0, 4.0)),
@@ -2087,7 +1999,6 @@ POSES = {
     "scaffold": SCAFFOLD_POSE,
 }
 
-
 def add_preview_camera(target, pose=None):
     pose = pose or PREVIEW_POSE
 
@@ -2109,7 +2020,6 @@ def add_preview_camera(target, pose=None):
     bpy.context.scene.camera = cam
     return cam
 
-
 def configure_cycles(samples: int = 64) -> None:
     scene = bpy.context.scene
     scene.render.engine = 'CYCLES'
@@ -2127,7 +2037,6 @@ def configure_cycles(samples: int = 64) -> None:
     scene.view_settings.look = 'None'
     scene.view_settings.exposure = 0.0
 
-
 def render_preview(name: str = "exterior", samples: int = 48, pose=None) -> Path:
     target = bpy.data.collections.get(COLLECTION) or collection()
     add_preview_camera(target, pose or POSES.get(name))
@@ -2140,7 +2049,6 @@ def render_preview(name: str = "exterior", samples: int = 48, pose=None) -> Path
     bpy.ops.render.render(write_still=True)
     print(f"[exterior] rendered {path}")
     return path
-
 
 def preview() -> Parts:
     target = collection()
@@ -2180,11 +2088,9 @@ def preview() -> Parts:
     print(f"[exterior] construction parts: {len(construction.all())}")
     return parts
 
-
 # --------------------------------------------------------------------------
 # bake and export
 # --------------------------------------------------------------------------
-
 
 def join_all(parts: list, name: str):
     bpy.ops.object.select_all(action='DESELECT')
@@ -2199,9 +2105,7 @@ def join_all(parts: list, name: str):
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     return obj
 
-
 DETAIL_AXES = ((1, 2), (0, 2), (0, 1))
-
 
 def project_detail_uv(obj) -> None:
     """World coordinates, in metres, divided by each material's tile."""
@@ -2222,7 +2126,6 @@ def project_detail_uv(obj) -> None:
             position = mesh.vertices[mesh.loops[loop].vertex_index].co
             uvs[loop].uv = (position[u_axis] / tile, position[v_axis] / tile)
 
-
 def unwrap_occlusion(obj) -> None:
     mesh = obj.data
     layer = mesh.uv_layers.get(OCCLUSION_UV) or mesh.uv_layers.new(name=OCCLUSION_UV)
@@ -2239,7 +2142,6 @@ def unwrap_occlusion(obj) -> None:
     if mesh.uv_layers[0].name != DETAIL_UV:
         raise RuntimeError(f"{obj.name}: detail UVs must be first, got {mesh.uv_layers[0].name}")
 
-
 def gltf_settings_tree():
     """The one node group Blender's glTF exporter reads occlusion out of."""
     tree = bpy.data.node_groups.get(GLTF_SETTINGS)
@@ -2249,7 +2151,6 @@ def gltf_settings_tree():
     tree.interface.new_socket("Occlusion", in_out='INPUT', socket_type='NodeSocketFloat')
     tree.nodes.new("NodeGroupInput")
     return tree
-
 
 def wire_occlusion(obj, image) -> None:
     for material in obj.data.materials:
@@ -2268,7 +2169,6 @@ def wire_occlusion(obj, image) -> None:
         settings.location = (-380, -700)
         tree.links.new(node.outputs["Color"], settings.inputs["Occlusion"])
 
-
 def set_bake_target(obj, image) -> None:
     for material in obj.data.materials:
         tree = material.node_tree
@@ -2279,7 +2179,6 @@ def set_bake_target(obj, image) -> None:
         node.image = image
         node.location = (-500, 320)
         tree.nodes.active = node
-
 
 def bake_into(obj, image) -> None:
     scene = bpy.context.scene
@@ -2301,13 +2200,11 @@ def bake_into(obj, image) -> None:
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.bake(type='AO', use_clear=True)
 
-
 def bake_image(name: str, size: int = BAKE_SIZE):
     existing = bpy.data.images.get(name)
     if existing:
         bpy.data.images.remove(existing, do_unlink=True)
     return bpy.data.images.new(name, size, size)
-
 
 def report_levels(name: str, image) -> None:
     """What an occlusion bake is worth checking for."""
@@ -2321,19 +2218,16 @@ def report_levels(name: str, image) -> None:
           f"open {(values > 0.9).mean() * 100.0:.1f}%  "
           f"closed {(values < 0.1).mean() * 100.0:.1f}%")
 
-
 def isolate_materials(obj) -> None:
     """Give this asset private copies of every material it uses."""
     for slot in obj.material_slots:
         if slot.material:
             slot.material = slot.material.copy()
 
-
 def save_blend() -> None:
     WORK.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND), copy=True)
     print(f"[exterior] saved {BLEND}")
-
 
 def export(objects, destination: Path = OUTPUT, occluded: bool = True) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -2366,7 +2260,6 @@ def export(objects, destination: Path = OUTPUT, occluded: bool = True) -> None:
         verify_export(destination)
     print(f"[exterior] wrote {destination} ({destination.stat().st_size / 1024:.1f} KB)")
 
-
 def verify_export(destination: Path) -> None:
     """Assert the exporter kept the occlusion map and its own UV set."""
     data = destination.read_bytes()
@@ -2382,7 +2275,6 @@ def verify_export(destination: Path) -> None:
     if coords != {1}:
         raise RuntimeError(f"{destination.name}: occlusion reads TEXCOORD {sorted(coords)}, want 1")
 
-
 def bake_surface(obj, name: str, size: int = BAKE_SIZE):
     """Bake what real-time light cannot reach, and only that."""
     project_detail_uv(obj)
@@ -2397,7 +2289,6 @@ def bake_surface(obj, name: str, size: int = BAKE_SIZE):
     occlusion.pack()
     print(f"[exterior] {name} polys: {len(obj.data.polygons)}")
     return obj
-
 
 def build_asset() -> None:
     """Bake the construction state first, then strike it and bake the building."""
@@ -2462,20 +2353,17 @@ def build_asset() -> None:
     # the building's bake because they stood in the scene while it ran.
     export_planting(site)
 
-
 def requested_views() -> list[str]:
     views = [name for name in POSES if f"--{name}" in sys.argv]
     if "--preview" in sys.argv and not views:
         views = ["exterior"]
     return views
 
-
 # The zone's ground and paving maps are written by `tools/web_textures.py`.
 # They used to be written here, which meant resizing six JPEGs required
 # launching Blender and building an entire apartment block first — and none of
 # the step ever needed `bpy`.
 LUMA = (0.2126, 0.7152, 0.0722)
-
 
 def apply_tint(image, color, amount: float = 1.0, relevel: bool = False) -> None:
     """Take luminance from the texture and hue from the palette."""
@@ -2502,7 +2390,6 @@ def apply_tint(image, color, amount: float = 1.0, relevel: bool = False) -> None
 
     image.pixels.foreach_set(rgba.reshape(-1))
 
-
 def export_planting(site: Parts) -> None:
     flora = site.get("flora", [])
     if not flora:
@@ -2513,7 +2400,6 @@ def export_planting(site: Parts) -> None:
     # real-time shadow map.
     simplify_flora(flora)
     export(flora, PLANTING_OUTPUT, occluded=False)
-
 
 def main() -> None:
     if "--planting" in sys.argv:
@@ -2532,7 +2418,6 @@ def main() -> None:
 
     build_asset()
     save_blend()
-
 
 if __name__ == "__main__":
     try:

@@ -20,6 +20,10 @@ export interface CameraPose {
   readonly arc?: number;
   /** Roll in radians. Used sparingly — it is disorienting in large doses. */
   readonly roll?: number;
+  /** `lead` looks along the direction of travel, turning onto the target on arrival. */
+  readonly approach?: 'direct' | 'lead';
+  /** A point the move routes through, so a walk follows the corridor, not the diagonal. */
+  readonly via?: Vec3;
 }
 
 export interface CameraMoveOptions {

@@ -62,8 +62,8 @@ export const TRANSITION = {
    */
   content: {
     seconds: 0.55,
-    /** Share of the camera move that passes before the new composition appears. */
-    lead: 0.55,
+    /** Seconds before the camera stops, not a share of the move. */
+    settle: 0.25,
     minLeadSeconds: 0.2,
   },
   /** Direct navigation still eases, just fast enough to feel like a cut. */

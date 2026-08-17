@@ -101,7 +101,6 @@ const RADIUS = 2.6;
  */
 const SECANT = 4.0;
 
-
 /**
  * How far past its tangent point a fillet runs before handing back to the
  * ribbon.

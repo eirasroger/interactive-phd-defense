@@ -29,18 +29,14 @@ SECTION = PLAN["section"]
 FLOW = PLAN["flow"]
 WING = PLAN["wing"]
 
-
 def metres(units: float) -> float:
     return units * SCALE
-
 
 def station(column: int) -> float:
     return metres(PLAN["columnX"][column] + PLAN["box"]["width"] / 2.0) + PLAN["lead"]
 
-
 def lane(key: str) -> float:
     return metres(PLAN["laneY"][key] - PLAN["laneY"]["axis"])
-
 
 ROOM_LENGTH = metres(PLAN["box"]["width"])
 ROOM_HALF = metres(PLAN["box"]["height"]) / 2.0
@@ -107,12 +103,12 @@ SKY_STRENGTH = 0.6
 PREVIEW_VIEW = 'AgX'
 
 DETAIL_SIZE = 1024
-BAKE_SIZE = 4096
+SHELL_SIZE = 4096
+FITTING_SIZE = 2048
 BAKE_SAMPLES = 384
 LIGHT_TEXELS = 64
 LID_SAMPLES = 192
 LID_MIN, LID_MAX = 256, 2048
-
 
 def surfaces() -> Surfaces:
     return Surfaces(
@@ -123,7 +119,6 @@ def surfaces() -> Surfaces:
         },
         size=DETAIL_SIZE, rough=False,
     )
-
 
 class Wing:
     """A gallery's side volume: interior, one floor level, full-height opening."""
@@ -141,7 +136,6 @@ class Wing:
         a = self.near - self.side * inward
         b = self.far + self.side * outward
         return (min(a, b), max(a, b))
-
 
 class Cell:
     """One member of the enfilade: a gallery, a link, or a flank of the cross."""
@@ -170,7 +164,6 @@ class Cell:
             low, high = min(low, wing.far), max(high, wing.far)
         return low, high
 
-
 def enfilade() -> list[Cell]:
     """Wing count and side encode the figure: C1 west, C2 east, cross both, C5 symmetric."""
     half = ROOM_LENGTH / 2.0
@@ -197,7 +190,6 @@ def enfilade() -> list[Cell]:
              washes=(WEST, EAST), panels=(WEST, EAST)),
     ]
 
-
 class Face:
     """A solid wall bounding a member's void, with the room on its inward side."""
 
@@ -220,7 +212,6 @@ class Face:
     def name(self, prefix: str) -> str:
         return f"{prefix}_{self.cell.key}_{'w' if self.side < 0 else 'e'}"
 
-
 def faces(cell: Cell) -> list[Face]:
     """Fittings hang off walls that exist; a wing's far wall replaces its room's."""
     winged = {wing.side for wing in cell.wings}
@@ -232,7 +223,6 @@ def faces(cell: Cell) -> list[Face]:
     for wing in cell.wings:
         found.append(Face(cell, wing.far, wing.side, wing.y0, wing.y1, True))
     return found
-
 
 def solids(target, cells: list[Cell]) -> list:
     blocks = []
@@ -247,7 +237,6 @@ def solids(target, cells: list[Cell]) -> list:
                 wing.span(outward=WALL),
                 (wing.y0 - WALL, wing.y1 + WALL), (BASE, cell.top)))
     return blocks
-
 
 def voids(target, cells: list[Cell]) -> list:
     cutters = []
@@ -265,7 +254,6 @@ def voids(target, cells: list[Cell]) -> list:
                 (wing.y0, wing.y1), (FLOOR, cell.top + BLEED)))
     return cutters
 
-
 def combine(objects: list, name: str, operation: str):
     base = objects[0]
     base.name = name
@@ -280,7 +268,6 @@ def combine(objects: list, name: str, operation: str):
         bpy.data.objects.remove(other, do_unlink=True)
     return base
 
-
 def carve(target, cells: list[Cell]):
     mass = combine(solids(target, cells), "corridor_shell", 'UNION')
     cavity = combine(voids(target, cells), "corridor_void", 'UNION')
@@ -294,9 +281,7 @@ def carve(target, cells: list[Cell]):
     bpy.data.objects.remove(cavity, do_unlink=True)
     return mass
 
-
 SHELL_KEYS = ("floor", "plaster", "ceiling")
-
 
 def clad(obj, palette: Surfaces) -> None:
     obj.data.materials.clear()
@@ -311,7 +296,6 @@ def clad(obj, palette: Surfaces) -> None:
         else:
             polygon.material_index = 1
 
-
 def verify(obj) -> None:
     import bmesh
 
@@ -323,7 +307,6 @@ def verify(obj) -> None:
     print(f"[{TAG}] shell {len(obj.data.polygons)} faces, {open_edges} open edges")
     if open_edges:
         raise RuntimeError(f"corridor shell is not watertight: {open_edges} open edges")
-
 
 TROUGH = {
     "cove": (0.0, 0.50),
@@ -339,7 +322,6 @@ COVE = {
 }
 
 BASE_REVEAL = (0.022, 0.045)
-
 
 def build_fittings(parts: Parts, target, cells: list[Cell]) -> None:
     """Bronze shadow gap at the floor; concealed cove at the head of every wall."""
@@ -368,7 +350,6 @@ def build_fittings(parts: Parts, target, cells: list[Cell]) -> None:
                 (face.y0 + inset, face.y1 - inset),
                 (face.top - high, face.top - low)))
 
-
 PANEL = {
     "pitch": 0.20,
     "width": 0.135,
@@ -378,7 +359,6 @@ PANEL = {
     "margin": 0.35,
     "reach": 3.4,
 }
-
 
 def build_panelling(parts: Parts, target, cells: list[Cell]) -> None:
     """Oak boarding on the quiet flank, opposite where the contribution lives."""
@@ -403,16 +383,13 @@ def build_panelling(parts: Parts, target, cells: list[Cell]) -> None:
                     target, f"{face.name('board')}_{index}", span,
                     (y, y + PANEL["width"]), (foot, head)))
 
-
 # `into` seats the strip inside the lid so it cannot light the soffit: §49.
 CEILING = {"width": 0.14, "high": 0.045, "into": 0.02, "pitch": 3.2, "inset": 0.9}
-
 
 def bays(low: float, high: float, pitch: float) -> list[float]:
     count = max(1, int(round((high - low) / pitch)))
     step = (high - low) / (count + 1)
     return [low + step * (index + 1) for index in range(count)]
-
 
 def build_ceiling_light(parts: Parts, target, cells: list[Cell]) -> None:
     """Recessed linear light, one rank per bay. On the shell, so the rise keeps it."""
@@ -430,14 +407,12 @@ def build_ceiling_light(parts: Parts, target, cells: list[Cell]) -> None:
                     (y0 + CEILING["inset"], y1 - CEILING["inset"]),
                     (cell.top - CEILING["high"], cell.top + CEILING["into"])))
 
-
 TERMINAL = {
     "downstand": (1.25, 1.05),
     "drop": 1.5,
     "cove": (1.0, 0.25),
     "coveTop": (0.16, 0.06),
 }
-
 
 def build_terminal(parts: Parts, target, cell: Cell) -> None:
     """C5's end wall, washed head-on from a slot behind a downstand."""
@@ -456,7 +431,6 @@ def build_terminal(parts: Parts, target, cell: Cell) -> None:
         (cell.y1 - near, cell.y1 - far),
         (cell.top - high, cell.top - low)))
 
-
 def build_lids(target, cells: list[Cell]) -> list:
     """One lid per member, oversailing only where a wall exists so none overlap: §50."""
     covers = []
@@ -471,7 +445,6 @@ def build_lids(target, cells: list[Cell]) -> list:
             (cell.top, cell.top + LID)))
         covers.append((cell.key, parts))
     return covers
-
 
 def build_geometry(target) -> tuple:
     cells = enfilade()
@@ -496,11 +469,9 @@ def build_geometry(target) -> tuple:
 
     return parts, covers, shell
 
-
 def light_scene(target) -> None:
     common.add_sun(target, SUN_VECTOR, SUN_ENERGY, SUN_COLOR)
     common.set_sky("corridor_sky", SKY_COLOR, SKY_STRENGTH)
-
 
 def report(cells: list[Cell]) -> None:
     print(f"[{TAG}] room {ROOM_LENGTH:.2f} x {ROOM_HALF * 2:.2f} m, "
@@ -512,19 +483,19 @@ def report(cells: list[Cell]) -> None:
               f"x {low:6.2f}..{high:6.2f}  top {cell.top:.2f}  "
               f"wings {wings or '-':<2} faces {len(faces(cell))}")
 
-
 EYE = FLOOR + 1.58
-HALF = ROOM_LENGTH / 2.0
 
+SHOT_FOV = 54.0
 
-def winged(z: float, side: float) -> dict:
-    """Mirrors scenes/act2 exactly: on the axis, turned slightly toward the wing."""
+def square_on(y: float, wall_x: float) -> dict:
+    """Mirrors `shotAt` in src/config/corridor.ts; SHOT_FOV is its `SHOT.fov`."""
     return {
-        "location": Vector((0.0, z - HALF + 1.0, EYE)),
-        "target": Vector((side * 2.2, z + HALF * 0.5, EYE - 0.14)),
-        "fov": 54.0,
+        "location": Vector((0.0, y, EYE)),
+        "target": Vector((wall_x, y, EYE)),
+        "fov": SHOT_FOV,
     }
 
+WING_WALL = ROOM_HALF + WING_DEPTH
 
 POSES = {
     "mouth": {
@@ -532,17 +503,14 @@ POSES = {
         "target": Vector((0.0, 24.0, EYE - 0.13)),
         "fov": 56.0,
     },
-    "c1": winged(C1, WEST),
-    "c2": winged(C2, EAST),
-    "cross": {
-        "location": Vector((0.0, C34 - HALF + 2.0, EYE)),
-        "target": Vector((-LANE * 1.02, C34 + 0.6, EYE - 0.12)),
-        "fov": 60.0,
-    },
+    "c1": square_on(C1, WEST * WING_WALL),
+    "c2": square_on(C2, EAST * WING_WALL),
+    "cross": square_on(C34, WEST * CROSS_HALF),
+    "c4": square_on(C34, EAST * CROSS_HALF),
     "c5": {
-        "location": Vector((0.0, C5 - HALF + 1.2, EYE)),
-        "target": Vector((0.0, RUN + 2.0, EYE + 0.35)),
-        "fov": 54.0,
+        "location": Vector((0.0, C5, EYE)),
+        "target": Vector((0.0, RUN, EYE)),
+        "fov": SHOT_FOV,
     },
     "plan": {
         "location": Vector((-38.0, RUN / 2.0, 44.0)),
@@ -550,7 +518,6 @@ POSES = {
         "fov": 42.0,
     },
 }
-
 
 def scene():
     target = common.collection(SCENE, COLLECTION)
@@ -567,7 +534,6 @@ def scene():
     verify(shell)
     return target, parts, covers, shell, palette
 
-
 def preview(views: list[str]) -> None:
     target, _, covers, _, _ = scene()
     lifted = [obj for _, cover in covers for obj in cover.all()]
@@ -576,30 +542,33 @@ def preview(views: list[str]) -> None:
             obj.hide_render = name == "plan"
         common.render(TAG, target, name, POSES[name], samples=96, view=PREVIEW_VIEW)
 
-
 def build_asset() -> None:
     _, parts, covers, shell, palette = scene()
 
     # Lids stay in the scene for the shell bake, or the galleries bake open-topped.
     ceiling = [common.join_all(cover.all(), f"lid_{index:02d}_{key}")
                for index, (key, cover) in enumerate(covers)]
-    whole = common.join_all([shell] + parts.all(), "corridor_shell")
 
-    gain = common.bake_lightmap(palette, whole, "shell", BAKE_SIZE, BAKE_SAMPLES)
+    # Shell and joinery take separate atlases: packing is per-island, and the
+    # joinery is thousands of small ones that would crowd out the galleries.
+    fittings = common.join_all(parts.all(), "corridor_fittings")
+
+    gain = common.bake_lightmap(palette, shell, "shell", SHELL_SIZE, BAKE_SAMPLES)
+    common.bake_lightmap(palette, fittings, "fittings", FITTING_SIZE, BAKE_SAMPLES, gain=gain)
     for lid in ceiling:
         size = common.atlas_size(common.surface_area(lid), LIGHT_TEXELS, LID_MIN, LID_MAX)
         common.bake_lightmap(palette, lid, lid.name, size, LID_SAMPLES, gain=gain)
 
+    whole = common.join_all([shell, fittings], "corridor_shell")
+
     common.export(TAG, ceiling, CEILING_OUTPUT)
     common.export(TAG, whole, SHELL_OUTPUT)
-
 
 def requested_views() -> list[str]:
     views = [name for name in POSES if f"--{name}" in sys.argv]
     if "--preview" in sys.argv and not views:
         views = ["c1", "cross", "c5"]
     return views
-
 
 def main() -> None:
     views = requested_views()
@@ -609,7 +578,6 @@ def main() -> None:
 
     build_asset()
     common.save_blend(BLEND)
-
 
 if __name__ == "__main__":
     try:

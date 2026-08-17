@@ -57,16 +57,13 @@ TEXTURES: dict[str, tuple[str, str]] = {
     "paving": ("square_concrete_pavers", "colour"),
 }
 
-
 def to_linear(srgb: numpy.ndarray) -> numpy.ndarray:
     return numpy.where(srgb <= 0.04045, srgb / 12.92, ((srgb + 0.055) / 1.055) ** 2.4)
-
 
 def to_srgb(linear: numpy.ndarray) -> numpy.ndarray:
     return numpy.where(
         linear <= 0.0031308, linear * 12.92, 1.055 * numpy.clip(linear, 0.0, None) ** (1 / 2.4) - 0.055
     )
-
 
 def neutralise(linear: numpy.ndarray) -> numpy.ndarray:
     """Strip hue to luminance and rescale the mean, keeping a little chroma."""
@@ -78,7 +75,6 @@ def neutralise(linear: numpy.ndarray) -> numpy.ndarray:
     scale = NEUTRAL_MEAN / mean
     grey = numpy.repeat((luma * scale)[:, :, None], 3, axis=2)
     return grey * (1.0 - NEUTRAL_CHROMA) + linear * scale * NEUTRAL_CHROMA
-
 
 def build(name: str, asset: str, mode: str) -> bool:
     source = next((ASSETS / asset).glob("Diffuse.*"), None)
@@ -101,7 +97,6 @@ def build(name: str, asset: str, mode: str) -> bool:
     print(f"[textures] {path.name}: {path.stat().st_size / 1024:.0f} KB ({mode})")
     return True
 
-
 def build_normal(name: str, asset: str) -> bool:
     """Copy the OpenGL-convention normal map through at web size."""
     source = next((ASSETS / asset).glob("nor_gl.*"), None)
@@ -121,12 +116,10 @@ def build_normal(name: str, asset: str) -> bool:
     print(f"[textures] {path.name}: {path.stat().st_size / 1024:.0f} KB (normal)")
     return True
 
-
 def main() -> None:
     written = sum(build(name, asset, mode) for name, (asset, mode) in TEXTURES.items())
     normals = sum(build_normal(name, TEXTURES[name][0]) for name in NORMALS)
     print(f"[textures] wrote {written}/{len(TEXTURES)} maps and {normals} normals into {OUTPUT}")
-
 
 if __name__ == "__main__":
     main()

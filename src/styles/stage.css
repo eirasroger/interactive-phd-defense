@@ -104,6 +104,60 @@
   );
 }
 
+.scene-layer[data-align='slide'] {
+  display: block;
+  padding: 0;
+}
+
+.scene-layer[data-align='slide']::before {
+  content: none;
+}
+
+.scene-layer[data-align='slide'] .slide-frame {
+  position: absolute;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 4%;
+  padding: 6% 7%;
+  overflow: hidden;
+}
+
+.scene-layer[data-align='slide'] .slide-stack {
+  display: grid;
+  min-height: 0;
+}
+
+.scene-layer[data-align='slide'] .slide-stack > * {
+  grid-area: 1 / 1;
+  min-height: 0;
+}
+
+.scene-layer[data-align='slide'] .caption {
+  max-width: 100%;
+}
+
+.scene-layer[data-align='slide'] .caption-heading {
+  font-size: var(--t-title);
+}
+
+.scene-layer[data-align='slide'] .slide-frame[data-figures] .caption-heading {
+  font-size: var(--t-heading);
+}
+
+/* Dark ink, because the projection throws white. */
+.scene-layer[data-align='slide'] .caption-heading,
+.scene-layer[data-align='slide'] .caption-body {
+  color: var(--c-base);
+}
+
+.scene-layer[data-align='slide'] .caption[data-accent='circular'] .caption-eyebrow {
+  color: var(--c-circular-dim);
+}
+
+.scene-layer[data-align='slide'] .caption-eyebrow::before {
+  background: currentcolor;
+}
+
 /* Full-width compositions veil the whole frame, but softly: the world stays
    readable as a depth field rather than being switched off. */
 .scene-layer[data-align='wide']::before {

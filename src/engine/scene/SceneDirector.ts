@@ -162,7 +162,7 @@ export class SceneDirector {
   private mount(definition: SceneDefinition, direction: NavDirection, travel: number): void {
     const entryDelay =
       travel > 0
-        ? Math.max(travel * TRANSITION.content.lead, TRANSITION.content.minLeadSeconds)
+        ? Math.max(travel - TRANSITION.content.settle, TRANSITION.content.minLeadSeconds)
         : 0;
 
     const layer = document.createElement('section');

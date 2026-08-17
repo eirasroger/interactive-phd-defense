@@ -119,17 +119,14 @@ TEXTURE_RESOLUTION = "2k"
 MAPS = ("Diffuse", "nor_gl", "Rough")
 FORMATS = ("jpg", "png", "exr")
 
-
 def request(url: str, timeout: int):
     return urllib.request.urlopen(
         urllib.request.Request(url, headers={"User-Agent": AGENT}), timeout=timeout
     )
 
-
 def fetch_json(url: str) -> dict:
     with request(url, 60) as response:
         return json.load(response)
-
 
 def download(url: str, destination: Path, size: int) -> bool:
     if destination.exists() and destination.stat().st_size == size:
@@ -138,7 +135,6 @@ def download(url: str, destination: Path, size: int) -> bool:
     with request(url, 300) as response:
         destination.write_bytes(response.read())
     return True
-
 
 def fetch_asset(asset: str) -> int:
     files = fetch_json(API.format(asset=asset))
@@ -162,7 +158,6 @@ def fetch_asset(asset: str) -> int:
     print(f"[assets] {asset}: {written / 1e6:.1f} MB new")
     return written
 
-
 def fetch_texture(asset: str) -> int:
     files = fetch_json(API.format(asset=asset))
     root = ASSETS / asset
@@ -183,12 +178,10 @@ def fetch_texture(asset: str) -> int:
     print(f"[assets] {asset}: {written / 1e6:.1f} MB new")
     return written
 
-
 def main() -> None:
     total = sum(fetch_asset(asset) for asset in WANTED)
     total += sum(fetch_texture(asset) for asset in TEXTURES)
     print(f"[assets] downloaded {total / 1e6:.1f} MB into {ASSETS}")
-
 
 if __name__ == "__main__":
     main()

@@ -28,7 +28,6 @@ KEY_ENERGY = 45.0
 EMIT_STRENGTH = 2.6
 ALBEDO = 0.46
 
-
 def purge() -> None:
     for collection in (
         bpy.data.objects,
@@ -41,7 +40,6 @@ def purge() -> None:
             collection.remove(datablock, do_unlink=True)
     bpy.context.scene.unit_settings.scale_length = 1.0
 
-
 def add_box(name: str, size, location):
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=location)
     box = bpy.context.active_object
@@ -49,7 +47,6 @@ def add_box(name: str, size, location):
     box.scale = size
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     return box
-
 
 def bevel(obj, width: float = 0.02, segments: int = 2) -> None:
     modifier = obj.modifiers.new(name="bevel", type="BEVEL")
@@ -59,7 +56,6 @@ def bevel(obj, width: float = 0.02, segments: int = 2) -> None:
     modifier.angle_limit = 0.785
     with bpy.context.temp_override(object=obj, active_object=obj, selected_objects=[obj]):
         bpy.ops.object.modifier_apply(modifier=modifier.name)
-
 
 def build_shell() -> list:
     """Floor, walls and ceiling — the enclosure the camera flies through."""
@@ -92,7 +88,6 @@ def build_shell() -> list:
 
     return parts
 
-
 def build_portal() -> list:
     """The station frame at the bay entrance."""
     half = WIDTH / 2.0
@@ -104,7 +99,6 @@ def build_portal() -> list:
     for part in parts:
         bevel(part, width=0.03)
     return parts
-
 
 def add_accent_emitters() -> None:
     """Emissive strips that exist only to be baked."""
@@ -126,7 +120,6 @@ def add_accent_emitters() -> None:
     top = add_box("emit_top", (WIDTH - 1.2, BAY_LENGTH - 0.4, 0.07), (0, mid_y, HEIGHT - 0.18))
     top.data.materials.append(material)
 
-
 def add_bake_lights() -> None:
     key = bpy.data.lights.new("key", type='AREA')
     key.energy = KEY_ENERGY
@@ -135,7 +128,6 @@ def add_bake_lights() -> None:
     lamp = bpy.data.objects.new("key", key)
     lamp.location = (0, BAY_LENGTH / 2.0, HEIGHT - 0.5)
     bpy.context.collection.objects.link(lamp)
-
 
 def join(parts: list):
     bpy.ops.object.select_all(action='DESELECT')
@@ -152,7 +144,6 @@ def join(parts: list):
     bpy.context.scene.cursor.location = (0.0, 0.0, 0.0)
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     return joined
-
 
 def prepare_bake_material(obj):
     material = bpy.data.materials.new("bay")
@@ -173,7 +164,6 @@ def prepare_bake_material(obj):
     tree.nodes.active = texture_node
     return material, image, texture_node
 
-
 def unwrap(obj) -> None:
     bpy.ops.object.select_all(action='DESELECT')
     obj.select_set(True)
@@ -182,7 +172,6 @@ def unwrap(obj) -> None:
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.012)
     bpy.ops.object.mode_set(mode='OBJECT')
-
 
 def bake(obj) -> None:
     scene = bpy.context.scene
@@ -198,7 +187,6 @@ def bake(obj) -> None:
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.bake(type='COMBINED', use_clear=True)
 
-
 def finish_material(material, image, texture_node) -> None:
     """Route the bake into Base Color so glTF carries it, and drop the shading
     inputs the web material will not use."""
@@ -208,7 +196,6 @@ def finish_material(material, image, texture_node) -> None:
     bsdf.inputs["Roughness"].default_value = 1.0
     bsdf.inputs["Metallic"].default_value = 0.0
     image.pack()
-
 
 def export() -> None:
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
@@ -225,7 +212,6 @@ def export() -> None:
     )
     print(f"[bay] wrote {OUTPUT} ({OUTPUT.stat().st_size / 1024:.1f} KB)")
 
-
 def build():
     purge()
     parts = build_shell() + build_portal()
@@ -239,7 +225,6 @@ def build():
     finish_material(material, image, texture_node)
     return bay
 
-
 def main() -> None:
     bay = build()
     bpy.ops.object.select_all(action='DESELECT')
@@ -247,7 +232,6 @@ def main() -> None:
     bpy.context.view_layer.objects.active = bay
     print(f"[bay] polys: {len(bay.data.polygons)}")
     export()
-
 
 if __name__ == "__main__":
     try:
