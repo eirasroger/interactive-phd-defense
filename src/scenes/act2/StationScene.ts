@@ -152,6 +152,13 @@ export class StationScene implements SceneInstance {
       if (panel === slot.panel || panel === outgoing) continue;
       gsap.set(panel.element, { opacity: 0, zIndex: 0 });
     }
+
+    // The panel being raised may still be running the fade-out from the last
+    // time it left, and a `set` inside `play` does not beat a tween that is
+    // still in flight. Stepping back onto a panel a click after leaving it left
+    // the wall blank for that reason. The scene started the fade, so the scene
+    // stops it.
+    gsap.killTweensOf(slot.panel.element);
     gsap.set(slot.panel.element, { zIndex: 1 });
 
     // Run the outgoing timeline to its end before dropping it. A bare `kill()`

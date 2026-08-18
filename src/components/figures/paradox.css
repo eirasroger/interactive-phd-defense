@@ -1,0 +1,188 @@
+.pd {
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 46%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --accent: #2b6ca3;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  gap: var(--s-16);
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+.pd-index {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ---- The slope ---------------------------------------------------------- */
+
+.pd-chart {
+  display: grid;
+  gap: var(--s-3);
+  align-content: center;
+  min-width: 0;
+}
+
+/* Placed on the axes rather than on the container's edges, because a head that
+   names an axis has to stand over it. 30/420 and 356/420 are where they are. */
+.pd-heads {
+  position: relative;
+  height: 0.875rem;
+}
+
+.pd-head {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Aspect-locked, so a label placed by percentage lands on the value its line
+   was drawn at. */
+.pd-plot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 420 / 300;
+}
+
+.pd-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.pd-axis {
+  stroke: color-mix(in srgb, var(--c-base) 15%, transparent);
+  stroke-width: 1;
+}
+
+.pd-line {
+  fill: none;
+  stroke: var(--slope);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.pd-dot {
+  fill: var(--slope);
+}
+
+/* Colour follows the category, so a line and its two labels are one object. */
+.pd-line[data-key='insulation'],
+.pd-dot[data-key='insulation'],
+.pd-label[data-key='insulation'] {
+  --slope: #b0405f;
+}
+
+.pd-line[data-key='structural'],
+.pd-dot[data-key='structural'],
+.pd-label[data-key='structural'] {
+  --slope: #2b6ca3;
+}
+
+.pd-line[data-key='coating'],
+.pd-dot[data-key='coating'],
+.pd-label[data-key='coating'] {
+  --slope: #4f8f3f;
+}
+
+.pd-label {
+  position: absolute;
+  display: grid;
+  gap: 1px;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+/* The axes stand at 30/420 and 356/420 of the plot; the labels hang off them. */
+.pd-label[data-side='origin'] {
+  right: calc(100% - 7.14% + 0.75rem);
+  text-align: right;
+  justify-items: end;
+}
+
+.pd-label[data-side='recycling'] {
+  left: calc(84.76% + 0.75rem);
+}
+
+.pd-label-value {
+  font-family: var(--font-figure);
+  font-size: 1.0625rem;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--slope);
+}
+
+.pd-label-name {
+  font-size: 0.6875rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.pd-head:first-child {
+  left: 7.14%;
+}
+
+.pd-head:last-child {
+  left: 84.76%;
+}
+
+.pd-reading {
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- Why it falls ------------------------------------------------------- */
+
+.pd-why {
+  display: grid;
+  gap: var(--s-4);
+  align-content: center;
+  min-width: 0;
+}
+
+.pd-blocker {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-4);
+  border-radius: 10px;
+  background-color: color-mix(in srgb, #ffffff 72%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  border-left: 3px solid #8f5324;
+}
+
+.pd-blocker-label {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: #8f5324;
+}
+
+.pd-blocker-body {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}

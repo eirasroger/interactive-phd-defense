@@ -1,0 +1,242 @@
+.bd {
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 46%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --accent: #2b6ca3;
+
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: var(--s-12);
+  align-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+.bd-index {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.bd-plot {
+  display: grid;
+  gap: var(--s-3);
+}
+
+/*
+ * The spine, the key and the two returns all sit on this grid, so the right end
+ * of the spine and the right end of a return rail are the same pixel. That
+ * alignment is the comparison: a credit given back at D is measured against the
+ * burden drawn to the left of it.
+ */
+.bd-row,
+.bd-return {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr) 3.5rem;
+  gap: var(--s-4);
+  align-items: center;
+}
+
+.bd-row-label {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- The spine ---------------------------------------------------------- */
+
+.bd-spine {
+  display: flex;
+  gap: 2px;
+  height: 2.75rem;
+}
+
+.bd-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 3px;
+  border-radius: 3px;
+  background-color: var(--stage);
+  will-change: transform;
+}
+
+/* Padding on a block a few pixels wide is a floor on its width, and the whole
+   point of the spine is that four of these blocks are a few pixels wide. */
+.bd-stage:first-child {
+  padding-inline: var(--s-3);
+}
+
+.bd-stage-key {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  color: #ffffff;
+  white-space: nowrap;
+  opacity: 0;
+}
+
+/* Only the product block is wide enough to hold its own key. The rest are named
+   in the legend, which is the honest way round: a label squeezed into a
+   six-pixel block is a label about to be misread. */
+.bd-stage:first-child .bd-stage-key {
+  opacity: 1;
+}
+
+
+.bd-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-6);
+}
+
+.bd-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.bd-legend-swatch {
+  width: var(--s-3);
+  height: var(--s-3);
+  border-radius: 2px;
+  background-color: var(--stage);
+  flex: none;
+}
+
+.bd-callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-6);
+  align-items: center;
+  margin-top: var(--s-6);
+}
+
+.bd-headline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+.bd-headline-value {
+  font-family: var(--font-figure);
+  font-size: 4.5rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-display);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  color: #1f5f8f;
+}
+
+.bd-headline-tail {
+  font-family: var(--font-figure);
+  font-size: 1.75rem;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+.bd-callout-note {
+  max-width: 58rem;
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- What comes back ---------------------------------------------------- */
+
+.bd-recovery {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.bd-recovery-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.bd-module {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-3);
+  border-radius: 6px;
+  border: 1px dashed color-mix(in srgb, var(--stage) 52%, transparent);
+  background-color: color-mix(in srgb, var(--stage) 7%, transparent);
+}
+
+.bd-module-key {
+  font-family: var(--font-figure);
+  font-size: 0.875rem;
+  font-weight: var(--fw-semibold);
+  color: var(--stage);
+}
+
+.bd-module-label {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.bd-return-label {
+  font-size: 1rem;
+  color: var(--ink-muted);
+}
+
+.bd-return-rail {
+  position: relative;
+  display: block;
+  height: 1rem;
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--c-base) 6%, transparent);
+}
+
+/* Anchored to the right, because the credit is given back at module D and paid
+   against everything drawn to the left of it. */
+.bd-return-fill {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  border-radius: 3px;
+  background-color: #3f8f4f;
+  will-change: width;
+}
+
+.bd-return-value {
+  justify-self: end;
+  font-family: var(--font-figure);
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+  color: #3f8f4f;
+}
+
+.bd-return-note {
+  grid-column: 2 / -1;
+  margin-top: calc(var(--s-2) * -1);
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
+
+/* Both returns are the same kind of credit, drawn in the same colour on the
+   same rail, so the only difference the eye can find between them is length. */

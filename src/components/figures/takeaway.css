@@ -5,8 +5,10 @@
   --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
 
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s-6);
+  /* Written by the component from the card count, so a station can close on
+     three or four without the sheet knowing which. */
+  grid-template-columns: repeat(var(--cards, 3), minmax(0, 1fr));
+  gap: var(--s-4);
   align-items: stretch;
   align-content: center;
   width: 100%;
@@ -37,6 +39,20 @@
   top: 0;
   height: 4px;
   background-color: var(--tint);
+}
+
+/* Four cards to a row leaves each of them a narrow measure, so the type steps
+   down rather than the copy being cut to fit the wider setting. */
+.take[style*='--cards: 4'] .take-card {
+  padding: var(--s-4);
+}
+
+.take[style*='--cards: 4'] .take-name {
+  font-size: 1.1875rem;
+}
+
+.take[style*='--cards: 4'] .take-body {
+  font-size: 0.8125rem;
 }
 
 .take-name {
@@ -138,12 +154,279 @@
   color: var(--ink-muted);
 }
 
-.take-card[data-tint='circularity'] {
-  --tint: #1a8a6d;
+/* Two quantities that should track each other, drawn as the fall between them. */
+.take-slope {
+  display: grid;
+  grid-template-columns: 1fr 0.55fr 1fr;
+  align-items: stretch;
+  gap: var(--s-2);
+  height: 6rem;
 }
-.take-card[data-tint='environmental'] {
-  --tint: #3060a8;
+
+/*
+ * Readouts below the baseline, bars above it. Anything that offsets a readout
+ * *by* the bar's own height puts the taller of the two outside the figure, and
+ * from there straight into the paragraph above it.
+ */
+.take-slope-end {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--s-2);
+  height: 100%;
 }
-.take-card[data-tint='performance'] {
-  --tint: #9c3b6e;
+
+.take-slope-bar {
+  align-self: end;
+  width: 76%;
+  justify-self: center;
+  height: var(--height);
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background-color: var(--tint);
+}
+
+.take-slope-end[data-side='to'] .take-slope-bar {
+  background-color: color-mix(in srgb, var(--tint) 34%, transparent);
+}
+
+.take-slope-text {
+  display: grid;
+  gap: 1px;
+}
+
+.take-slope-value {
+  font-family: var(--font-figure);
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--tint);
+}
+
+.take-slope-label {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.take-slope-fall {
+  align-self: start;
+  margin-top: 1.5rem;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--tint),
+    color-mix(in srgb, var(--tint) 24%, transparent)
+  );
+}
+
+/* A median against its own mean: the span between them is the spread. */
+.take-spread {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.take-spread-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.take-spread-rail {
+  position: relative;
+  display: block;
+  height: 0.75rem;
+}
+
+.take-spread-rail::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 1px;
+  background-color: var(--rule);
+}
+
+.take-spread-span {
+  position: absolute;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--tint) 34%, transparent);
+}
+
+.take-spread-median,
+.take-spread-mean {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 999px;
+}
+
+.take-spread-median {
+  background-color: var(--tint);
+}
+
+.take-spread-mean {
+  background-color: color-mix(in srgb, #ffffff 82%, transparent);
+  box-shadow: inset 0 0 0 2px var(--tint);
+}
+
+
+/* Declared wordings collapsing into the label the schema has to store. */
+.take-aggregate {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.take-aggregate-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--s-4) 5.75rem;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.take-aggregate-text {
+  font-size: 0.6875rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.take-aggregate-arrow {
+  position: relative;
+  height: 1px;
+  background-color: color-mix(in srgb, var(--tint) 34%, transparent);
+}
+
+.take-aggregate-arrow::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+  width: 5px;
+  height: 5px;
+  border-top: 1px solid color-mix(in srgb, var(--tint) 52%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--tint) 52%, transparent);
+  transform: rotate(45deg);
+}
+
+.take-aggregate-label {
+  padding: 2px var(--s-2);
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--tint) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 34%, transparent);
+
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--tint);
+}
+
+/* Consecutive rows landing on the same label read as one destination. */
+.take-aggregate-row + .take-aggregate-row[data-slot='0'] .take-aggregate-label {
+  opacity: 0.55;
+}
+
+.take-stack {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.take-stack-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-2) var(--s-3);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--tint) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 26%, transparent);
+}
+
+.take-stack-mark {
+  width: var(--s-2);
+  height: var(--s-2);
+  border-radius: 2px;
+  background-color: var(--tint);
+}
+
+.take-stack-text {
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+/* One record resolving into two independent targets. A single arrow would say
+   the branches track each other, which is the opposite of the claim. */
+.take-fork {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+}
+
+.take-fork-source {
+  padding: var(--s-2) var(--s-3);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 34%, transparent);
+
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--tint);
+}
+
+.take-fork-branches {
+  position: relative;
+  display: grid;
+  gap: var(--s-2);
+  padding-left: var(--s-6);
+}
+
+/* The stem, spanning between the two branch centres. */
+.take-fork-branches::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background-color: color-mix(in srgb, var(--tint) 40%, transparent);
+}
+
+.take-fork-branch {
+  position: relative;
+  padding: var(--s-2) var(--s-3);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--tint) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 28%, transparent);
+  font-size: 0.75rem;
+  color: var(--ink);
+}
+
+.take-fork-branch::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  width: var(--s-6);
+  height: 1px;
+  background-color: color-mix(in srgb, var(--tint) 40%, transparent);
 }

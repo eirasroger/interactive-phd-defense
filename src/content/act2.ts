@@ -5,12 +5,11 @@ import fig4Url from '@/assets/figures/fig4.png?url';
 /**
  * Act II copy: one slide per contribution.
  *
- * `narrative.md` breaks each station into three or four beats. C1's are built;
- * the rest are still one slide carrying their claim, and come back one at a
- * time as their content gets written.
+ * `narrative.md` breaks each station into three or four beats. C1 and C2 are
+ * built; the rest are still one slide carrying their claim, and come back one
+ * at a time as their content gets written.
  *
- * Headings are the claim column verbatim. They are the argument and they are
- * settled.
+ * Headings are the claim column. They are the argument and they are settled.
  */
 const slide = (station: string, title: string, heading: string): CaptionContent => ({
   eyebrow: `Act II · ${station} · ${title}`,
@@ -18,6 +17,7 @@ const slide = (station: string, title: string, heading: string): CaptionContent 
 });
 
 const c1 = (heading: string): CaptionContent => slide('C1', 'Decision framework', heading);
+const c2 = (heading: string): CaptionContent => slide('C2', 'Empirical characterisation', heading);
 
 /**
  * Six beats over one held pose. The camera stays where it landed, so each of
@@ -37,13 +37,25 @@ export const c1Captions: readonly CaptionContent[] = [
   c1('What the framework settles, and what it hands on.'),
 ];
 
+/**
+ * Seven beats over one held pose. The contribution is contextualised, the
+ * method and its scale are established, the corpus is read, the paradox inside
+ * that reading is opened, the burden is located, and what all of it hands on is
+ * stated.
+ */
+export const c2Captions: readonly CaptionContent[] = [
+  c2('Decision support has to work with the information available at the early design stage.'),
+  c2('Environmental Product Declarations carry the required data in partially structured form.'),
+  c2('A large language model is probabilistic, so its extraction is verified against ground truth.'),
+  c2('Landfilling dominates declared end-of-life pathways, and recovery is almost entirely recycling.'),
+  c2('Circular origin and end-of-life recovery vary independently across product categories.'),
+  c2('Impacts are concentrated in the product stage and only partially offset by module D.'),
+  c2('Implications for the contributions that follow.'),
+];
+
 export const act2Captions = {
   c1: c1Captions[0] as CaptionContent,
-  c2: slide(
-    'C2',
-    'Empirical characterisation',
-    'Heterogeneous, inconsistent, incomplete — measured, not assumed.',
-  ),
+  c2: c2Captions[0] as CaptionContent,
   c3: slide('C3', 'Screening agent', 'Feasibility and preference are different operations.'),
   c4: slide('C4', 'Inference', 'Declared data is absent exactly where it matters.'),
   c5: slide(
@@ -52,6 +64,12 @@ export const act2Captions = {
     'The ranking depends on the composition of the candidate set.',
   ),
 } satisfies Record<string, CaptionContent>;
+
+/** Beat captions for the stations whose beats are built. */
+export const act2Beats: Partial<Record<keyof typeof act2Captions, readonly CaptionContent[]>> = {
+  c1: c1Captions,
+  c2: c2Captions,
+};
 
 export const act2Figures: Partial<Record<keyof typeof act2Captions, readonly FigureContent[]>> = {};
 

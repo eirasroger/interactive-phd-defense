@@ -1,0 +1,239 @@
+.op {
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 46%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --accent: #2b6ca3;
+
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: var(--s-16);
+  align-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+.op-index,
+.op-card-index {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ---- The queue ---------------------------------------------------------- */
+
+/* The band label hangs three rem above the rail, so the index above it needs
+   the clearance rather than the default rhythm. */
+.op-timeline {
+  display: grid;
+  gap: var(--s-12);
+}
+
+.op-axis {
+  position: relative;
+  height: 5.5rem;
+}
+
+.op-rail {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background-color: color-mix(in srgb, var(--c-base) 22%, transparent);
+}
+
+/* The years that matter are the two bounding this, so it is drawn as occupied
+   space rather than as an annotation between them. */
+.op-band {
+  position: absolute;
+  top: -1.25rem;
+  height: 2.5rem;
+  border-radius: 3px;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, #8f5324 20%, transparent) 0 2px,
+    transparent 2px 8px
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #8f5324 30%, transparent);
+}
+
+.op-band-label {
+  position: absolute;
+  top: -3rem;
+  text-align: center;
+
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: #8f5324;
+}
+
+.op-mark {
+  position: absolute;
+  top: 0;
+  width: 13rem;
+  margin-left: -1px;
+  display: grid;
+  gap: 2px;
+  padding-top: var(--s-6);
+}
+
+.op-mark-stem {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: var(--s-4);
+  background-color: color-mix(in srgb, var(--c-base) 34%, transparent);
+}
+
+.op-mark-year {
+  font-family: var(--font-figure);
+  font-size: 1.5rem;
+  font-weight: var(--fw-light);
+  line-height: 1;
+  letter-spacing: var(--ls-title);
+  font-variant-numeric: tabular-nums;
+}
+
+.op-mark-label {
+  font-size: 0.875rem;
+  line-height: var(--lh-snug);
+}
+
+.op-mark-note {
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
+
+.op-mark[data-inside='true'] .op-mark-year,
+.op-mark[data-inside='true'] .op-mark-stem {
+  color: #8f5324;
+  background-color: #8f5324;
+}
+
+.op-mark[data-inside='true'] .op-mark-year {
+  background-color: transparent;
+}
+
+/* The last mark would run off the frame, so it hangs back from its own tick. */
+.op-mark:last-child {
+  width: 11rem;
+  transform: translateX(-100%);
+  text-align: right;
+}
+
+.op-mark:last-child .op-mark-stem {
+  left: auto;
+  right: 0;
+}
+
+/* ---- What exists, and why it is unreadable ------------------------------ */
+
+.op-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-6);
+  align-content: start;
+}
+
+.op-card {
+  position: relative;
+  display: grid;
+  gap: var(--s-3);
+  align-content: start;
+  padding: var(--s-6) var(--s-6) var(--s-6);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, #ffffff 70%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    0 10px 30px color-mix(in srgb, var(--c-base) 7%, transparent);
+}
+
+.op-card::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 4px;
+  border-radius: 12px 12px 0 0;
+  background-color: var(--tone);
+}
+
+.op-card[data-tone='demand'] {
+  --tone: #2b6ca3;
+}
+.op-card[data-tone='resource'] {
+  --tone: #4f8f3f;
+}
+.op-card[data-tone='blocker'] {
+  --tone: #8f5324;
+}
+
+.op-card-index {
+  color: var(--tone);
+}
+
+.op-card-lede {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.op-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+}
+
+.op-chip {
+  padding: var(--s-2) var(--s-3);
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 26%, transparent);
+  font-size: 0.8125rem;
+  line-height: 1;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.op-supply {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.op-figure {
+  font-family: var(--font-figure);
+  font-size: 3.5rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-display);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  color: var(--tone);
+}
+
+.op-supply-label {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.op-source {
+  margin-top: auto;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}

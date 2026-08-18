@@ -1,0 +1,405 @@
+.cp {
+  position: relative;
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 46%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --accent: #2b6ca3;
+
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+/* Two independent layers over one cell, so the state that is leaving cannot
+   resize the state that is arriving. Same reason as `framework.css`. */
+.cp-method,
+.cp-scale {
+  position: absolute;
+  inset: 0;
+  align-content: center;
+}
+
+.cp-index {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ---- Beat 0: one declaration, read ------------------------------------- */
+
+.cp-method {
+  display: grid;
+  grid-template-columns: 21rem 11rem minmax(0, 1fr);
+  gap: var(--s-6);
+  align-items: center;
+}
+
+.cp-source-column {
+  display: grid;
+  gap: var(--s-3);
+  align-content: center;
+}
+
+/*
+ * The page is drawn rather than quoted. A wall of transcribed excerpts asks the
+ * room to read; a document with the answers lit where they sit shows the
+ * problem in one look, which is that they sit nowhere in particular.
+ */
+.cp-page {
+  position: relative;
+  aspect-ratio: 1 / 1.31;
+  padding: 8% 9%;
+  border-radius: 4px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    0 12px 34px color-mix(in srgb, var(--c-base) 10%, transparent);
+  overflow: hidden;
+}
+
+.cp-page-head {
+  height: 4%;
+  width: 58%;
+  margin-bottom: 4%;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--c-base) 30%, transparent);
+}
+
+/* Body copy as texture: the words are never the point, the layout is. */
+.cp-page-body {
+  height: 44%;
+  background-image: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--c-base) 13%, transparent) 0 3px,
+    transparent 3px 9px
+  );
+}
+
+.cp-page-table {
+  height: 30%;
+  margin-top: 5%;
+  background-image:
+    repeating-linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--c-base) 15%, transparent) 0 3px,
+      transparent 3px 11px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 22%,
+      color-mix(in srgb, var(--c-base) 8%, transparent) 22% 23%
+    );
+}
+
+.cp-highlight {
+  position: absolute;
+  height: 4.5%;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--group) 22%, transparent);
+  box-shadow: inset 2px 0 0 0 var(--group);
+  will-change: transform;
+}
+
+/* Inside the highlight, because the page clips and a label hung off the right
+   edge was cut in half on every one of them. */
+.cp-highlight-locus {
+  position: absolute;
+  right: var(--s-2);
+  top: 50%;
+  transform: translateY(-50%);
+
+  font-family: var(--font-label);
+  font-size: 0.4375rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--group) 82%, var(--c-base));
+  white-space: nowrap;
+}
+
+/* The travelling mark, parked on its highlight's right edge until it is flown. */
+.cp-token {
+  position: absolute;
+  right: -0.28rem;
+  top: 50%;
+  width: 0.5625rem;
+  height: 0.5625rem;
+  margin-top: -0.28rem;
+  border-radius: 999px;
+  background-color: var(--group);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--group) 20%, transparent);
+  opacity: 0;
+  z-index: 4;
+  will-change: transform;
+}
+
+/* One real sentence, because the point lands harder with something to read. */
+.cp-exemplar {
+  padding-left: var(--s-3);
+  border-left: 2px solid color-mix(in srgb, var(--group-circularity) 50%, transparent);
+  font-size: 0.75rem;
+  font-style: italic;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.cp-extractor {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--s-4);
+  height: 100%;
+  padding-block: var(--s-4);
+}
+
+.cp-rail {
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent) 42%, transparent) 18%,
+    color-mix(in srgb, var(--accent) 42%, transparent) 82%,
+    transparent 100%
+  );
+}
+
+.cp-steps {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-3);
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--accent) 7%, #ffffff 74%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.cp-model {
+  font-family: var(--font-figure);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-medium);
+  color: var(--accent);
+}
+
+.cp-step {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.cp-guardrail {
+  position: relative;
+  max-width: 11rem;
+  padding: var(--s-2);
+  border-radius: 6px;
+  /* The rail runs the full height behind this, so the note carries its own
+     ground rather than being read through a line. */
+  background-color: color-mix(in srgb, #ffffff 82%, transparent);
+  font-size: 0.6875rem;
+  line-height: var(--lh-snug);
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.cp-record {
+  display: grid;
+  gap: var(--s-3);
+  align-content: center;
+}
+
+.cp-groups {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.cp-group {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-3) var(--s-4);
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--group) 5%, #ffffff 66%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--group) 22%, transparent);
+}
+
+.cp-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.cp-group-mark {
+  width: var(--s-2);
+  height: var(--s-2);
+  border-radius: 999px;
+  background-color: var(--group);
+  flex: none;
+}
+
+.cp-group-label {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  color: var(--group);
+}
+
+.cp-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.cp-field {
+  padding: 2px var(--s-2);
+  border-radius: 4px;
+  background-color: color-mix(in srgb, #ffffff 62%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--group) 28%, transparent);
+
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.cp-modules {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+
+/* ---- Beat 1: the corpus -------------------------------------------------- */
+
+.cp-scale {
+  display: grid;
+  grid-template-columns: 18rem minmax(0, 1fr);
+  gap: var(--s-8);
+  align-items: center;
+  opacity: 0;
+}
+
+.cp-ledger {
+  display: grid;
+  gap: var(--s-6);
+  align-content: center;
+}
+
+.cp-readout {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.cp-figure {
+  font-family: var(--font-figure);
+  font-size: 3rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-display);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.cp-readout[data-tone='total'] .cp-figure {
+  color: var(--accent);
+}
+
+/* The colour the verified cells wear in the field, so the number and the marks
+   are one statement and the field needs no key of its own. */
+.cp-readout[data-tone='checked'] .cp-figure {
+  color: #c07a12;
+}
+
+.cp-readout[data-tone='clean'] .cp-figure {
+  color: #1a8a6d;
+}
+
+.cp-readout-label {
+  max-width: 17rem;
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.cp-source {
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+
+.cp-plot {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-8);
+  align-items: center;
+  min-width: 0;
+}
+
+/* Sized from `CorpusField`'s own geometry constants, so the cells never land
+   on a fractional device pixel. */
+.cp-canvas-frame {
+  width: 797.5px;
+  height: 412.5px;
+  flex: none;
+}
+
+.cp-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* All eleven, ordered by size, with the count and the share beside each. A
+   wrapping chip list hid the tail behind an "and six more". */
+.cp-legend {
+  display: grid;
+  gap: var(--s-2);
+  align-content: center;
+}
+
+.cp-legend-item {
+  display: grid;
+  grid-template-columns: var(--s-3) minmax(0, 1fr) 3rem 2.75rem;
+  gap: var(--s-3);
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.cp-legend-swatch {
+  width: var(--s-3);
+  height: var(--s-3);
+  border-radius: 2px;
+}
+
+.cp-legend-count,
+.cp-legend-share {
+  justify-self: end;
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+}
+
+.cp-legend-count {
+  color: var(--ink);
+}
+
+.cp-legend-share {
+  color: var(--ink-faint);
+}
