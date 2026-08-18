@@ -1,0 +1,284 @@
+.trial {
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 46%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --surface: #f4f6f9;
+
+  display: flex;
+  align-items: center;
+  gap: var(--s-12);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+/* The export carries wide white margins; the plate crops back into them. */
+.trial-plate {
+  position: relative;
+  flex: none;
+  width: 54%;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  overflow: hidden;
+}
+
+.trial-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  object-position: center;
+  transform: scale(1.24);
+}
+
+.trial-column {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: var(--s-6);
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  align-content: center;
+}
+
+.trial-panel {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  align-content: center;
+}
+
+.trial-panel > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+/* ---- Step 0: the two elements put up for test ------------------------- */
+
+.trial-scenarios {
+  display: grid;
+  gap: var(--s-8);
+  align-content: center;
+}
+
+.trial-scenario {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.trial-scenario-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.trial-key {
+  width: var(--s-3);
+  height: var(--s-3);
+  border-radius: 2px;
+  background-color: var(--scenario);
+  flex: none;
+  align-self: center;
+}
+
+.trial-scenario-label {
+  font-family: var(--font-display);
+  font-size: var(--t-heading);
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  line-height: var(--lh-tight);
+}
+
+.trial-scenario-area {
+  margin-left: auto;
+  font-family: var(--font-figure);
+  font-size: var(--t-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+
+.trial-candidates {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.trial-candidate {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, #ffffff 58%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  font-size: var(--t-caption);
+  line-height: 1;
+}
+
+.trial-candidate-mark {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 999px;
+  background-color: var(--scenario);
+}
+
+.trial-candidate-life {
+  margin-left: auto;
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+
+.trial-scenario[data-scenario='partitions'] {
+  --scenario: #f2790c;
+}
+
+.trial-scenario[data-scenario='flooring'] {
+  --scenario: #1d5fab;
+}
+
+/* ---- Steps 1 and 2: the ranking ---------------------------------------- */
+
+.trial-ranking {
+  display: grid;
+  gap: var(--s-6);
+  align-content: center;
+  opacity: 0;
+}
+
+.trial-profile {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--rule);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.trial-profile[data-weighted='true'] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--family) 48%, transparent);
+  background-color: color-mix(in srgb, var(--family) 8%, transparent);
+  color: var(--family);
+}
+
+.trial-groups {
+  display: grid;
+  gap: var(--s-8);
+}
+
+.trial-group {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.trial-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--rule);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.trial-rows {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.trial-row {
+  display: grid;
+  grid-template-columns: 1.2rem 11.5rem minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+}
+
+.trial-rank {
+  font-family: var(--font-figure);
+  font-size: var(--t-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+
+.trial-label {
+  font-size: 1.0625rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.trial-row[data-lead='true'] .trial-rank,
+.trial-row[data-lead='true'] .trial-label {
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+}
+
+.trial-track {
+  display: flex;
+  gap: 2px;
+  height: 1.2rem;
+  min-width: 0;
+}
+
+.trial-band {
+  height: 100%;
+  background-color: var(--family);
+  will-change: width;
+}
+
+.trial-band:first-child {
+  border-start-start-radius: 4px;
+  border-end-start-radius: 4px;
+}
+
+.trial-band:last-child {
+  border-start-end-radius: 4px;
+  border-end-end-radius: 4px;
+}
+
+.trial-band[data-weighted='true'] {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px color-mix(in srgb, var(--family) 58%, transparent);
+}
+
+.trial-legend {
+  display: flex;
+  gap: var(--s-6);
+  flex-wrap: wrap;
+}
+
+.trial-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.trial-legend-swatch {
+  width: var(--s-3);
+  height: var(--s-3);
+  border-radius: 2px;
+  background-color: var(--family);
+}

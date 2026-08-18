@@ -116,9 +116,9 @@
 .scene-layer[data-align='slide'] .slide-frame {
   position: absolute;
   display: grid;
-  grid-template-rows: 1fr auto;
-  gap: 4%;
-  padding: 6% 7%;
+  grid-template-rows: auto 1fr;
+  gap: 3.5%;
+  padding: 5.5% 6% 6%;
   overflow: hidden;
 }
 
@@ -132,6 +132,15 @@
   min-height: 0;
 }
 
+.scene-layer[data-align='slide'] .slide-captions {
+  display: grid;
+  min-height: 0;
+}
+
+.scene-layer[data-align='slide'] .slide-captions > * {
+  grid-area: 1 / 1;
+}
+
 .scene-layer[data-align='slide'] .caption {
   max-width: 100%;
 }
@@ -140,8 +149,14 @@
   font-size: var(--t-title);
 }
 
+/* Act I sets the register: one large display line over a ruled eyebrow. The
+   wall is lit white, so only the ink changes, never the type. */
 .scene-layer[data-align='slide'] .slide-frame[data-figures] .caption-heading {
-  font-size: var(--t-heading);
+  font-size: 3rem;
+}
+
+.scene-layer[data-align='slide'] .caption {
+  gap: var(--s-4);
 }
 
 /* Dark ink, because the projection throws white. */
@@ -150,8 +165,9 @@
   color: var(--c-base);
 }
 
-.scene-layer[data-align='slide'] .caption[data-accent='circular'] .caption-eyebrow {
-  color: var(--c-circular-dim);
+.scene-layer[data-align='slide'] .caption[data-accent='circular'] .caption-eyebrow,
+.scene-layer[data-align='slide'] .caption[data-accent='emphasis'] .caption-eyebrow {
+  color: #8a5410;
 }
 
 .scene-layer[data-align='slide'] .caption-eyebrow::before {

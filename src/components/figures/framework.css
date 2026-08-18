@@ -1,0 +1,262 @@
+.fw {
+  position: relative;
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 46%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --accent: #8a5410;
+
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+/*
+ * The two states are independent layers. Sharing a grid cell coupled them: the
+ * type growing in one step resized the row and moved the other layer out from
+ * under the geometry the transition had already measured.
+ */
+.fw-stages,
+.fw-families {
+  position: absolute;
+  inset: 0;
+  align-content: center;
+}
+
+/* ---- The card, shared by both steps ------------------------------------ */
+
+/*
+ * The surface is a child rather than the card's own background, so the card can
+ * shed its panel while the rows inside it stay put and travel onward.
+ */
+.fw-card {
+  position: relative;
+  display: grid;
+  gap: var(--s-3);
+  align-content: start;
+  padding: var(--s-6) var(--s-4) var(--s-4);
+}
+
+.fw-card-surface {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background-color: color-mix(in srgb, #ffffff 72%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    0 10px 30px color-mix(in srgb, var(--c-base) 7%, transparent);
+  overflow: hidden;
+}
+
+.fw-card-surface::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 4px;
+  background-color: var(--tint, var(--accent));
+}
+
+.fw-card > *:not(.fw-card-surface) {
+  position: relative;
+}
+
+.fw-card[data-family] {
+  --tint: var(--family);
+  --reveal: 0;
+  clip-path: inset(0 0 calc(var(--reveal) * 1%) 0);
+}
+
+.fw-card[data-family] .fw-card-surface {
+  background-color: color-mix(in srgb, var(--family) 6%, #ffffff 70%);
+}
+
+/* The card header and the key row are the same shape, so one can land on the other. */
+.fw-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.fw-index {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--tint, var(--accent));
+}
+
+.fw-name {
+  font-family: var(--font-display);
+  font-size: 1.6875rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+}
+
+.fw-card[data-family] .fw-name {
+  color: var(--family);
+}
+
+.fw-lede {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- Step 0 ------------------------------------------------------------- */
+
+.fw-stages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  gap: var(--s-8);
+}
+
+.fw-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+}
+
+.fw-chip {
+  padding: var(--s-2) var(--s-3);
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px var(--rule);
+  font-size: 0.8125rem;
+  line-height: 1;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.fw-keys {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+}
+
+.fw-key {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  will-change: transform;
+}
+
+.fw-key-swatch {
+  width: var(--s-3);
+  height: var(--s-3);
+  border-radius: 2px;
+  background-color: var(--family);
+  flex: none;
+}
+
+.fw-key-label {
+  transform-origin: left center;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  color: var(--ink-muted);
+}
+
+.fw-bars {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.fw-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.75rem;
+}
+
+.fw-bar span {
+  height: 100%;
+  background-color: var(--family);
+}
+
+.fw-bar span:first-child {
+  border-start-start-radius: 4px;
+  border-end-start-radius: 4px;
+}
+
+.fw-bar span:last-child {
+  border-start-end-radius: 4px;
+  border-end-end-radius: 4px;
+}
+
+/* ---- Step 1 ------------------------------------------------------------- */
+
+.fw-families {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  gap: var(--s-4);
+  opacity: 0;
+}
+
+.fw-metrics {
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+}
+
+.fw-metric {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-radius: 7px;
+  background-color: color-mix(in srgb, #ffffff 76%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.fw-metric-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.fw-metric-key {
+  font-family: var(--font-figure);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--family);
+  flex: none;
+}
+
+.fw-metric-label {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+}
+
+.fw-metric-unit {
+  margin-top: -2px;
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.fw-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.fw-part {
+  padding: 1px var(--s-2);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--family) 26%, transparent);
+
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}

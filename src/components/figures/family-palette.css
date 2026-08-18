@@ -1,0 +1,23 @@
+/*
+ * C1's four indicator families, as a categorical scale for the projected
+ * surface. Validated against that white ground: all four sit inside the
+ * lightness band, clear the chroma floor, hold >= 3:1 contrast, and separate
+ * under protan, deutan and tritan simulation across every pair. Circularity
+ * keeps `--c-circular-dim` so the family that owns the corridor's flow is the
+ * same teal here as it is underfoot.
+ *
+ * The one pair that lands in the CVD floor band, performance against
+ * circularity, is never adjacent in a stack and is always direct-labelled.
+ */
+[data-family='circularity'] {
+  --family: #1a8a6d;
+}
+[data-family='environmental'] {
+  --family: #3060a8;
+}
+[data-family='economic'] {
+  --family: #a05a12;
+}
+[data-family='performance'] {
+  --family: #9c3b6e;
+}

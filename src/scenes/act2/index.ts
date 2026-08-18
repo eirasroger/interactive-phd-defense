@@ -1,13 +1,16 @@
 import { CROSS, ROOM, SHOT, STATIONS, shotAt } from '@/config/corridor';
 import { ZONE_ORIGIN } from '@/config/layout';
 import { AT_THRESHOLD, DOORS_AT } from '@/animations/entry';
-import { act2Captions, act2Figures } from '@/content/act2';
+import { act2Captions, act2Figures, c1Captions, c1Render } from '@/content/act2';
 import type { CameraPose, Vec3 } from '@/engine/camera/types';
 import type { SceneDefinition } from '@/engine/scene/types';
 import { CORRIDOR_ASSETS, corridorZone } from '@/world/corridor/CorridorZone';
 import { ENTRANCE_LEAF_STAGGER, ENTRANCE_TRAVEL_SECONDS } from '@/world/exterior/entrance';
 import { THRESHOLD_Z } from '@/world/exterior/site';
-import { StationScene } from './StationScene';
+import { createFramework } from '@/components/figures/Framework';
+import { createTakeaway } from '@/components/figures/Takeaway';
+import { createTrial } from '@/components/figures/Trial';
+import { StationScene, type SlidePanel } from './StationScene';
 
 const CHAPTER = 'Act II — The Corridor';
 
@@ -32,6 +35,12 @@ const station = (index: number): CameraPose => {
   };
 };
 
+const c1Panels = (): readonly SlidePanel[] => [
+  createFramework(),
+  createTrial(c1Render),
+  createTakeaway(),
+];
+
 const slide = (
   id: keyof typeof act2Captions,
   title: string,
@@ -44,7 +53,12 @@ const slide = (
   world: 'foreground',
   pose: station(index),
   assets: [...CORRIDOR_ASSETS],
-  create: () => new StationScene({ caption: act2Captions[id], figures: act2Figures[id] }),
+  create: () =>
+    new StationScene({
+      caption: act2Captions[id],
+      ...(id === 'c1' ? { captions: c1Captions, panels: c1Panels() } : {}),
+      figures: act2Figures[id],
+    }),
 });
 
 export const act2Scenes: readonly SceneDefinition[] = [

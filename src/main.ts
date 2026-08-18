@@ -14,6 +14,10 @@ import { Engine } from '@/engine/Engine';
 import { qualityTier, supportsWebGL } from '@/engine/env';
 import { scenes } from '@/scenes';
 
+if (import.meta.env.DEV) {
+  Object.assign(window as unknown as Record<string, unknown>, { __gsap: gsap });
+}
+
 const viewport = document.querySelector<HTMLElement>('#viewport');
 const stage = document.querySelector<HTMLElement>('#stage');
 const canvasLayer = document.querySelector<HTMLElement>('#canvas-layer');

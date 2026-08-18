@@ -1,0 +1,149 @@
+.take {
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 46%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-6);
+  align-items: stretch;
+  align-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+.take-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--s-4);
+  padding: var(--s-6) var(--s-6) var(--s-6);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, #ffffff 72%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    0 10px 30px color-mix(in srgb, var(--c-base) 7%, transparent);
+  overflow: hidden;
+}
+
+.take-card::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 4px;
+  background-color: var(--tint);
+}
+
+.take-name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+}
+
+.take-body {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.take-figure {
+  display: grid;
+  gap: var(--s-3);
+  align-content: end;
+}
+
+/* A pair of verdicts, the second overturning the first. */
+.take-verdict {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-3);
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.take-verdict-from {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.take-verdict-to {
+  font-size: 0.9375rem;
+  font-weight: var(--fw-medium);
+}
+
+.take-verdict[data-lead='true'] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 40%, transparent);
+  background-color: color-mix(in srgb, var(--tint) 8%, transparent);
+}
+
+.take-verdict[data-lead='true'] .take-verdict-to {
+  color: var(--tint);
+}
+
+/* Two bars all but equal, which is the finding. */
+.take-pair {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.take-pair-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: center;
+
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.take-pair-bar {
+  height: 0.6875rem;
+  border-radius: 4px;
+  background-color: var(--tint);
+}
+
+.take-handoff {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 40%, transparent);
+  background-color: color-mix(in srgb, var(--tint) 8%, transparent);
+}
+
+.take-handoff-mark {
+  font-family: var(--font-figure);
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  color: var(--tint);
+  flex: none;
+}
+
+.take-handoff-text {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.take-card[data-tint='circularity'] {
+  --tint: #1a8a6d;
+}
+.take-card[data-tint='environmental'] {
+  --tint: #3060a8;
+}
+.take-card[data-tint='performance'] {
+  --tint: #9c3b6e;
+}
