@@ -1,0 +1,292 @@
+/*
+ * Three tiers over one rule. The rule spans the full width because it is the
+ * only horizontal in the composition that means anything: stochastic reading
+ * above it, deterministic execution below.
+ */
+.wf {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--s-6);
+  align-content: center;
+}
+
+.wf-grid {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: var(--s-4) var(--s-8);
+  align-content: center;
+}
+
+/* The line spans everything, the node centres over the content the line
+   divides, so it does not sit off-axis by half the gutter. */
+.wf-rule {
+  position: relative;
+  grid-column: 1 / -1;
+  display: grid;
+  justify-items: center;
+  padding-left: calc(8.5rem + var(--s-8));
+  margin: var(--s-3) 0 var(--s-6);
+}
+
+.wf-gutter {
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  justify-items: end;
+  padding-right: var(--s-4);
+  border-right: 1px solid var(--rule);
+  text-align: right;
+}
+
+.wf-gutter-step {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  color: var(--ink-ghost);
+}
+
+.wf-gutter-label {
+  font-family: var(--font-label);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+}
+
+/* ---- Tier 1: what arrives ----------------------------------------------- */
+
+.wf-docs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+
+.wf-doc {
+  position: relative;
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+  padding: var(--s-4);
+  padding-top: var(--s-4);
+  border-radius: 11px;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--source) 26%, transparent),
+    0 8px 20px color-mix(in srgb, var(--source) 10%, transparent);
+}
+
+/* The colour each input carries is the authority it carries, and the same four
+   tones are read again on the axes and on the constraint chips. */
+.wf-doc::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background-color: var(--source);
+}
+
+/* A regulatory schema is digitised by hand into key-value pairs, so it is the
+   one input no model reads. */
+.wf-doc[data-path='direct'] {
+  background-color: color-mix(in srgb, var(--source) 5%, #ffffff);
+}
+
+.wf-doc-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: center;
+}
+
+.wf-glyph {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: none;
+  stroke: var(--source);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wf-doc-label {
+  font-size: 1rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+}
+
+.wf-doc-detail {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
+
+/* ---- Tier 2: what the model returns ------------------------------------- */
+
+.wf-records {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6);
+}
+
+.wf-record {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-6);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--c3-user) 7%, #ffffff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c3-user) 28%, transparent);
+}
+
+.wf-record-label {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+}
+
+.wf-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.wf-field {
+  padding: 3px var(--s-3);
+  border-radius: 999px;
+  background-color: #ffffff;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c3-user) 26%, transparent);
+
+  font-family: var(--font-figure);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+/* ---- The rule ------------------------------------------------------------ */
+
+.wf-rule-line {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--c3-accent) 22%, transparent),
+    var(--c3-accent) 30%,
+    var(--c3-accent) 70%,
+    color-mix(in srgb, var(--c3-accent) 22%, transparent)
+  );
+}
+
+.wf-rule-node {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 0 var(--s-3);
+  margin-top: -1.1rem;
+  padding: var(--s-2) var(--s-6) var(--s-2) var(--s-4);
+  border-radius: 999px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1.5px var(--c3-accent),
+    0 10px 26px color-mix(in srgb, var(--c3-accent) 16%, transparent);
+}
+
+.wf-rule-tick {
+  width: 0.9rem;
+  height: 0.5rem;
+  border-left: 2.2px solid var(--c3-accent);
+  border-bottom: 2.2px solid var(--c3-accent);
+  border-radius: 1px;
+  transform: rotate(-45deg) translate(1px, -2px);
+}
+
+.wf-rule-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: var(--fw-medium);
+  line-height: 1.2;
+  color: var(--c3-accent);
+}
+
+.wf-rule-detail {
+  grid-column: 2;
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
+
+/* ---- Tier 3: what the engine does --------------------------------------- */
+
+.wf-verdict {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: var(--s-8);
+  align-items: center;
+}
+
+.wf-engine {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-6);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--c3-accent) 4%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c3-accent) 16%, transparent);
+}
+
+.wf-engine-label {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+}
+
+.wf-engine-detail {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
+
+.wf-chips {
+  display: flex;
+  gap: var(--s-2);
+}
+
+/* The cohort, before any scenario has been declared. Tinting these would
+   assert a result this panel has not established. */
+.wf-chip {
+  flex: 1;
+  padding: var(--s-2) 0;
+  border-radius: 7px;
+  background-color: #ffffff;
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: var(--fw-medium);
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.wf-bins {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.wf-bin {
+  padding: var(--s-2) var(--s-4);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--status) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status) 34%, transparent);
+}
+
+.wf-bin-label {
+  font-family: var(--font-label);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.01em;
+  color: var(--status);
+}

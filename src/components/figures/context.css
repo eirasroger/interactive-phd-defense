@@ -1,0 +1,261 @@
+/*
+ * Two states over one cell, so the state arriving is never sized by the one
+ * leaving. Same arrangement as `corpus.css` and `framework.css`.
+ */
+.cx-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: var(--s-8);
+  align-content: center;
+}
+
+.cx {
+  position: relative;
+}
+
+/* ---- Where the stage sits ----------------------------------------------- */
+
+.cx-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-8);
+  align-content: start;
+  padding-top: var(--s-6);
+}
+
+.cx-rail {
+  position: absolute;
+  top: var(--s-6);
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--rule-strong),
+    var(--rule-strong) 62%,
+    color-mix(in srgb, var(--c3-accent) 34%, transparent)
+  );
+}
+
+.cx-stage {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  padding-top: var(--s-6);
+}
+
+.cx-stage-node {
+  position: absolute;
+  top: calc(var(--s-6) * -1 - 5px);
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background-color: #ffffff;
+  box-shadow: inset 0 0 0 2px var(--rule-strong);
+}
+
+/* The stage the contribution is, marked once. */
+.cx-stage[data-key='screening'] .cx-stage-node {
+  box-shadow: inset 0 0 0 4px var(--c3-accent);
+}
+
+.cx-stage-step {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  color: var(--ink-ghost);
+}
+
+.cx-stage-label {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+}
+
+.cx-stage[data-key='screening'] .cx-stage-label {
+  color: var(--c3-accent);
+  font-weight: var(--fw-medium);
+}
+
+.cx-stage-note {
+  max-width: 19rem;
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.cx-population {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  width: 17rem;
+  margin-top: var(--s-8);
+}
+
+.cx-population:empty {
+  display: none;
+}
+
+.cx-mark {
+  width: 27px;
+  height: 34px;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--c-base) 26%, transparent);
+  will-change: transform, opacity;
+}
+
+.cx-mark-kept {
+  background-color: color-mix(in srgb, var(--c3-pass) 72%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--c3-pass) 22%, transparent);
+}
+
+/* ---- Why the gate cannot close by itself -------------------------------- */
+
+.cx-state[data-state='dilemma'] {
+  grid-template-rows: auto auto auto auto;
+  gap: var(--s-4);
+  justify-items: center;
+}
+
+.cx-state[data-state='dilemma'] .c3-index {
+  justify-self: start;
+}
+
+.cx-approaches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 26rem));
+  gap: var(--s-12);
+  margin-top: var(--s-2);
+}
+
+.cx-approach {
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+  padding: var(--s-6) var(--s-6) var(--s-4);
+  border-radius: 14px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c-base) 9%, transparent),
+    0 1px 2px color-mix(in srgb, var(--c-base) 5%, transparent),
+    0 12px 28px color-mix(in srgb, var(--c-base) 6%, transparent);
+}
+
+.cx-approach-label {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+}
+
+.cx-approach-body {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.cx-approach-cost {
+  margin-top: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--c3-fail);
+}
+
+.cx-joins {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 26rem));
+  gap: var(--s-12);
+  justify-items: center;
+  margin-block: calc(var(--s-4) * -1);
+}
+
+.cx-join {
+  width: 2px;
+  height: var(--s-12);
+  border-radius: 999px;
+  background: linear-gradient(to bottom, var(--rule-strong), var(--c3-accent));
+}
+
+/* The resolution carries the accent and the only elevated surface on the
+   state, because it is the answer to both cards above it. */
+.cx-resolution {
+  position: relative;
+  display: grid;
+  gap: var(--s-4);
+  width: 100%;
+  max-width: 58rem;
+  padding: var(--s-6) var(--s-8);
+  border-radius: 16px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c3-accent) 22%, transparent),
+    0 18px 40px color-mix(in srgb, var(--c3-accent) 12%, transparent);
+}
+
+.cx-resolution::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  border-radius: 16px 16px 0 0;
+  background-color: var(--c3-accent);
+}
+
+.cx-resolution-label {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+  color: var(--c3-accent);
+}
+
+.cx-parts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-8);
+}
+
+.cx-part {
+  display: grid;
+  gap: var(--s-1);
+  align-content: start;
+  padding-left: var(--s-4);
+  border-left: 2px solid color-mix(in srgb, var(--c3-accent) 30%, transparent);
+}
+
+.cx-part[data-key='verify'] {
+  border-left-color: var(--c3-accent);
+}
+
+.cx-part-agent {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c3-accent);
+}
+
+.cx-part-act {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}

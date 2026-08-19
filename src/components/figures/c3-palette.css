@@ -1,0 +1,96 @@
+/*
+ * C3's own chromatic identity: an authority scale, not a category set.
+ *
+ * Regulation, drawing and operator are three strengths of the same thing, so
+ * one hue at three weights carries the hierarchy before any label is read.
+ * Every use still pairs the colour with a badge and a gap, per the project's
+ * rule that separation is geometry first and colour second.
+ *
+ * Verdicts get their own semantic pair, reused nowhere else in the deck: pass
+ * and fail read at a glance across a field of product cards, and missing gets
+ * a third, deliberately duller tone so an unresolved check never reads as a
+ * clean fail.
+ */
+.c3 {
+  --c3-accent: #33366e;
+  --c3-regulation: #33366e;
+  --c3-drawing: #5a5f9e;
+  --c3-user: #9296c4;
+  /* Product evidence is not a source of authority, so it sits off the ramp. */
+  --c3-evidence: #8a5a2b;
+
+  --c3-pass: #2f8f5b;
+  --c3-fail: #b23b3b;
+  --c3-missing: #8a8f97;
+
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 44%, transparent);
+  --ink-ghost: color-mix(in srgb, var(--c-base) 22%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --rule-strong: color-mix(in srgb, var(--c-base) 22%, transparent);
+  --card: color-mix(in srgb, #ffffff 74%, transparent);
+
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+[data-source='regulation'] {
+  --source: var(--c3-regulation);
+}
+[data-source='drawing'] {
+  --source: var(--c3-drawing);
+}
+[data-source='user'] {
+  --source: var(--c3-user);
+}
+[data-source='epd'] {
+  --source: var(--c3-evidence);
+}
+
+[data-status='pass'] {
+  --status: var(--c3-pass);
+}
+[data-status='fail'] {
+  --status: var(--c3-fail);
+}
+[data-status='missing'] {
+  --status: var(--c3-missing);
+}
+
+/*
+ * A product, wherever the station draws one. The tint is its verdict, so the
+ * two that survive the screening are recognisably the same objects on the
+ * handover wall that they were in the field.
+ */
+.c3-product {
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--status) 7%, var(--card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status) 26%, transparent);
+
+  transition:
+    background-color var(--d-slow) var(--e-standard),
+    box-shadow var(--d-slow) var(--e-standard);
+}
+
+/* The uppercase locator every C3 panel opens with. */
+.c3-index {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c3-accent);
+}
+
+/* The scenario, quoted as the operator typed it. */
+.c3-quote {
+  max-width: 46rem;
+  font-size: 0.9375rem;
+  font-style: italic;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}

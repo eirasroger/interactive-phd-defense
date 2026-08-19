@@ -18,6 +18,7 @@ const slide = (station: string, title: string, heading: string): CaptionContent 
 
 const c1 = (heading: string): CaptionContent => slide('C1', 'Decision framework', heading);
 const c2 = (heading: string): CaptionContent => slide('C2', 'Empirical characterisation', heading);
+const c3 = (heading: string): CaptionContent => slide('C3', 'Screening agent', heading);
 
 /**
  * Six beats over one held pose. The camera stays where it landed, so each of
@@ -53,10 +54,25 @@ export const c2Captions: readonly CaptionContent[] = [
   c2('Implications for the contributions that follow.'),
 ];
 
+/**
+ * Seven beats over one held pose. Two establish why the stage exists and why it
+ * cannot be fully automated, one states the workflow, one the reconciliation
+ * rule, two run the case study, and the last states what the station produces.
+ */
+export const c3Captions: readonly CaptionContent[] = [
+  c3('A ranking is meaningful only over candidates that are already admissible.'),
+  c3('Screening at portfolio scale requires automation, and a regulatory verdict requires accountability.'),
+  c3('A language model reads the documents, and a rule engine issues the verdict.'),
+  c3('Every source proposes a bound, and the strictest one governs.'),
+  c3('Six products, screened against the operator’s description of the application.'),
+  c3('The same six products, screened once the structural drawing has been read.'),
+  c3('What leaves the station is a candidate set with its reasoning attached.'),
+];
+
 export const act2Captions = {
   c1: c1Captions[0] as CaptionContent,
   c2: c2Captions[0] as CaptionContent,
-  c3: slide('C3', 'Screening agent', 'Feasibility and preference are different operations.'),
+  c3: c3Captions[0] as CaptionContent,
   c4: slide('C4', 'Inference', 'Declared data is absent exactly where it matters.'),
   c5: slide(
     'C5',
@@ -69,6 +85,7 @@ export const act2Captions = {
 export const act2Beats: Partial<Record<keyof typeof act2Captions, readonly CaptionContent[]>> = {
   c1: c1Captions,
   c2: c2Captions,
+  c3: c3Captions,
 };
 
 export const act2Figures: Partial<Record<keyof typeof act2Captions, readonly FigureContent[]>> = {};

@@ -4,6 +4,10 @@ import { createFramework } from '@/components/figures/Framework';
 import { createLandscape } from '@/components/figures/Landscape';
 import { createOpening } from '@/components/figures/Opening';
 import { createParadox } from '@/components/figures/Paradox';
+import { createContext } from '@/components/figures/Context';
+import { createHandover } from '@/components/figures/Handover';
+import { createReconcile } from '@/components/figures/Reconcile';
+import { createSort } from '@/components/figures/Sort';
 import {
   aggregate,
   createTakeaway,
@@ -16,6 +20,7 @@ import {
   type TakeawayCard,
 } from '@/components/figures/Takeaway';
 import { createTrial } from '@/components/figures/Trial';
+import { createWorkflow } from '@/components/figures/Workflow';
 import { c1Render } from '@/content/act2';
 import { GWP_BY_CATEGORY, WORDINGS } from '@/content/c2';
 import type { SlidePanel } from './StationScene';
@@ -120,6 +125,13 @@ const PANELS: Readonly<Record<string, () => readonly SlidePanel[]>> = {
     createParadox(),
     createBurden(),
     createTakeaway(c2Takeaway),
+  ],
+  c3: () => [
+    createContext(),
+    createWorkflow(),
+    createReconcile(),
+    createSort(),
+    createHandover(),
   ],
 };
 

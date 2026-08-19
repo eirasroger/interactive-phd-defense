@@ -12,6 +12,10 @@ import { el } from '@/utilities/dom';
  * A panel owning more than one beat is the point: a device that re-forms
  * across three clicks is one object being driven, and it can animate between
  * its own states. Swapping two finished pictures cannot.
+ *
+ * `element` belongs to the scene during a swap: it drives its `opacity`, `y`
+ * and `zIndex`, and kills anything else tweening them. A panel animates its
+ * contents and may raise its own opacity, but must not tween `y` on its root.
  */
 export interface SlidePanel {
   readonly element: HTMLElement;
@@ -33,6 +37,29 @@ interface Slot {
 }
 
 const percent = (fraction: number): string => `${(fraction * 100).toFixed(4)}%`;
+
+/**
+ * How one composition on the wall is replaced by another.
+ *
+ * The outgoing panel loses its ink quickly and carries on up out of the frame;
+ * the incoming one comes up into it from below under its own staggered build.
+ * Both travel the same way, so the wall reads as one surface being changed
+ * rather than as two slides swapping.
+ *
+ * Two constraints hold these numbers together, and both are measurable.
+ * `handover` must land where the outgoing panel is under a tenth of its
+ * opacity, so the two compositions are never legible at once. And `lift` must
+ * spend most of its distance inside `fade`, or the travel happens after the
+ * panel is invisible and the swap is a dissolve again.
+ */
+const SWAP = {
+  fade: DURATION.normal * 0.9,
+  lift: DURATION.slow * 0.56,
+  liftBy: 30,
+  handover: DURATION.quick * 1.1,
+  rise: DURATION.slow * 0.7,
+  riseBy: 12,
+} as const;
 
 const asPanel = (figure: FigureContent): SlidePanel => {
   const built = createSlideFigure(figure);
@@ -111,12 +138,20 @@ export class StationScene implements SceneInstance {
     const shown = this.captions[wanted];
     if (!shown) return;
 
+    // The claim leaves the same way the panel under it does, and it spends its
+    // opacity early: `EASE.exit` holds a heading near full for most of its
+    // duration, so the outgoing and incoming claims were legible together.
     for (const [position, node] of this.captions.entries()) {
       if (position === wanted) continue;
+      if (settle) {
+        gsap.set(node, { opacity: 0, y: 0 });
+        continue;
+      }
       gsap.to(node, {
         opacity: 0,
-        duration: settle ? 0 : seconds(DURATION.quick),
-        ease: EASE.exit,
+        y: -14,
+        duration: seconds(DURATION.quick),
+        ease: 'power2.out',
         overwrite: true,
       });
     }
@@ -135,7 +170,7 @@ export class StationScene implements SceneInstance {
         duration: seconds(DURATION.slow),
         ease: EASE.enter,
         overwrite: true,
-        delay,
+        delay: delay + seconds(DURATION.quick * 0.72),
       },
     );
   }
@@ -150,45 +185,62 @@ export class StationScene implements SceneInstance {
 
     for (const panel of this.panels) {
       if (panel === slot.panel || panel === outgoing) continue;
-      gsap.set(panel.element, { opacity: 0, zIndex: 0 });
+      gsap.killTweensOf(panel.element);
+      gsap.set(panel.element, { opacity: 0, y: 0, zIndex: 0 });
     }
 
-    // The panel being raised may still be running the fade-out from the last
-    // time it left, and a `set` inside `play` does not beat a tween that is
-    // still in flight. Stepping back onto a panel a click after leaving it left
-    // the wall blank for that reason. The scene started the fade, so the scene
-    // stops it.
+    // The panel being raised may still be running the exit from the last time it
+    // left, and a `set` inside `play` does not beat a tween that is still in
+    // flight. Stepping back onto a panel a click after leaving it left the wall
+    // blank for that reason. The scene started the exit, so the scene stops it
+    // and writes back every property the exit touched, rather than trusting an
+    // `onComplete` that a kill would have skipped.
     gsap.killTweensOf(slot.panel.element);
-    gsap.set(slot.panel.element, { zIndex: 1 });
+    gsap.set(slot.panel.element, { zIndex: 1, y: 0 });
 
     // Run the outgoing timeline to its end before dropping it. A bare `kill()`
     // abandons every `from` tween wherever it happened to be, which strands
     // whatever it was fading at whatever opacity it had reached.
     this.build?.progress(1).kill();
 
-    // A panel handing over to another panel crossfades under it. Cutting the
-    // outgoing one to zero in the same frame is what made every change of
-    // panel read as a jump, however carefully the incoming one was staged.
     if (outgoing && outgoing !== slot.panel) {
       gsap.set(outgoing.element, { zIndex: 0 });
+      gsap.killTweensOf(outgoing.element);
+
       if (settle) {
-        gsap.set(outgoing.element, { opacity: 0 });
+        gsap.set(outgoing.element, { opacity: 0, y: 0 });
       } else {
+        // Two tweens on one target, so neither may overwrite: `overwrite: true`
+        // kills every other tween of the target at the moment it is created.
+        // The kill above is what they would have been for.
         gsap.to(outgoing.element, {
           opacity: 0,
-          duration: seconds(DURATION.slow),
-          ease: EASE.standard,
-          overwrite: true,
+          duration: seconds(SWAP.fade),
+          ease: 'power2.out',
         });
-        handover = seconds(DURATION.normal * 0.4);
+        gsap.to(outgoing.element, {
+          y: -SWAP.liftBy,
+          duration: seconds(SWAP.lift),
+          ease: 'power3.out',
+        });
+        handover = seconds(SWAP.handover);
       }
     }
 
-    // Two compositions dissolving through each other reads as a glitch, so the
-    // incoming one waits until the outgoing has mostly cleared. Steps inside a
-    // panel are a continuous move and take no handover at all.
     this.build = slot.panel.play(slot.step, settle);
-    if (handover > 0) this.build?.delay(handover);
+
+    // A swap gives the incoming panel a rise of its own, under the stagger its
+    // own contents already run. Entering the scene takes none of this: there is
+    // nothing to replace, and the entry is paced against the camera instead.
+    if (handover > 0) {
+      this.build?.delay(handover);
+      gsap.fromTo(
+        slot.panel.element,
+        { y: SWAP.riseBy },
+        { y: 0, duration: seconds(SWAP.rise), ease: EASE.enter, delay: handover },
+      );
+    }
+
     return this.build;
   }
 }

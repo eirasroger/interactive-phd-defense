@@ -1,0 +1,269 @@
+/*
+ * The cause across the top, the effect underneath. Six rows, two columns, and
+ * the only movement in the panel is a card crossing the centre.
+ */
+.so {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: var(--s-3);
+  align-content: center;
+}
+
+/* ---- What the engine was told ------------------------------------------- */
+
+.so-head {
+  display: grid;
+  grid-template-columns: 18.5rem minmax(0, 1fr) auto;
+  gap: var(--s-8);
+  align-items: center;
+  margin-top: var(--s-3);
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Written once for the whole panel. Holding still is what it is for. */
+.so-condition-label {
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+}
+
+/* ---- What the engine was given ------------------------------------------ */
+
+.so-chips {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+
+.so-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 3px var(--s-2) 3px 7px;
+  border-radius: 5px;
+  background-color: color-mix(in srgb, var(--source) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--source) 22%, transparent);
+  white-space: nowrap;
+}
+
+.so-chip[data-present='false'] {
+  display: none;
+}
+
+.so-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--source);
+}
+
+.so-chip-name {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--source);
+}
+
+/* ---- A quantity that is replaced rather than redrawn --------------------- */
+
+.so-roll-track {
+  display: block;
+  will-change: transform;
+}
+
+.so-roll-cell {
+  display: block;
+  height: 1.15em;
+  line-height: 1.15em;
+  white-space: nowrap;
+}
+
+.so-slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.so-slot {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-2) var(--s-3);
+  border-radius: 7px;
+  border-left: 3px solid var(--source, var(--rule-strong));
+  background-color: var(--card);
+
+  transition:
+    border-left-color var(--d-slow) var(--e-standard),
+    background-color var(--d-slow) var(--e-standard);
+}
+
+.so-slot[data-governed='false'] {
+  --source: var(--c3-missing);
+  background-color: transparent;
+}
+
+.so-slot-label {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--source, var(--ink-faint));
+}
+
+.so-slot-value {
+  display: block;
+  overflow: hidden;
+  height: 1.15em;
+  font-family: var(--font-figure);
+  font-size: 1.0625rem;
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.so-slot[data-governed='false'] .so-slot-value {
+  font-weight: var(--fw-regular);
+  color: var(--ink-faint);
+}
+
+.so-tally {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: var(--s-3);
+  align-items: baseline;
+  justify-items: end;
+}
+
+.so-tally-value {
+  display: block;
+  overflow: hidden;
+  height: 1.15em;
+  font-family: var(--font-figure);
+  font-size: 3rem;
+  font-weight: var(--fw-light);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-display);
+  color: var(--c3-pass);
+}
+
+.so-tally-unit {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- The field ---------------------------------------------------------- */
+
+.so-field {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto repeat(6, minmax(0, 1fr));
+  column-gap: var(--s-8);
+  row-gap: 6px;
+  align-content: center;
+  margin-top: var(--s-2);
+}
+
+/* One rule down the centre. A card crossing it is the whole panel. */
+.so-field::before {
+  content: '';
+  position: absolute;
+  top: 1.5rem;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--rule-strong) 12%,
+    var(--rule-strong) 88%,
+    transparent
+  );
+}
+
+.so-column {
+  grid-row: 1;
+  padding-bottom: var(--s-1);
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.so-column[data-column='considered'] {
+  grid-column: 1;
+  color: var(--c3-pass);
+}
+
+.so-column[data-column='discarded'] {
+  grid-column: 2;
+  color: var(--c3-fail);
+}
+
+.so-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 var(--s-3);
+  padding: 6px var(--s-4);
+  will-change: transform;
+}
+
+.so-card-name {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  color: var(--status);
+}
+
+.so-card-reason {
+  justify-self: end;
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-align: right;
+  color: var(--status);
+}
+
+.so-readings {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--s-3);
+  margin-top: 1px;
+}
+
+.so-reading {
+  font-family: var(--font-figure);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+
+/* An indicator no source governs is not evidence, so it does not read as any. */
+.so-reading[data-state='ungoverned'] {
+  color: var(--ink-ghost);
+}
+
+/* The reading that decided it. This is why the card is where it is. */
+.so-reading[data-state='fails'] {
+  padding: 0 var(--s-2);
+  margin: 0 calc(var(--s-2) * -1);
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--status) 16%, transparent);
+  font-weight: var(--fw-semibold);
+  color: var(--status);
+}

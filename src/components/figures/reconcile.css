@@ -1,0 +1,238 @@
+/*
+ * One axis per indicator, the full width of the band. The shading is the set of
+ * values a product is still allowed to have, and every source in the scenario
+ * puts a mark on the same scale, so "strictest" is a position rather than a
+ * word.
+ */
+.rc {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--s-4);
+  align-content: center;
+}
+
+.rc-rows {
+  display: grid;
+  gap: var(--s-6);
+  align-content: center;
+  margin-top: var(--s-4);
+}
+
+.rc-row {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr) 10.5rem;
+  gap: var(--s-12);
+  align-items: center;
+}
+
+/*
+ * The axis reserves the space its marks label into, so the row's box is the
+ * whole drawing and a mark cannot overflow into the row above it. The strip is
+ * therefore below the row's centre, and the two text columns are nudged the
+ * same distance down to meet it. Every measure here is fixed rem, so the nudge
+ * stays correct.
+ */
+.rc-row-head,
+.rc-governing {
+  margin-top: 1.25rem;
+}
+
+.rc-row-head {
+  display: grid;
+  gap: 3px;
+}
+
+.rc-row-label {
+  font-size: 1.25rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+}
+
+.rc-row-kind {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- The axis ----------------------------------------------------------- */
+
+.rc-rule {
+  position: relative;
+  height: 7rem;
+}
+
+.rc-rule::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 1.5rem;
+  height: 1px;
+  background-color: var(--rule-strong);
+}
+
+.rc-band {
+  position: absolute;
+  inset: 2.75rem 0 1.5rem;
+  background-color: color-mix(in srgb, var(--c3-accent) 18%, transparent);
+  border-radius: 3px;
+}
+
+/* The shading needs one word, once, at the end that never moves. */
+.rc-band::after {
+  content: 'Admissible';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c3-accent) 68%, transparent);
+}
+
+.rc-row[data-kind='max'] .rc-band::after {
+  left: var(--s-3);
+}
+
+.rc-row[data-kind='min'] .rc-band::after {
+  right: var(--s-3);
+}
+
+/* The moving edge is the only edge that is drawn, because it is the only one
+   the rule decides. */
+.rc-row[data-kind='max'] .rc-band {
+  border-right: 3px solid var(--c3-accent);
+}
+
+.rc-row[data-kind='min'] .rc-band {
+  border-left: 3px solid var(--c3-accent);
+}
+
+.rc-tick {
+  position: absolute;
+  bottom: 0.25rem;
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-ghost);
+}
+
+.rc-tick[data-end='low'] {
+  left: 0;
+}
+
+.rc-tick[data-end='high'] {
+  right: 0;
+}
+
+/* ---- A source's mark ---------------------------------------------------- */
+
+.rc-mark {
+  position: absolute;
+  top: 2.5rem;
+  bottom: 1.25rem;
+  width: 0;
+}
+
+.rc-mark-stem {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1.5px;
+  width: 3px;
+  border-radius: 999px;
+  background-color: var(--source);
+}
+
+/* A cap on the stem, so a mark reads as a placed measure rather than a tick. */
+.rc-mark-stem::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 999px;
+  background-color: var(--source);
+}
+
+.rc-mark-value,
+.rc-mark-source {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  color: var(--source);
+}
+
+.rc-mark-value {
+  bottom: calc(100% + 5px);
+  font-family: var(--font-figure);
+  font-size: 1.25rem;
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.rc-mark-source {
+  bottom: calc(100% + 2.15rem);
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+/* A mark the region no longer covers keeps its position and loses its weight.
+   Nothing announces that it lost; it is simply outside the shading. */
+.rc-mark[data-state='outside'] .rc-mark-stem {
+  width: 2px;
+  left: -1px;
+  background: repeating-linear-gradient(to bottom, var(--source) 0 3px, transparent 3px 6px);
+}
+
+.rc-mark[data-state='outside'] .rc-mark-stem::before {
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--source);
+}
+
+.rc-mark[data-state='outside'] .rc-mark-value {
+  font-weight: var(--fw-regular);
+}
+
+/* ---- What governs ------------------------------------------------------- */
+
+.rc-governing {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  padding-left: var(--s-4);
+  border-left: 3px solid var(--source);
+}
+
+.rc-governing-value {
+  font-family: var(--font-figure);
+  font-size: 2rem;
+  font-weight: var(--fw-light);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.rc-governing-source {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--source);
+}

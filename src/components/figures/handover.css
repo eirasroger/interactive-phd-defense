@@ -1,0 +1,255 @@
+/*
+ * What the station produces, weighted by what it is for. One tall card for the
+ * candidate set, two stacked beside it for the account of how it was reached.
+ */
+.hv {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--s-4);
+  align-content: center;
+}
+
+.hv-layout {
+  display: grid;
+  grid-template-columns: 32rem minmax(0, 1fr);
+  gap: var(--s-6);
+  min-height: 0;
+}
+
+.hv-column {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--s-6);
+  min-height: 0;
+}
+
+.hv-card {
+  display: grid;
+  align-content: start;
+  gap: var(--s-3);
+  padding: var(--s-6);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, #ffffff 78%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+
+.hv-card-head {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.hv-label {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+}
+
+.hv-body {
+  font-size: 0.875rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- The set that survived ---------------------------------------------- */
+
+.hv-candidates {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: var(--s-4);
+}
+
+.hv-hero {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-display);
+}
+
+.hv-hero-count {
+  font-size: 5.25rem;
+  font-weight: var(--fw-light);
+  line-height: 0.85;
+  color: var(--c3-pass);
+}
+
+.hv-hero-of {
+  font-size: 2rem;
+  font-weight: var(--fw-light);
+  line-height: 0.85;
+  color: var(--ink-faint);
+}
+
+/*
+ * The products anchor the foot of the card, under the count that describes
+ * them, so the air in the card falls in one place rather than in two.
+ */
+.hv-survivors {
+  align-self: end;
+  display: grid;
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.hv-survivor {
+  --status: var(--c3-pass);
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4);
+}
+
+.hv-survivor-name {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  color: var(--c3-pass);
+}
+
+.hv-survivor-readings {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+
+.hv-survivor-reading {
+  font-family: var(--font-figure);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+
+/* ---- The record the engine writes --------------------------------------- */
+
+.hv-log-card {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.hv-log-subject {
+  font-family: var(--font-figure);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+
+.hv-log {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+}
+
+.hv-log-row {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr) 6.5rem 4.5rem;
+  gap: var(--s-3);
+  align-items: baseline;
+  padding: var(--s-2) var(--s-3);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--c-base) 3%, transparent);
+
+  font-family: var(--font-figure);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+.hv-log-heads {
+  padding-top: 0;
+  padding-bottom: var(--s-1);
+  background-color: transparent;
+}
+
+.hv-log-head {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+}
+
+.hv-log-head:last-child {
+  text-align: right;
+}
+
+.hv-log-bound {
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+}
+
+.hv-log-source {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--source);
+}
+
+.hv-log-verdict {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--status);
+  text-align: right;
+}
+
+/* ---- What a jurisdiction costs ------------------------------------------ */
+
+.hv-rulesets {
+  display: flex;
+  gap: var(--s-3);
+}
+
+.hv-ruleset {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  padding: var(--s-3) var(--s-4);
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--c3-accent) 7%, #ffffff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c3-accent) 26%, transparent);
+  text-align: center;
+}
+
+/* The slot the next jurisdiction takes, drawn as a slot rather than as a card. */
+.hv-ruleset[data-open='true'] {
+  background-color: transparent;
+  box-shadow: none;
+  outline: 2px dashed color-mix(in srgb, var(--c-base) 26%, transparent);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.hv-ruleset-name {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  color: var(--c3-accent);
+}
+
+.hv-ruleset[data-open='true'] .hv-ruleset-name {
+  color: var(--ink-faint);
+}
+
+.hv-ruleset-note {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.hv-ruleset[data-open='true'] .hv-ruleset-note {
+  color: var(--ink-ghost);
+}
