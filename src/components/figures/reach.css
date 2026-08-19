@@ -1,0 +1,237 @@
+/*
+ * Beat 6. The claim the contribution exists to make, and beside it the reason
+ * it is not a claim about end-of-life circularity.
+ *
+ * The reach is drawn at full size on the right rather than listed with the
+ * others, because it is the difference between a model for one attribute and a
+ * method for any attribute the composition correlates with.
+ */
+.rh {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: var(--s-16);
+  align-content: center;
+  align-items: center;
+}
+
+.rh-column {
+  display: grid;
+  gap: var(--s-8);
+}
+
+.rh-head {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.rh-headline {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: var(--fw-light);
+  /* Not `--lh-tight`: a light-weight display line needs more than its em box
+     and clips at that value, the same way `.c4-figure` does. */
+  line-height: 1.16;
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.rh-body-text {
+  font-size: 1rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- The two supporting claims ------------------------------------------------ */
+
+.rh-points {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.rh-point {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: var(--s-4);
+  align-items: center;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.rh-point-text {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+}
+
+.rh-claim {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+.rh-figure {
+  padding: 2px var(--s-3);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--c4-accent) 10%, transparent);
+
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--c4-accent);
+}
+
+.rh-glyph {
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  overflow: visible;
+}
+
+.rh-ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c4-declared) 34%, transparent);
+  stroke-width: 7;
+  stroke-linecap: butt;
+}
+
+.rh-ring-inferred {
+  stroke: var(--c4-accent);
+}
+
+/* Wiped from the wide end, so the mark reads as three hundred coefficients
+   arriving and fifty leaving. The origin is in viewBox units, which is what an
+   SVG child's default `transform-box` resolves against. */
+.rh-funnel-group {
+  transform-origin: 9px 32px;
+}
+
+.rh-funnel {
+  fill: color-mix(in srgb, var(--c4-accent) 30%, transparent);
+}
+
+.rh-end {
+  fill: color-mix(in srgb, var(--c4-declared) 62%, transparent);
+}
+
+.rh-end-out {
+  fill: var(--c4-accent);
+}
+
+/* ---- One operation, any correlated attribute ----------------------------------- */
+
+.rh-reach {
+  display: grid;
+  gap: var(--s-6);
+  padding: var(--s-8);
+  border-radius: 18px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c4-accent) 24%, transparent),
+    0 20px 48px color-mix(in srgb, var(--c4-accent) 12%, transparent);
+}
+
+.rh-reach-label {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  color: var(--c4-accent);
+}
+
+.rh-fan {
+  display: grid;
+  grid-template-columns: auto var(--s-8) 1fr;
+  gap: 0;
+  align-items: center;
+}
+
+.rh-source {
+  padding: var(--s-3) var(--s-4);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--c4-accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c4-accent) 36%, transparent);
+}
+
+.rh-source-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-title);
+  color: var(--c4-accent);
+}
+
+.rh-stem {
+  height: 2px;
+  background-color: color-mix(in srgb, var(--c4-accent) 40%, transparent);
+}
+
+/* The spine and the branch stubs are what make three separate rows read as one
+   fan leaving a single point. */
+.rh-branches {
+  position: relative;
+  display: grid;
+  gap: var(--s-3);
+  padding-left: var(--s-6);
+}
+
+.rh-spine {
+  position: absolute;
+  left: 0;
+  top: 1.25rem;
+  bottom: 1.25rem;
+  width: 2px;
+  background-color: color-mix(in srgb, var(--c4-accent) 40%, transparent);
+}
+
+.rh-attribute {
+  position: relative;
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-2) var(--s-4);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+
+.rh-branch {
+  position: absolute;
+  right: 100%;
+  width: var(--s-6);
+  height: 2px;
+  background-color: color-mix(in srgb, var(--c4-accent) 40%, transparent);
+  transform-origin: left center;
+}
+
+.rh-attribute-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+/* The one this contribution measured carries the accent; the rest are the same
+   operation pointed somewhere else. */
+.rh-attribute[data-measured='true'] {
+  background-color: color-mix(in srgb, var(--c4-accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c4-accent) 44%, transparent);
+}
+
+.rh-attribute[data-measured='true'] .rh-attribute-label {
+  font-weight: var(--fw-medium);
+  color: var(--c4-accent);
+}
+
+.rh-attribute-tag {
+  margin-left: auto;
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c4-accent) 76%, var(--c-base));
+}
+
+.rh-attribute[data-key='others'] .rh-attribute-label {
+  color: var(--ink-muted);
+}

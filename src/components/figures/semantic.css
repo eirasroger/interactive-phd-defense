@@ -1,0 +1,132 @@
+/*
+ * Beat 5. Two inputs the model has no exact match for, read left to right:
+ * what the declaration says, the terms it comes out beside, and the pathway
+ * those terms carry.
+ *
+ * The columns are headed, so the arrows need no caption to be understood.
+ */
+.sm {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: var(--s-6);
+  align-content: center;
+}
+
+.sm-head {
+  display: grid;
+  gap: var(--s-2);
+  max-width: 62rem;
+}
+
+.sm-body {
+  font-size: 1rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- The table ------------------------------------------------------------- */
+
+.sm-table {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-6) var(--s-8);
+}
+
+.sm-row {
+  display: grid;
+  grid-template-columns: 18rem var(--s-12) 21rem var(--s-12) 1fr;
+  gap: var(--s-4);
+  align-items: center;
+  min-height: 6.5rem;
+}
+
+.sm-row + .sm-row {
+  border-top: 1px solid var(--rule);
+}
+
+.sm-header {
+  min-height: 0;
+}
+
+.sm-head-label {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- What is declared -------------------------------------------------------- */
+
+.sm-declared-value {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+  color: var(--c4-accent);
+}
+
+.sm-declared-note {
+  margin-top: var(--s-1);
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- What it resolves to ------------------------------------------------------ */
+
+.sm-neighbours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.sm-neighbour {
+  padding: 5px var(--s-4);
+  white-space: nowrap;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, #f0ecf8 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f0ecf8 26%, transparent);
+
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+/* The paper names some of the five nearest neighbours and not the rest, and the
+   mark says so without standing in for a term. */
+.sm-neighbour-more {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f0ecf8 16%, transparent);
+  font-size: 0.875rem;
+  color: var(--ink-faint);
+}
+
+/* ---- What is predicted --------------------------------------------------------- */
+
+.sm-pathway {
+  display: inline-block;
+  padding: var(--s-2) var(--s-4);
+  border-radius: 10px;
+
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+}
+
+/* Pathway colours, the same ones C2 gave these outcomes. */
+.sm-predicted[data-tone='energy'] .sm-pathway {
+  background-color: color-mix(in srgb, var(--c4-energy) 26%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c4-energy) 62%, transparent);
+  color: #f6e2c2;
+}
+
+.sm-predicted[data-tone='recovery'] .sm-pathway {
+  background-color: color-mix(in srgb, var(--c4-recovery) 26%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c4-recovery) 62%, transparent);
+  color: #d8ecd0;
+}

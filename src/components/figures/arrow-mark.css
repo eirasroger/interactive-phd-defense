@@ -1,0 +1,47 @@
+/*
+ * One arrow, shared by the beats that carry a value across a gap.
+ *
+ * The head sits at the shaft's end as a sibling and keeps its own geometry, so
+ * the shaft can be scaled from zero without the head deforming with it.
+ */
+.mk-arrow {
+  position: relative;
+  display: block;
+  height: 10px;
+}
+
+.mk-shaft {
+  position: absolute;
+  left: 0;
+  right: 7px;
+  top: 50%;
+  height: 1.5px;
+  margin-top: -0.75px;
+  border-radius: 999px;
+  transform-origin: left center;
+}
+
+.mk-head {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  margin-top: -4.5px;
+  border-left: 8px solid;
+  border-block: 4.5px solid transparent;
+}
+
+.mk-arrow[data-tone='ink'] .mk-shaft {
+  background-color: color-mix(in srgb, var(--c4-accent) 44%, transparent);
+}
+
+.mk-arrow[data-tone='ink'] .mk-head {
+  border-left-color: color-mix(in srgb, var(--c4-accent) 68%, transparent);
+}
+
+.mk-arrow[data-tone='field'] .mk-shaft {
+  background-color: color-mix(in srgb, #a98cf0 52%, transparent);
+}
+
+.mk-arrow[data-tone='field'] .mk-head {
+  border-left-color: color-mix(in srgb, #a98cf0 78%, transparent);
+}

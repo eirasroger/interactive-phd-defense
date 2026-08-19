@@ -1,12 +1,17 @@
+import { createBudget } from '@/components/figures/Budget';
 import { createBurden } from '@/components/figures/Burden';
 import { createCorpus } from '@/components/figures/Corpus';
 import { createFramework } from '@/components/figures/Framework';
 import { createLandscape } from '@/components/figures/Landscape';
+import { createModel } from '@/components/figures/Model';
 import { createOpening } from '@/components/figures/Opening';
 import { createParadox } from '@/components/figures/Paradox';
 import { createContext } from '@/components/figures/Context';
 import { createHandover } from '@/components/figures/Handover';
+import { createReach } from '@/components/figures/Reach';
+import { createSemantic } from '@/components/figures/Semantic';
 import { createReconcile } from '@/components/figures/Reconcile';
+import { createProfile } from '@/components/figures/Profile';
 import { createSort } from '@/components/figures/Sort';
 import {
   aggregate,
@@ -109,7 +114,7 @@ const c2Takeaway: readonly TakeawayCard[] = [
   {
     tint: WORTH.inference,
     name: 'The structured corpus is a training basis for supporting models',
-    body: 'Material composition correlates strongly with both impact and end-of-life outcome across the corpus. Where a declaration is incomplete, that relationship can be used to estimate the missing quantity and keep the candidate in consideration.',
+    body: 'Material composition correlates strongly with both impact and end-of-life outcome across the corpus. Where a declaration is incomplete, that relationship can be used to estimate the missing quantity and hold the comparison on the full indicator set.',
     figure: [
       stack(['End-of-life pathway prediction', 'GWP estimation', 'Disassembly potential']),
     ],
@@ -132,6 +137,13 @@ const PANELS: Readonly<Record<string, () => readonly SlidePanel[]>> = {
     createReconcile(),
     createSort(),
     createHandover(),
+  ],
+  c4: () => [
+    createProfile(),
+    createModel(),
+    createBudget(),
+    createSemantic(),
+    createReach(),
   ],
 };
 

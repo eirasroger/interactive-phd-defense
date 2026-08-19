@@ -1,0 +1,401 @@
+/*
+ * Beat 5. The error budget across the top at reading size, and under it the
+ * two things that qualify it: what the representation is worth against the
+ * alternatives, and which pathways the declared data lets the model separate.
+ */
+.bd {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--s-4);
+  align-content: stretch;
+}
+
+.bd-head {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.bd-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-6);
+}
+
+.bd-tile {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding-top: var(--s-2);
+  border-top: 2px solid color-mix(in srgb, var(--c4-accent) 36%, transparent);
+}
+
+.bd-tile-label {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.bd-tile-value {
+  display: flex;
+  gap: 2px;
+  align-items: baseline;
+}
+
+.bd-tile-figure {
+  font-size: 2.25rem;
+  color: var(--c4-accent);
+}
+
+.bd-tile-unit {
+  font-family: var(--font-figure);
+  font-size: 1.25rem;
+  font-weight: var(--fw-light);
+  color: color-mix(in srgb, var(--c4-accent) 58%, transparent);
+}
+
+.bd-tile-splits {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+/* The dataset, drawn. The bar's two tracks are sized by the counts themselves,
+   so the partition cannot drift from the numbers printed under it. */
+.bd-split {
+  display: grid;
+  gap: 5px;
+  /* Wide enough that the smaller track still holds its own count and label:
+     the testing track is a fifth of the bar, so the bar is sized from it. */
+  max-width: 29rem;
+}
+
+.bd-split-total {
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+}
+
+.bd-split-figure {
+  font-size: 1.375rem;
+  color: var(--ink);
+}
+
+.bd-split-unit {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.bd-split-bar,
+.bd-split-keys {
+  display: grid;
+  grid-template-columns: var(--train) var(--test);
+  gap: 3px;
+}
+
+.bd-split-segment {
+  height: 7px;
+  border-radius: 2px;
+  transform-origin: left center;
+}
+
+.bd-split-segment[data-part='train'] {
+  background-color: color-mix(in srgb, var(--c4-accent) 62%, transparent);
+}
+
+.bd-split-segment[data-part='test'] {
+  background-color: color-mix(in srgb, var(--c4-accent) 26%, transparent);
+}
+
+.bd-split-key {
+  display: flex;
+  gap: 5px;
+  align-items: baseline;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.bd-split-count {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+.bd-split-label {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+/* The losses the model converged to. They belong with the error budget above
+   them and not under the heading of a comparison against other reductions. */
+.bd-converged {
+  display: flex;
+  gap: var(--s-8);
+}
+
+.bd-converged-item {
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+}
+
+.bd-converged-label {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.bd-converged-value {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+/* ---- The two qualifications ------------------------------------------------ */
+
+.bd-body {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: var(--s-16);
+  min-height: 0;
+}
+
+.bd-panel {
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+}
+
+.bd-panel + .bd-panel {
+  padding-left: var(--s-8);
+  border-left: 1px solid var(--rule);
+}
+
+.bd-panel-label {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c4-accent);
+}
+
+/* ---- Reductions ----------------------------------------------------------- */
+
+.bd-losses {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.bd-loss {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-1) var(--s-3);
+  align-items: baseline;
+}
+
+.bd-loss-label {
+  font-size: 0.9375rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+}
+
+.bd-loss[data-key='autoencoder'] .bd-loss-label {
+  color: var(--c4-accent);
+}
+
+.bd-loss-value {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+.bd-loss-rail {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--rule);
+}
+
+.bd-loss-fill {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background-color: color-mix(in srgb, var(--c4-declared) 44%, transparent);
+  transform-origin: left center;
+}
+
+.bd-loss[data-key='autoencoder'] .bd-loss-fill {
+  background-color: var(--c4-accent);
+}
+
+.bd-ledger {
+  display: grid;
+  gap: var(--s-1);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--rule);
+}
+
+.bd-ledger-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-4);
+  align-items: baseline;
+}
+
+.bd-ledger-label {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.bd-ledger-value {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+.bd-ledger-row[data-lead='true'] .bd-ledger-value {
+  font-family: var(--font-display);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-title);
+  color: var(--c4-accent);
+}
+
+/* ---- Recall --------------------------------------------------------------- */
+
+.bd-recalls {
+  display: grid;
+  gap: 5px;
+}
+
+.bd-recall {
+  display: grid;
+  grid-template-columns: 9rem 1fr 5rem;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.bd-recall-label {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+}
+
+.bd-recall[data-resolved='false'] .bd-recall-label {
+  color: var(--ink-muted);
+}
+
+.bd-recall-rail {
+  height: 10px;
+  border-radius: 3px;
+  background-color: var(--rule);
+  overflow: hidden;
+}
+
+.bd-recall-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: color-mix(in srgb, var(--c4-recovery) 74%, transparent);
+  transform-origin: left center;
+}
+
+/* The same hatch the absent cells carry at the opening. In both places the mark
+   means that the declared data does not say. */
+.bd-recall[data-resolved='false'] .bd-recall-fill {
+  background-color: color-mix(in srgb, var(--c4-absent) 13%, transparent);
+}
+
+.bd-recall-value {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  text-align: right;
+  color: var(--ink);
+}
+
+.bd-recall[data-resolved='false'] .bd-recall-value {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-faint);
+}
+
+/* ---- Where the floor comes from -------------------------------------------- */
+
+/* The cause of the four unresolved rows, sitting directly under them: one
+   figure, and the two lines that say where it comes from. */
+.bd-floor {
+  display: grid;
+  gap: var(--s-2);
+  align-items: start;
+  margin-top: var(--s-1);
+  padding: var(--s-3) var(--s-4);
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c4-accent) 20%, transparent);
+}
+
+.bd-floor-text {
+  display: grid;
+  gap: 2px;
+}
+
+.bd-floor-value {
+  display: flex;
+  gap: 1px;
+  align-items: baseline;
+}
+
+.bd-floor-figure {
+  font-size: 1.75rem;
+  color: var(--c4-accent);
+}
+
+.bd-floor-measure {
+  margin-left: var(--s-2);
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.bd-floor-unit {
+  font-family: var(--font-figure);
+  font-size: 1rem;
+  font-weight: var(--fw-light);
+  color: color-mix(in srgb, var(--c4-accent) 58%, transparent);
+}
+
+.bd-floor-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+}
+
+.bd-floor-body {
+  margin-top: var(--s-1);
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.bd-floor-remedy {
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: color-mix(in srgb, var(--c4-accent) 76%, var(--c-base));
+}

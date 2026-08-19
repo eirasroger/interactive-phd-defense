@@ -1,0 +1,143 @@
+/*
+ * C4's own chromatic identity, and its own ground.
+ *
+ * The violet is the one C2's closing wall already gave to the card that points
+ * here, so the station opens in the colour the argument arrived in. It sits
+ * clear of C3's indigo authority ramp and of C1's four indicator families.
+ *
+ * The station's signature is a second ground. Everything outside the model is
+ * drawn on the white the corridor projects; the inside of the model is drawn on
+ * a dark field. The two registers say which side of the boundary a composition
+ * is on before a word of it is read, which is the one thing a schematic of a
+ * network otherwise has to caption.
+ */
+.c4 {
+  --c4-accent: #6d4bb0;
+  --c4-accent-soft: #9a7fd4;
+
+  /* Where a value came from. The pair is read at every beat and by C5 after. */
+  --c4-declared: #3f4a5b;
+  --c4-inferred: #6d4bb0;
+  --c4-absent: #a9aeb8;
+
+  /* Outcomes, borrowed from C2 so a pathway keeps its colour across stations. */
+  --c4-recovery: #4f8f3f;
+  --c4-energy: #c07a12;
+  --c4-loss: #8f5324;
+
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 44%, transparent);
+  --ink-ghost: color-mix(in srgb, var(--c-base) 22%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --rule-strong: color-mix(in srgb, var(--c-base) 22%, transparent);
+  --card: color-mix(in srgb, #ffffff 74%, transparent);
+
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+/*
+ * The field: the ground the model's interior is drawn on.
+ *
+ * Its ink tokens carry the same names as the white ground's, so a component
+ * built for one reads correctly inside the other without a second stylesheet.
+ */
+.c4-field {
+  --ink: #f0ecf8;
+  --ink-muted: color-mix(in srgb, #f0ecf8 62%, transparent);
+  --ink-faint: color-mix(in srgb, #f0ecf8 40%, transparent);
+  --ink-ghost: color-mix(in srgb, #f0ecf8 20%, transparent);
+  --rule: color-mix(in srgb, #f0ecf8 14%, transparent);
+  --rule-strong: color-mix(in srgb, #f0ecf8 28%, transparent);
+  --c4-accent: #a98cf0;
+  --c4-accent-soft: #c9b5ff;
+  --c4-declared: #93a3ba;
+  --c4-inferred: #a98cf0;
+
+  position: relative;
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      ellipse 70% 90% at 50% 0%,
+      color-mix(in srgb, #6d4bb0 22%, transparent) 0%,
+      transparent 70%
+    ),
+    linear-gradient(180deg, #1b1626 0%, #14111c 100%);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #a98cf0 22%, transparent),
+    0 24px 60px color-mix(in srgb, var(--c-base) 22%, transparent);
+}
+
+/*
+ * The field's own texture: a faint lattice, so a region with points scattered
+ * across it reads as a space with coordinates in it and an empty region still
+ * reads as part of the same space.
+ */
+.c4-field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, #a98cf0 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, #a98cf0 7%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 45%, #000 30%, transparent 100%);
+}
+
+/* Provenance, wherever a value is drawn. */
+[data-provenance='declared'] {
+  --provenance: var(--c4-declared);
+}
+[data-provenance='inferred'] {
+  --provenance: var(--c4-inferred);
+}
+[data-provenance='absent'] {
+  --provenance: var(--c4-absent);
+}
+
+/*
+ * A cell that has no value.
+ *
+ * The hatch is the load-bearing half of the encoding: an absent cell has to be
+ * recognisable in one glance across a grid, and at that size a colour on its
+ * own is a shade of grey next to another shade of grey.
+ */
+.c4-hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--c4-absent) 44%, transparent) 0 2px,
+    transparent 2px 6px
+  );
+}
+
+/* The uppercase locator every C4 panel opens with. */
+.c4-index {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c4-accent);
+}
+
+.c4-field .c4-index {
+  color: var(--c4-accent-soft);
+}
+
+/* A quantity, wherever one is set at reading size. */
+.c4-figure {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  /* Not 1: a light-weight numeral needs more than its em box and clips at 1. */
+  line-height: 1.12;
+}

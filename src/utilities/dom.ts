@@ -2,7 +2,8 @@ interface ElementOptions {
   className?: string;
   text?: string;
   attrs?: Record<string, string>;
-  children?: readonly HTMLElement[];
+  /** `Element` rather than `HTMLElement`, so a composition can hold an `svg`. */
+  children?: readonly Element[];
 }
 
 export function el<K extends keyof HTMLElementTagNameMap>(

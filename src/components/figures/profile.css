@@ -1,0 +1,202 @@
+/*
+ * Beat 1. The pipeline across the top, and under it the same five candidates
+ * twice with one operation between them.
+ *
+ * Left to right is the argument: what a declaration supports, what the station
+ * reads, and what the recommendation is then made on.
+ */
+.pf {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--s-8);
+  align-content: start;
+}
+
+.pf-top {
+  display: grid;
+  gap: var(--s-4);
+}
+
+/* ---- The pipeline --------------------------------------------------------- */
+
+.pf-stage {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--s-4);
+}
+
+.pf-rail {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    var(--rule-strong),
+    color-mix(in srgb, var(--c4-accent) 46%, transparent)
+  );
+}
+
+.pf-terminal {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+/* ---- Three columns and two arrows ------------------------------------------ */
+
+.pf-body {
+  display: grid;
+  grid-template-columns: 1fr var(--s-8) 20rem var(--s-8) 1fr;
+  gap: var(--s-4);
+  align-items: center;
+  min-height: 0;
+}
+
+.pf-panel {
+  display: grid;
+  align-content: start;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+/* ---- One candidate's profile ------------------------------------------------ */
+
+.pf-tracks {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.pf-track {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr);
+  gap: var(--s-2);
+  align-items: end;
+}
+
+.pf-track-index {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.pf-columns {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+  height: 56px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* The slot is the attribute; the bar is what is known about it. Keeping the
+   slot at full height is what makes a hole read as a hole rather than as a
+   short reading. */
+.pf-slot {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.pf-bar {
+  width: 100%;
+  height: var(--extent);
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--provenance) 60%, transparent);
+  transform-origin: center bottom;
+  will-change: transform;
+}
+
+/* An attribute with no value keeps its slot and shows nothing in it, so a hole
+   reads as a hole and never as the tallest reading on the row. */
+.pf-bar[data-provenance='absent'] {
+  height: 100%;
+  background-color: transparent;
+  border: 1px dashed color-mix(in srgb, var(--c4-absent) 88%, transparent);
+  border-radius: 3px;
+}
+
+.pf-bar[data-provenance='inferred'] {
+  background-color: color-mix(in srgb, var(--c4-inferred) 72%, transparent);
+}
+
+.pf-key {
+  display: flex;
+  gap: var(--s-4);
+  padding-left: calc(5.25rem + var(--s-2));
+}
+
+.pf-key-item {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.pf-key-item::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--provenance) 60%, transparent);
+}
+
+.pf-key-item[data-provenance='absent']::before {
+  background-color: transparent;
+  border: 1px dashed color-mix(in srgb, var(--c4-absent) 88%, transparent);
+}
+
+/* ---- The operation ---------------------------------------------------------- */
+
+.pf-engine {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--s-4);
+  padding: var(--s-8) var(--s-6);
+  text-align: center;
+}
+
+/* Stacked rather than wrapped: three inputs read as a list of three, and a
+   two-then-one wrap reads as a hierarchy that is not there. */
+.pf-chips {
+  display: grid;
+  justify-items: stretch;
+  gap: 5px;
+  width: 100%;
+  margin-top: var(--s-1);
+}
+
+.pf-chip {
+  padding: 4px var(--s-3);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--c4-accent) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c4-accent) 42%, transparent);
+
+  font-size: 0.75rem;
+  color: var(--ink);
+}
+
+/* The first chip is the one the claim under it is about. */
+.pf-chip[data-key='composition'] {
+  background-color: color-mix(in srgb, var(--c4-accent) 40%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c4-accent) 72%, transparent);
+  color: #ffffff;
+}
+
+/* The fourth chip says the list is open: a different attribute reads whatever
+   else the record reliably carries. */
+.pf-chip[data-key='others'] {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f0ecf8 22%, transparent);
+  color: var(--ink-muted);
+}

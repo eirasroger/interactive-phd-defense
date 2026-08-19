@@ -19,6 +19,7 @@ const slide = (station: string, title: string, heading: string): CaptionContent 
 const c1 = (heading: string): CaptionContent => slide('C1', 'Decision framework', heading);
 const c2 = (heading: string): CaptionContent => slide('C2', 'Empirical characterisation', heading);
 const c3 = (heading: string): CaptionContent => slide('C3', 'Screening agent', heading);
+const c4 = (heading: string): CaptionContent => slide('C4', 'Inference', heading);
 
 /**
  * Six beats over one held pose. The camera stays where it landed, so each of
@@ -60,24 +61,38 @@ export const c2Captions: readonly CaptionContent[] = [
  * rule, two run the case study, and the last states what the station produces.
  */
 export const c3Captions: readonly CaptionContent[] = [
-  c3('A ranking is meaningful only over candidates that are already admissible.'),
+  c3('A recommendation is only meaningful over candidates that are already admissible.'),
   c3('Screening at portfolio scale requires automation, and a regulatory verdict requires accountability.'),
   c3('A language model reads the documents, and a rule engine issues the verdict.'),
   c3('Every source proposes a bound, and the strictest one governs.'),
   c3('Six products, screened against the operator’s description of the application.'),
   c3('The same six products, screened once the structural drawing has been read.'),
-  c3('What leaves the station is a candidate set with its reasoning attached.'),
+  c3('The screening produces a candidate set with its reasoning attached.'),
+];
+
+/**
+ * Six beats over one held pose. One establishes why the station exists and what
+ * it reads, two build the model, one reports what it achieves, one shows what
+ * the representation generalises over, and the last states what it produces.
+ */
+export const c4Captions: readonly CaptionContent[] = [
+  c4('Information on construction products is not always complete, and inference prevents the recommendation from degrading.'),
+  c4('A declared composition becomes a vector through a semantic embedding.'),
+  c4('The autoencoder and the predictor are trained together as one model.'),
+  c4('The model predicts the pathways that manufacturers declare consistently.'),
+  c4('A material the model has never seen is predicted like the materials it resembles.'),
+  c4('What this contribution settles.'),
 ];
 
 export const act2Captions = {
   c1: c1Captions[0] as CaptionContent,
   c2: c2Captions[0] as CaptionContent,
   c3: c3Captions[0] as CaptionContent,
-  c4: slide('C4', 'Inference', 'Declared data is absent exactly where it matters.'),
+  c4: c4Captions[0] as CaptionContent,
   c5: slide(
     'C5',
     'Context-adaptive recommender',
-    'The ranking depends on the composition of the candidate set.',
+    'The recommendation depends on the composition of the candidate set.',
   ),
 } satisfies Record<string, CaptionContent>;
 
@@ -86,6 +101,7 @@ export const act2Beats: Partial<Record<keyof typeof act2Captions, readonly Capti
   c1: c1Captions,
   c2: c2Captions,
   c3: c3Captions,
+  c4: c4Captions,
 };
 
 export const act2Figures: Partial<Record<keyof typeof act2Captions, readonly FigureContent[]>> = {};

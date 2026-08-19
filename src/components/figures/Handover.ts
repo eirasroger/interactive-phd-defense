@@ -199,7 +199,7 @@ export function createHandover(): Handover {
   const log = logCard();
   const rules = ruleSetCard();
 
-  const index = el('p', { className: 'c3-index', text: 'What leaves the station' });
+  const index = el('p', { className: 'c3-index', text: 'What the screening produces' });
   const element = el('div', {
     className: 'c3 hv',
     children: [

@@ -266,11 +266,11 @@ export function evaluate(epd: Epd, governing: BoundSet): Verdict {
 }
 
 /**
- * Why a screening stage exists ahead of ranking.
+ * Why a screening stage exists ahead of the recommendation.
  *
  * Section 1: decision and optimisation tools assume the designer has already
  * excluded non-compliant products by hand. Where that exclusion has not
- * happened, a ranking is well-formed and inadmissible.
+ * happened, a recommendation is well-formed and inadmissible.
  */
 export const FUNNEL = [
   {
@@ -289,8 +289,8 @@ export const FUNNEL = [
     note: 'Every survivor satisfies every applicable clause',
   },
   {
-    key: 'ranking',
-    label: 'Ranking',
+    key: 'recommendation',
+    label: 'Recommendation',
     note: 'Preference is applied to a set that is already valid',
   },
 ] as const;
