@@ -239,20 +239,13 @@
   fill: var(--ink-faint);
 }
 
-/* Expert: six labelled batches, and the pair that is measured across two. */
+/* Expert: six labelled batches, each with the alternative that expert preferred. */
 .sv-case {
   fill: color-mix(in srgb, var(--c5-accent) 16%, transparent);
 }
 
 .sv-case[data-marked='true'] {
   fill: var(--c5-accent);
-}
-
-.sv-check {
-  fill: none;
-  stroke: var(--c5-accent);
-  stroke-width: 1;
-  stroke-dasharray: 3 2.5;
 }
 
 /* ---- What each source says, and what it is worth ---------------------------------- */

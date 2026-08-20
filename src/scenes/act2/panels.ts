@@ -1,8 +1,6 @@
-import { createAdapt } from '@/components/figures/Adapt';
 import { createAttention } from '@/components/figures/Attention';
 import { createBudget } from '@/components/figures/Budget';
 import { createBurden } from '@/components/figures/Burden';
-import { createConsensus } from '@/components/figures/Consensus';
 import { createConverge } from '@/components/figures/Converge';
 import { createCorpus } from '@/components/figures/Corpus';
 import { createFramework } from '@/components/figures/Framework';
@@ -13,11 +11,10 @@ import { createParadox } from '@/components/figures/Paradox';
 import { createContext } from '@/components/figures/Context';
 import { createHandover } from '@/components/figures/Handover';
 import { createReach } from '@/components/figures/Reach';
-import { createRelational } from '@/components/figures/Relational';
-import { createSalience } from '@/components/figures/Salience';
 import { createSettle } from '@/components/figures/Settle';
 import { createSemantic } from '@/components/figures/Semantic';
 import { createSupervision } from '@/components/figures/Supervision';
+import { createValidation } from '@/components/figures/Validation';
 import { createReconcile } from '@/components/figures/Reconcile';
 import { createProfile } from '@/components/figures/Profile';
 import { createSort } from '@/components/figures/Sort';
@@ -157,10 +154,7 @@ const PANELS: Readonly<Record<string, () => readonly SlidePanel[]>> = {
     createConverge(),
     createSupervision(),
     createAttention(),
-    createRelational(),
-    createConsensus(),
-    createAdapt(),
-    createSalience(),
+    createValidation(),
     createSettle(),
   ],
 };

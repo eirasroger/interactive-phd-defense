@@ -2,10 +2,9 @@ import type { CaptionContent } from '@/components/Caption';
 import type { FigureContent } from '@/components/SlideFigure';
 import fig4Url from '@/assets/figures/fig4.png?url';
 import {
-  APPLICATION_CLAIM,
+  ARCHITECTURE_CLAIM,
   LEARNED_CLAIM,
-  RELATIONAL,
-  STAKEHOLDER_CLAIM,
+  VALIDATION_CLAIM,
 } from '@/content/c5';
 
 /**
@@ -106,14 +105,8 @@ export const c5Captions: readonly CaptionContent[] = [
     'The recommendation depends on the product evidence, on stakeholder priorities, and on the intended application.',
   ),
   c5(LEARNED_CLAIM),
-  c5('Candidates are scored together, so the order never depends on how they arrived.'),
-  c5(RELATIONAL.pair),
-  c5(RELATIONAL.trio),
-  c5(RELATIONAL.quartet),
-  c5('Six experts ranked thirty-two scenarios, and the model reached their order.'),
-  c5(STAKEHOLDER_CLAIM),
-  c5(APPLICATION_CLAIM),
-  c5('Feature importance reorganises with the context the model is given.'),
+  c5(ARCHITECTURE_CLAIM),
+  c5(VALIDATION_CLAIM),
   c5('What this contribution settles.'),
 ];
 

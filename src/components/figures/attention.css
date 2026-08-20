@@ -1,310 +1,403 @@
 /*
- * Beat 4. What the model does to a candidate set.
+ * Beat 3. What a concrete alternative is, and what the network does with a set.
  *
- * The board is the field, because everything inside a model is drawn on the
- * dark ground and everything outside one is drawn on the projected white. C4
- * set that rule and this station keeps it.
+ * Two registers side by side, and the division is the deck's rule: everything
+ * outside a model is drawn on the white the corridor projects, everything
+ * inside one on the dark field. The case study is a ledger on the left; the
+ * pass that consumes it is a board on the right.
  *
- * Five rails cross the board, and the middle column is the only place they are
- * joined to each other. That geometry is the beat: a score is computed after
- * every candidate has seen every other one.
+ * The board owns its own geometry in `Attention.ts`. Nothing here positions a
+ * mark; this sheet decides tone, weight and the rhythm of the ledger.
  */
 .at {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: var(--s-6);
+  grid-template-columns: 40fr 55fr;
+  gap: var(--s-12);
   align-content: center;
 }
 
-/* ---- What one candidate carries in --------------------------------------- */
+/* ---- Left: the concrete input vector ------------------------------------------ */
 
-.at-top {
+.at-inputs {
   display: grid;
-  gap: var(--s-3);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: var(--s-4);
+  align-content: start;
 }
 
-.at-input {
+.at-ledger {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: var(--s-8);
-  align-items: center;
+  gap: var(--s-2);
+  align-content: start;
 }
 
-.at-parts {
-  display: flex;
-  gap: var(--s-6);
+/* Named once, above the column of triplets it describes. */
+.at-ledger-key {
+  justify-self: end;
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
 }
 
-.at-part {
-  display: flex;
+/*
+ * Two columns, because eighteen rows in one is a column of type and not a
+ * ledger. Families are kept whole: a family split across the fold reads as two
+ * groups, which is the one thing the grouping exists to prevent.
+ */
+.at-families {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--s-6);
+  align-content: start;
+}
+
+.at-column {
+  display: grid;
+  align-content: start;
+}
+
+.at-family {
+  display: grid;
+  align-content: start;
+}
+
+.at-family-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--s-2);
   align-items: baseline;
+  margin-top: var(--s-3);
+  padding-bottom: 3px;
+  border-bottom: 1px solid color-mix(in srgb, var(--c5-accent) 30%, transparent);
 }
 
-.at-part-figure {
-  font-size: 1.375rem;
+.at-family:first-child .at-family-head {
+  margin-top: 0;
+}
+
+.at-family-label {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
   color: var(--c5-accent);
 }
 
-.at-part-label {
+/* The standard the family is derived from, which is what makes it concrete. */
+.at-family-source {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+  color: var(--ink-ghost);
+}
+
+.at-family-count {
   font-size: 0.8125rem;
-  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
+
+.at-attribute {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-2);
+  align-items: center;
+  padding: 4px 0;
+}
+
+.at-attribute-label {
+  font-size: 0.875rem;
+  line-height: 1.35;
   color: var(--ink-muted);
 }
+
+/* Value, presence, relevance. Three cells because the encoding is three wide. */
+.at-triplet {
+  display: flex;
+  gap: 2px;
+}
+
+.at-cell {
+  width: 11px;
+  height: 9px;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--c5-accent) 30%, transparent);
+}
+
+.at-cell[data-slot='present'],
+.at-cell[data-slot='relevant'] {
+  background-color: color-mix(in srgb, var(--c5-accent) 15%, transparent);
+}
+
+/* ---- The two context vectors ---------------------------------------------------- */
+
+/*
+ * Drawn apart from the attribute rows and in their own tones, because they are
+ * the only part of the vector that describes the decision rather than the
+ * product. The tones are the ones beat 1 introduced.
+ */
+.at-context-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.at-context-band[data-input='who'] {
+  --input: var(--c5-who);
+}
+
+.at-context-band[data-input='what'] {
+  --input: var(--c5-what);
+}
+
+.at-context-band {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.at-context-cells {
+  display: flex;
+  gap: 2px;
+}
+
+.at-context-band .at-cell {
+  background-color: color-mix(in srgb, var(--input) 45%, transparent);
+}
+
+.at-context-label {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--input);
+}
+
+/* ---- What it adds to ------------------------------------------------------------ */
 
 .at-sum {
   display: flex;
   gap: var(--s-3);
   align-items: baseline;
-  padding-left: var(--s-6);
-  border-left: 1px solid var(--rule);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.at-sum-terms {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  color: var(--ink-faint);
+}
+
+.at-sum-terms::after {
+  content: ' =';
 }
 
 .at-sum-figure {
   font-size: 2.25rem;
-  color: var(--ink);
+  color: var(--c5-accent);
 }
 
 .at-sum-label {
-  max-width: 8rem;
-  font-size: 0.8125rem;
-  line-height: var(--lh-snug);
+  font-size: 0.9375rem;
   color: var(--ink-muted);
 }
 
-.at-triplet {
+/* ---- Right: one pass over the candidate set -------------------------------------- */
+
+.at-network {
   display: grid;
-  gap: var(--s-1);
-  justify-items: end;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--s-4);
+  align-content: start;
 }
 
-.at-triplet-label {
-  font-family: var(--font-label);
-  font-size: 0.625rem;
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+.at-field {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) var(--s-4);
+  border-radius: 16px;
+}
+
+/* Early fusion, stated once. The strips show the twelve context features on
+   every rail but cannot say they hold the same twelve values. */
+.at-shared {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
   color: var(--ink-faint);
 }
 
-.at-triplet-cells {
-  display: flex;
-  gap: 3px;
+/* The board's ratio is a contract: SVG geometry and the labels set inside it
+   share one coordinate system, so the frame may never letterbox. */
+.at-board-frame {
+  width: 100%;
+  aspect-ratio: 732 / 316;
 }
 
-.at-triplet-cell {
-  padding: 3px var(--s-2);
-  border-radius: 5px;
-  background-color: color-mix(in srgb, var(--c5-accent) 12%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 30%, transparent);
-
-  font-family: var(--font-label);
-  font-size: 0.625rem;
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--c5-accent) 86%, var(--c-base));
-}
-
-/* ---- The board ------------------------------------------------------------- */
-
-/* The lane columns are declared once here and inherited by the headings, so a
-   heading can never drift off the stage it names. */
 .at-board {
-  --at-columns: 0.5fr 1fr 1.6fr 0.9fr 1.2fr;
-
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--s-4);
-  min-height: 0;
-  padding: var(--s-6) var(--s-8);
-}
-
-.at-heads {
-  display: grid;
-  grid-template-columns: var(--at-columns);
-  gap: var(--s-4);
-}
-
-/* The first column is the rail's own run-in and names nothing. */
-.at-head[data-key='encode'] {
-  grid-column: 2;
-}
-
-.at-head-label {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--ls-title);
-  color: var(--c5-accent-soft);
-}
-
-.at-head-detail {
-  font-size: 0.75rem;
-  line-height: var(--lh-snug);
-  color: var(--ink-muted);
-}
-
-.at-lanes {
-  position: relative;
-  display: grid;
-  grid-template-rows: repeat(5, minmax(0, 1fr));
-  align-items: center;
-  min-height: 0;
-}
-
-.at-lane {
-  display: grid;
-  grid-template-columns: var(--at-columns);
-  gap: var(--s-4);
-  align-items: center;
-}
-
-.at-rail {
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(to right, transparent, var(--rule-strong));
-}
-
-/* The encoder narrows the rail, which is the only thing the drawing needs to
-   say about three fully connected layers. */
-.at-encoder {
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--c5-accent) 46%, transparent),
-    color-mix(in srgb, var(--c5-accent) 22%, transparent)
-  );
-  transform-origin: left center;
-  clip-path: polygon(0 0, 100% 32%, 100% 68%, 0 100%);
-}
-
-.at-zone {
-  height: 2px;
-  background-color: transparent;
-}
-
-.at-join {
-  height: 2px;
-  border-radius: 999px;
-  background-color: color-mix(in srgb, var(--c5-accent) 40%, transparent);
-  transform-origin: left center;
-}
-
-.at-score {
-  position: relative;
-  height: 6px;
-  border-radius: 999px;
-  background-color: var(--rule);
-}
-
-/* Position along the rail is a shape, never a reading: this beat is the
-   architecture and the numbers belong to the beats that measured them. */
-.at-score-dot {
-  position: absolute;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  margin-top: -5px;
-  margin-left: -5px;
-  border-radius: 999px;
-  background-color: var(--c5-accent-soft);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c5-accent) 24%, transparent);
-}
-
-.at-lane[data-lane='0'] .at-score-dot {
-  left: 78%;
-}
-.at-lane[data-lane='1'] .at-score-dot {
-  left: 41%;
-}
-.at-lane[data-lane='2'] .at-score-dot {
-  left: 64%;
-}
-.at-lane[data-lane='3'] .at-score-dot {
-  left: 88%;
-}
-.at-lane[data-lane='4'] .at-score-dot {
-  left: 18%;
-}
-
-/* ---- Attention, over the third column -------------------------------------- */
-
-/* Placed by the same column template the lanes use, so the overlay covers
-   exactly the span whose heading says attention happens in it. The row has to
-   be declared: left to `auto` it is sized by the SVG, and an SVG asked for
-   `height: 100%` of an indefinite box falls back to its view box's aspect
-   ratio, which made the overlay as tall as its column is wide. */
-.at-overlay-slot {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template-columns: var(--at-columns);
-  grid-template-rows: minmax(0, 1fr);
-  gap: var(--s-4);
-  pointer-events: none;
-}
-
-.at-overlay {
-  grid-column: 3;
   display: block;
   width: 100%;
   height: 100%;
   overflow: visible;
 }
 
-.at-link {
+.at-stage {
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-anchor: middle;
+  fill: var(--c5-accent-soft);
+}
+
+.at-stage-detail {
+  font-size: 10px;
+  text-anchor: middle;
+  fill: var(--ink-faint);
+}
+
+.at-rail {
+  stroke: color-mix(in srgb, #5cc0d4 22%, transparent);
+  stroke-width: 1;
+}
+
+.at-token-ring {
+  fill: color-mix(in srgb, #5cc0d4 16%, #0b1418);
+  stroke: color-mix(in srgb, #5cc0d4 55%, transparent);
+  stroke-width: 1.25;
+}
+
+.at-token-letter {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: var(--fw-medium);
+  text-anchor: middle;
+  fill: var(--ink);
+}
+
+/* The vector, in the proportions the vector has: fifty-four of sixty-six is the
+   product, and the remaining twelve are the decision. */
+.at-band[data-key='attributes'] {
+  fill: color-mix(in srgb, #5cc0d4 42%, transparent);
+}
+
+.at-band[data-key='stakeholder'] {
+  fill: color-mix(in srgb, #b98ee0 78%, transparent);
+}
+
+.at-band[data-key='application'] {
+  fill: #5cc0d4;
+}
+
+.at-block {
+  fill: color-mix(in srgb, #5cc0d4 12%, transparent);
+  stroke: color-mix(in srgb, #5cc0d4 34%, transparent);
+  stroke-width: 1;
+}
+
+/*
+ * Attention, drawn as the matrix it is.
+ *
+ * A row per alternative attending and a column per alternative attended to,
+ * every cell present. Drawn as curves running between the rails it read as a
+ * random tangle, which says the opposite of what self-attention over a set is:
+ * the relation is complete, and it is regular.
+ */
+.at-cell-mark {
+  fill: color-mix(in srgb, #5cc0d4 26%, transparent);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* The diagonal is an alternative against itself, which the operation includes
+   and the drawing should not pretend it leaves out. */
+.at-cell-mark[data-self='true'] {
+  fill: color-mix(in srgb, #5cc0d4 48%, transparent);
+}
+
+/* The two stages that hold the whole set at once. Both are enclosures, because
+   an arrow per alternative would say each is handled on its own. */
+.at-stage-box {
+  fill: color-mix(in srgb, #5cc0d4 5%, transparent);
+  stroke: color-mix(in srgb, #5cc0d4 30%, transparent);
+  stroke-width: 1;
+}
+
+/* ---- The global context ----------------------------------------------------------- */
+
+/*
+ * One vector formed from the whole set and handed back to every member of it,
+ * drawn as a collapse and an expansion on the axis the rails already share, so
+ * the mean sits at the centre of the thing it is the mean of.
+ */
+.at-pool {
   fill: none;
-  stroke: color-mix(in srgb, var(--c5-accent-soft) 62%, transparent);
-  stroke-width: 1.5;
-  stroke-linecap: round;
+  stroke: color-mix(in srgb, #5cc0d4 32%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 2.5;
 }
 
-/* The global context is the mean of the set, so it sits on the centre line
-   between the attention column and the scoring head. */
-.at-context {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template-columns: var(--at-columns);
-  gap: var(--s-4);
-  align-items: center;
-  pointer-events: none;
+.at-pool-out {
+  stroke: #5cc0d4;
+  stroke-width: 1.25;
+  stroke-dasharray: none;
 }
 
-.at-context-node {
-  grid-column: 4;
-  justify-self: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background-color: var(--c5-accent-soft);
-  box-shadow:
-    0 0 0 5px color-mix(in srgb, var(--c5-accent) 26%, transparent),
-    0 0 22px color-mix(in srgb, var(--c5-accent-soft) 60%, transparent);
+.at-mean-halo {
+  fill: color-mix(in srgb, #5cc0d4 18%, transparent);
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
-/* ---- The two properties the architecture was chosen for ---------------------- */
+.at-mean-core {
+  fill: #5cc0d4;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ---- What comes out ---------------------------------------------------------------- */
+
+.at-score-track {
+  fill: color-mix(in srgb, #e6f2f4 10%, transparent);
+}
+
+/* Widths are the standard structural column of Fig. 8 and the rails are in
+   arrival order, so the strongest score sits fourth. Sorting them here would
+   contradict the property the board exists to show. */
+.at-score-fill {
+  fill: color-mix(in srgb, #5cc0d4 45%, transparent);
+  transform-box: fill-box;
+  transform-origin: left center;
+}
+
+.at-score-fill[data-lead='true'] {
+  fill: #5cc0d4;
+}
+
+/* ---- What the architecture guarantees ----------------------------------------------- */
 
 .at-properties {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s-8);
-}
-
-.at-property {
-  display: grid;
-  gap: var(--s-1);
+  gap: var(--s-6);
   padding-top: var(--s-3);
   border-top: 1px solid var(--rule);
 }
 
+.at-property {
+  display: grid;
+  gap: 1px;
+}
+
 .at-property-figure {
   font-family: var(--font-display);
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: var(--fw-medium);
-  font-variant-numeric: tabular-nums;
   letter-spacing: var(--ls-title);
   color: var(--c5-accent);
 }

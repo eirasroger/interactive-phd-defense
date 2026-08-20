@@ -281,6 +281,88 @@ export const FEATURES = {
   total: 66,
 } as const;
 
+/**
+ * The eighteen attributes a concrete alternative carries, §3.1.1 and §4.1.
+ *
+ * Eleven are sustainability indicators and hold for any construction product;
+ * the seven performance properties are drawn from EN 206 and are the reason the
+ * case study is concrete rather than something else. A different product
+ * category keeps the first eleven and derives its own seven.
+ *
+ * `assertPublished` checks the count against `FEATURES.attributes`, so the list
+ * and the arithmetic printed beside it cannot drift.
+ */
+export interface AttributeFamily {
+  readonly key: string;
+  readonly label: string;
+  /** The standard the family is derived from, where it is derived from one. */
+  readonly source?: string;
+  readonly attributes: readonly string[];
+}
+
+export const ATTRIBUTE_FAMILIES: readonly AttributeFamily[] = [
+  {
+    key: 'circularity',
+    label: 'Circularity',
+    attributes: [
+      'Circular origin',
+      'Recycling',
+      'Incineration',
+      'Inert landfilling',
+      'Hazardous waste',
+    ],
+  },
+  {
+    key: 'environmental',
+    label: 'Environmental',
+    attributes: [
+      'Global warming potential',
+      'Water depletion potential',
+      'Freshwater use',
+      'Biodiversity impact',
+    ],
+  },
+  {
+    key: 'economic',
+    label: 'Economic',
+    attributes: ['Life cycle costs'],
+  },
+  {
+    key: 'health',
+    label: 'Health',
+    attributes: ['Product health, C2C scoring'],
+  },
+  {
+    key: 'performance',
+    label: 'Performance',
+    source: 'EN 206, tailored to concrete',
+    attributes: [
+      'Compressive strength class',
+      'Consistency class',
+      'Water-to-cement ratio',
+      'Cementitious content',
+      'Supplementary cementitious materials',
+      'Maximum aggregate size',
+      'Density',
+    ],
+  },
+];
+
+/** What the left register is, named above the vector it lists. */
+export const CASE_STUDY = {
+  label: 'The input vector for a concrete alternative',
+} as const;
+
+/**
+ * The heading of the architecture beat, read by `act2.ts`.
+ *
+ * It describes the pass that produces a recommendation, in the order the pass
+ * runs, because that order is the contribution: a score exists only relative to
+ * the set the alternative arrived in.
+ */
+export const ARCHITECTURE_CLAIM =
+  'The model encodes every alternative, compares them against each other, and scores each one against the whole set.';
+
 export interface Layer {
   readonly key: string;
   readonly label: string;
@@ -291,7 +373,7 @@ export const PIPELINE: readonly Layer[] = [
   {
     key: 'encode',
     label: 'Encoder',
-    detail: '256, 128, 64, each layer normalised',
+    detail: '256, 128, 64, each normalised, ReLU and dropout',
   },
   {
     key: 'attend',
@@ -301,91 +383,28 @@ export const PIPELINE: readonly Layer[] = [
   {
     key: 'context',
     label: 'Global context',
-    detail: 'The mean of the set, folded back into each candidate',
+    detail: 'The mean embedding of the set, concatenated back onto each candidate',
   },
   {
     key: 'score',
     label: 'Scoring head',
-    detail: 'One preference score per candidate, between zero and one',
+    detail: 'Two-layer MLP and a sigmoid, one score per candidate between zero and one',
   },
 ];
+
+/** Stated once under the board, because the input strips cannot say it. */
+export const SHARED_CONTEXT =
+  'The stakeholder archetype and the application are the same for every alternative in the set.';
 
 export const MODEL = {
   parameters: 167361,
   minAlternatives: 2,
   maxAlternatives: 5,
+  /** §3.3.1.2. Two Set Transformer blocks, two attention heads in each. */
+  blocks: 2,
+  heads: 2,
   invariance: 'Permutation invariant',
-  invarianceNote: 'The order candidates arrive in leaves the scores untouched',
-} as const;
-
-/* ---- Relational scoring ---------------------------------------------------- */
-
-export interface Scored {
-  readonly id: string;
-  readonly score: number;
-  /**
-   * How far ±10% on the inputs moves the score. §5.2 reports low variability at
-   * both extremes and high variability in the middle, so this carries three
-   * steps and never a measured width.
-   */
-  readonly spread: 'narrow' | 'wide';
-}
-
-export interface CandidateSet {
-  readonly key: string;
-  readonly entering: string | null;
-  readonly products: readonly Scored[];
-}
-
-/**
- * §5.2, read from the prose. Adding C leaves A and B separated by less than the
- * model's own mean absolute error, and adding D restores a clear order above
- * them while A and B stay together.
- */
-export const SETS: readonly CandidateSet[] = [
-  {
-    key: 'pair',
-    entering: null,
-    products: [
-      { id: 'A', score: 0.72, spread: 'wide' },
-      { id: 'B', score: 0.32, spread: 'wide' },
-    ],
-  },
-  {
-    key: 'trio',
-    entering: 'C',
-    products: [
-      { id: 'A', score: 0.44, spread: 'wide' },
-      { id: 'B', score: 0.41, spread: 'wide' },
-      { id: 'C', score: 0.86, spread: 'wide' },
-    ],
-  },
-  {
-    key: 'quartet',
-    entering: 'D',
-    products: [
-      { id: 'A', score: 0.44, spread: 'wide' },
-      { id: 'B', score: 0.41, spread: 'wide' },
-      { id: 'C', score: 0.86, spread: 'wide' },
-      { id: 'D', score: 0.95, spread: 'narrow' },
-    ],
-  },
-];
-
-/** The model's mean absolute error, which is the width A and B end up inside. */
-export const MARGIN = 0.05;
-
-/**
- * The three readings of the relational beat.
- *
- * Spoken by the caption over the panel rather than printed inside it: a line on
- * the wall and the same line in the heading above it is the same sentence
- * twice, and the panel is the picture the heading is about.
- */
-export const RELATIONAL = {
-  pair: 'Two candidates, and the ordering between them is clear.',
-  trio: 'A stronger candidate arrives, and the two below it close to within the margin of error.',
-  quartet: 'A stronger one again, and the order above the margin holds.',
+  invarianceNote: 'A change in the order alternatives arrive in leaves every score where it was',
 } as const;
 
 /* ---- Expert evaluation ------------------------------------------------------ */
@@ -407,18 +426,85 @@ export const PANEL: readonly Judgement[] = [
   { id: 'E', expert: 0.05, uncertainty: 0.11, model: 0.06 },
 ];
 
+/**
+ * The model's own interval, printed in Table 3 beside every score.
+ *
+ * Both sides of the comparison are intervals: the experts carry δ(1 − c) on
+ * their reported confidence, and the model carries its mean absolute error. A
+ * figure that drew the model as a point would claim a precision the paper does
+ * not.
+ */
+export const MODEL_UNCERTAINTY = 0.05;
+
+/**
+ * §5.1. The scenario in `PANEL` is one of the thirty-two; these are the figures
+ * across all of them, except the mean deviation, which belongs to that scenario.
+ */
 export const AGREEMENT = {
   experts: 6,
   scenarios: 32,
-  tau: '0.911',
-  tauLabel: 'Rank agreement with the panel',
-  topMatch: '96.4%',
-  topLabel: 'Same leading product',
-  clear: '100%',
-  clearLabel: 'Agreement where the panel was decided',
+  scenario: 'Balanced priority, standard structural',
+  figures: [
+    {
+      key: 'tau',
+      figure: '0.911',
+      label: "Mean Kendall's τ against expert rankings",
+      note: 'SD 0.122',
+    },
+    {
+      key: 'top',
+      figure: '96.4%',
+      label: "Model's first choice matches the expert's",
+      note: 'Across all 32 scenarios',
+    },
+    {
+      key: 'clear',
+      figure: '100%',
+      label: 'Agreement where experts clearly preferred or clearly rejected',
+      note: 'Preference ≥ 0.75 or ≤ 0.25',
+    },
+    {
+      key: 'deviation',
+      figure: '0.028',
+      label: 'Mean deviation from expert consensus',
+      note: 'In the scenario drawn above',
+    },
+  ] as readonly { readonly key: string; readonly figure: string; readonly label: string; readonly note: string }[],
   residual:
-    'The distance that remains sits in the middle of the field, where the experts also parted from each other.',
+    'What distance remains is concentrated in the mid-ranked alternatives, where the experts also parted from each other.',
 } as const;
+
+/** The three things the beat separates, named where each one begins. */
+export const VALIDATION_BLOCKS = {
+  panel: 'Validation against the expert panel',
+  behaviour: 'Model behaviour under context',
+  importance: 'What the model weighs, by application',
+} as const;
+
+/**
+ * The two conditioning inputs, segmented because they do different work.
+ *
+ * §5.3 finds stakeholder priority modest and margin-level; §5.4 finds
+ * application context capable of genuinely reordering the mid-tier. Drawn side
+ * by side under one heading they read as one effect, so each carries its own
+ * heading and its own one-line reading.
+ */
+export const BEHAVIOUR_STUDIES = {
+  stakeholder: {
+    title: 'Changing stakeholder priority',
+    takeaway: 'A tie-breaker between contested candidates.',
+  },
+  application: {
+    title: 'Changing application context',
+    takeaway: 'Produces larger score shifts.',
+  },
+} as const;
+
+/** What the whole beat comes to, set under it. */
+export const BEHAVIOUR_TAKEAWAY = 'Indicator weighting changes dynamically with context.';
+
+export const VALIDATION_CLAIM =
+  'The model is validated against expert judgement, and its behaviour analysed under changing priorities and applications.';
 
 /* ---- Who is deciding -------------------------------------------------------- */
 
@@ -458,6 +544,36 @@ export const ARCHETYPES: readonly Archetype[] = [
     reading: 'A pulls clear on the strength of its end-of-life profile',
   },
 ];
+
+/**
+ * Fig. 7 in full: eight stakeholder archetypes, five products, forty scores.
+ *
+ * The earlier pass drew this without values, on the grounds that the figure
+ * prints none. It prints none as *labels*, but it is a bar chart on a 0–1 axis
+ * and every bar is legible against its gridlines, so the values below are read
+ * from it at chart precision. Drawn as bars they carry the paper's own reading:
+ * D and C hold the upper tier and E stays near zero under every archetype,
+ * while the distance inside the contested pair opens and closes.
+ */
+export interface StakeholderScenario {
+  readonly code: string;
+  readonly label: string;
+  readonly scores: Readonly<Record<ProductId, number>>;
+}
+
+export const STAKEHOLDER_SCENARIOS: readonly StakeholderScenario[] = [
+  { code: 'S1', label: 'Sustainability maximalist', scores: { A: 0.485, B: 0.375, C: 0.865, D: 0.978, E: 0.058 } },
+  { code: 'S2', label: 'Cost-conscious developer', scores: { A: 0.643, B: 0.484, C: 0.822, D: 0.915, E: 0.075 } },
+  { code: 'S3', label: 'Occupant comfort focused', scores: { A: 0.596, B: 0.531, C: 0.831, D: 0.948, E: 0.058 } },
+  { code: 'S4', label: 'Health and safety focused', scores: { A: 0.526, B: 0.481, C: 0.833, D: 0.968, E: 0.046 } },
+  { code: 'S5', label: 'Circular economy advocate', scores: { A: 0.512, B: 0.377, C: 0.826, D: 0.978, E: 0.070 } },
+  { code: 'S6', label: 'Regulatory aligned', scores: { A: 0.6, B: 0.469, C: 0.81, D: 0.955, E: 0.056 } },
+  { code: 'S7', label: 'Balanced optimiser', scores: { A: 0.625, B: 0.441, C: 0.831, D: 0.955, E: 0.058 } },
+  { code: 'S8', label: 'Pragmatic contractor', scores: { A: 0.603, B: 0.503, C: 0.822, D: 0.942, E: 0.067 } },
+];
+
+/** The two archetypes §5.3 names, and the boundary each one sits on. */
+export const STAKEHOLDER_MARKED = ['S3', 'S5'] as const;
 
 export const STAKEHOLDER_CLAIM =
   'Stakeholder priority decides the margin between candidates that are already close.';
@@ -572,7 +688,7 @@ export const SALIENCE: readonly Salience[] = [
       'biodiversity',
       'hazardous',
     ],
-    concentration: 'A steep fall after the top three',
+    concentration: 'Density dominates',
   },
   {
     key: 'finish',
@@ -592,6 +708,62 @@ export const SALIENCE: readonly Salience[] = [
     concentration: 'A steep fall after the top three',
   },
 ];
+
+/**
+ * Fig. 10's bar lengths, read from the chart against its 0.00 and 0.01 gridlines.
+ *
+ * The ordering is published and exact; these magnitudes are the figure's shape
+ * at the precision the figure supports, which is what the beat needs. What they
+ * carry is §5.5's distinction: thermal insulation and architectural finish fall
+ * away steeply after their top three, and the standard structural application
+ * spreads importance across many indicators instead.
+ *
+ * `remaining` is the aggregated contribution of the seven indicators outside the
+ * top ten, which the paper plots as its own bar. It is small where importance is
+ * concentrated and large where it is not, so it is the reading rather than a
+ * footnote.
+ */
+export interface SalienceWeight {
+  readonly key: IndicatorKey;
+  readonly weight: number;
+}
+
+export const SALIENCE_WEIGHTS: Readonly<Record<string, readonly SalienceWeight[]>> = {
+  standard: [
+    { key: 'cost', weight: 0.0072 },
+    { key: 'gwp', weight: 0.0068 },
+    { key: 'origin', weight: 0.006 },
+    { key: 'landfill', weight: 0.0058 },
+    { key: 'water', weight: 0.0043 },
+    { key: 'recycling', weight: 0.0035 },
+  ],
+  thermal: [
+    { key: 'density', weight: 0.0135 },
+    { key: 'gwp', weight: 0.008 },
+    { key: 'cost', weight: 0.0068 },
+    { key: 'water', weight: 0.006 },
+    { key: 'landfill', weight: 0.005 },
+    { key: 'freshwater', weight: 0.0038 },
+  ],
+  finish: [
+    { key: 'origin', weight: 0.015 },
+    { key: 'slump', weight: 0.014 },
+    { key: 'aggregate', weight: 0.0098 },
+    { key: 'gwp', weight: 0.0055 },
+    { key: 'cost', weight: 0.005 },
+    { key: 'water', weight: 0.0048 },
+  ],
+};
+
+/** The seven indicators outside the top ten, plotted as one bar in Fig. 10. */
+export const SALIENCE_REMAINING: Readonly<Record<string, number>> = {
+  standard: 0.0072,
+  thermal: 0.0012,
+  finish: 0.0038,
+};
+
+/** The widest bar any panel draws, so the three share one scale. */
+export const SALIENCE_MAX = 0.015;
 
 /** How many ranks a column draws before an indicator drops to the muted lane. */
 export const SHOWN_RANKS = 5;
@@ -737,12 +909,72 @@ function assertPublished(): void {
     );
   }
 
+  const named = ATTRIBUTE_FAMILIES.reduce((sum, family) => sum + family.attributes.length, 0);
+  if (named !== FEATURES.attributes) {
+    throw new Error(
+      `C5: the architecture beat names ${named} concrete attributes and the feature count ` +
+        `is built from ${FEATURES.attributes}.`,
+    );
+  }
+
+  // Fig. 7 is read off a chart, so the readings are checked against what §5.3
+  // states about it rather than trusted.
+  for (const scenario of STAKEHOLDER_SCENARIOS) {
+    const { A, B, C, D, E } = scenario.scores;
+    if (!(D > C && C > A && C > B && E < 0.1)) {
+      throw new Error(
+        `C5: ${scenario.code} is drawn out of the tier structure §5.3 states holds across all eight.`,
+      );
+    }
+    if (A < B) {
+      throw new Error(`C5: ${scenario.code} puts B above A, which Fig. 7 never does.`);
+    }
+  }
+
+  const gapOf = (code: string): number => {
+    const found = STAKEHOLDER_SCENARIOS.find((entry) => entry.code === code);
+    if (!found) throw new Error(`C5: no stakeholder scenario "${code}".`);
+    return found.scores.A - found.scores.B;
+  };
+  const [closest, widest] = STAKEHOLDER_MARKED;
+  if (gapOf(closest) >= gapOf(widest)) {
+    throw new Error(
+      `C5: §5.3 names ${closest} as the archetype where B closes on A and ${widest} as the one ` +
+        'where A pulls clear, and the drawn scores do not hold that.',
+    );
+  }
+
+  for (const [context, bars] of Object.entries(SALIENCE_WEIGHTS)) {
+    const published = SALIENCE.find((entry) => entry.key === context);
+    if (!published) throw new Error(`C5: Fig. 10 has no context "${context}".`);
+    for (const [index, bar] of bars.entries()) {
+      if (published.order[index] !== bar.key) {
+        throw new Error(
+          `C5: ${context} draws ${bar.key} at rank ${index + 1} and Fig. 10 ranks ` +
+            `${published.order[index]} there.`,
+        );
+      }
+      const next = bars[index + 1];
+      if (next && next.weight > bar.weight) {
+        throw new Error(`C5: ${context} draws rank ${index + 2} longer than rank ${index + 1}.`);
+      }
+    }
+  }
+
   const mix = GENERATION.archetypeMix.reduce((sum, entry) => sum + entry.share, 0);
   if (Math.abs(mix - 1) > 1e-9) {
     throw new Error(`C5: the archetype mix covers ${(mix * 100).toFixed(1)}% of the scenarios.`);
   }
 
+  // §5.1: every model score falls inside the expert band, and the model's own
+  // interval is narrower than the expert's on every product.
   for (const entry of PANEL) {
+    if (MODEL_UNCERTAINTY >= entry.uncertainty) {
+      throw new Error(
+        `C5: product ${entry.id} is drawn with a model interval of ±${MODEL_UNCERTAINTY} against ` +
+          `an expert interval of ±${entry.uncertainty}, and Table 3 has the model tighter.`,
+      );
+    }
     const distance = Math.abs(entry.model - entry.expert);
     if (distance > entry.uncertainty + 1e-9) {
       throw new Error(
@@ -778,16 +1010,6 @@ function assertPublished(): void {
           `lead across all four applications.`,
       );
     }
-  }
-
-  const [, trio] = SETS;
-  const gap = (trio?.products ?? []).filter((entry) => entry.id === 'A' || entry.id === 'B');
-  const [a, b] = gap;
-  if (!a || !b || Math.abs(a.score - b.score) > MARGIN) {
-    throw new Error(
-      `C5: §5.2 states A and B fall inside the model's margin of error once C is added, and ` +
-        `the drawn scores are further apart than ${MARGIN}.`,
-    );
   }
 
   for (const entry of SALIENCE) {

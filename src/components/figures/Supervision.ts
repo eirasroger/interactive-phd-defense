@@ -255,16 +255,15 @@ const generatedDiagram = (): SVGSVGElement => {
 const EXPERT_BOARD = { width: 380, height: 100 } as const;
 const EXPERTS = 6;
 const CASES_DRAWN = 4;
-/** The two batches a structurally matched pair of cases is split across. */
-const CHECK: readonly [number, number] = [1, 4];
 
 /**
- * Six batches that share no scenario, and the one thing measured across them.
+ * Six batches that share no scenario, each carrying its own judgement.
  *
- * The columns are labelled, because unlabelled they are a barcode. Cases built
- * to the same structure sit in two different batches and are joined here: that
- * pairing is what makes cross-expert consistency measurable at all, and it is
- * the reason the batches can be independent without being incomparable.
+ * The columns are labelled, because unlabelled they are a barcode. One cell in
+ * every column is the alternative that expert preferred, so the drawing says
+ * what an expert case actually is: a set of alternatives and a decision over
+ * it. Which row that cell falls on is a function of the column index and
+ * carries no claim, since the cases are not published per batch.
  */
 const expertDiagram = (): SVGSVGElement => {
   const board = svg('svg', {
@@ -278,12 +277,9 @@ const expertDiagram = (): SVGSVGElement => {
   const rowStep = 14;
   const left = 4;
   const top = 18;
-  const checkRow = CASES_DRAWN - 1;
-
-  const anchors: { x: number; y: number }[] = [];
-
   for (let expert = 0; expert < EXPERTS; expert += 1) {
     const x = left + expert * columnStep;
+    const chosen = Math.floor(jitter(expert * 3) * CASES_DRAWN);
 
     const head = svg('text', {
       class: 'sv-column-name',
@@ -294,47 +290,18 @@ const expertDiagram = (): SVGSVGElement => {
     board.appendChild(head);
 
     for (let index = 0; index < CASES_DRAWN; index += 1) {
-      const y = top + index * rowStep;
-      const marked = index === checkRow && CHECK.includes(expert);
-      if (marked) anchors.push({ x: x + cellWidth / 2, y: y + cellHeight });
       board.appendChild(
         svg('rect', {
           class: 'sv-case',
-          'data-marked': String(marked),
+          'data-marked': String(index === chosen),
           x: x.toFixed(1),
-          y: y.toFixed(1),
+          y: (top + index * rowStep).toFixed(1),
           width: String(cellWidth),
           height: String(cellHeight),
           rx: '2',
         }),
       );
     }
-  }
-
-  const [from, to] = anchors;
-  if (from && to) {
-    const drop = 13;
-    board.appendChild(
-      svg('path', {
-        class: 'sv-check',
-        'vector-effect': 'non-scaling-stroke',
-        d:
-          `M ${from.x.toFixed(1)} ${from.y.toFixed(1)} ` +
-          `C ${from.x.toFixed(1)} ${(from.y + drop).toFixed(1)}, ` +
-          `${to.x.toFixed(1)} ${(to.y + drop).toFixed(1)}, ` +
-          `${to.x.toFixed(1)} ${to.y.toFixed(1)}`,
-      }),
-    );
-
-    const label = svg('text', {
-      class: 'sv-diagram-label',
-      'data-kind': 'accent',
-      'text-anchor': 'middle',
-      x: ((from.x + to.x) / 2).toFixed(1),
-      y: String(EXPERT_BOARD.height - 3),
-    });
-    label.textContent = 'Same case structure, different batch';
-    board.appendChild(label);
   }
 
   return board;

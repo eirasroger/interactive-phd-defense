@@ -1,0 +1,394 @@
+/*
+ * Beat 4. What the model was tested against, and what the test showed.
+ *
+ * Three numbered blocks, ruled apart, because they are three different claims
+ * and an unbroken wall of charts reads as one. Each block carries the paper's
+ * own figure: Table 3 as paired intervals, Fig. 7 as its grouped bars, Fig. 8
+ * as its heatmap, Fig. 10 as its ranked bars on one shared scale.
+ *
+ * One tone per product, held across all three blocks, so a colour means the
+ * same alternative wherever it is met.
+ */
+.vl-takeaway {
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--rule-strong);
+
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.vl {
+  --c5-pa: #7fb3c8;
+  --c5-pb: #a9c9d6;
+  --c5-pc: #3f8fae;
+  --c5-pd: #0d6e80;
+  --c5-pe: #17384a;
+
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  gap: var(--s-2);
+  align-content: center;
+}
+
+/* ---- A block ------------------------------------------------------------------ */
+
+.vl-block {
+  display: grid;
+  gap: 0.375rem;
+  align-content: start;
+  padding-top: 0.375rem;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.vl-block:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.vl-block-head {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: baseline;
+}
+
+.vl-block-index {
+  font-size: 0.75rem;
+  color: var(--c5-accent);
+}
+
+.vl-block-title {
+  white-space: nowrap;
+}
+
+.vl-block-note:empty {
+  display: none;
+}
+
+.vl-block-note {
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
+
+.vl-block-body {
+  display: grid;
+  gap: var(--s-8);
+  align-items: center;
+}
+
+/*
+ * The matrix sizes its own column and sits against the panel's right margin;
+ * the bar chart takes everything left of the gutter.
+ *
+ * Split by ratio instead, the matrix is narrower than its column and floats in
+ * the middle of it, leaving two hundred pixels of dead space to its right while
+ * its own labels crowd the chart on its left. Sizing the column to the table
+ * puts the whole gap in one place, and puts it between the two figures.
+ */
+.vl-block-body[data-split='behaviour'] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-16);
+  align-items: stretch;
+}
+
+/*
+ * The two conditioning inputs, segmented. §5.3 finds priority modest and
+ * margin-level, §5.4 finds application capable of reordering the middle; under
+ * one heading they read as one effect, so each takes its own.
+ */
+.vl-study {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.375rem;
+}
+
+.vl-study-title {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.vl-study-takeaway {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+.vl-block-body[data-split='importance'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+}
+
+/* Block one puts the chart and its aggregate figures side by side, because the
+   scenario and the thirty-two are one claim read at two scales. */
+.vl-block:first-child .vl-block-body {
+  grid-template-columns: 62fr 38fr;
+}
+
+/* ---- Shared board mechanics ---------------------------------------------------- */
+
+.vl-board-frame {
+  width: 100%;
+  aspect-ratio: var(--ratio);
+}
+
+.vl-board {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.vl-grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.vl-axis {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+.vl-axis-label {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 9.5px;
+  text-anchor: middle;
+  fill: var(--ink-ghost);
+}
+
+.vl-axis-label[data-align='end'] {
+  text-anchor: end;
+}
+
+.vl-column-head {
+  font-family: var(--font-label);
+  font-size: 9px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-anchor: middle;
+  fill: var(--ink-faint);
+}
+
+/* ---- Block one: the panel against the model ------------------------------------ */
+
+.vl-row-letter {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  text-anchor: middle;
+  fill: var(--product);
+}
+
+.vl-band {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* The panel's interval, and the model's inside it. Both to one axis, so
+   containment is read off the picture rather than asserted beside it. */
+.vl-band-expert {
+  fill: color-mix(in srgb, var(--c-base) 13%, transparent);
+}
+
+.vl-band-model {
+  fill: var(--product);
+}
+
+.vl-readout {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  text-anchor: middle;
+  fill: var(--ink-muted);
+}
+
+.vl-readout[data-kind='model'] {
+  font-weight: var(--fw-medium);
+  fill: var(--ink);
+}
+
+.vl-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2) var(--s-6);
+}
+
+.vl-figure {
+  display: grid;
+  gap: 1px;
+  padding-left: var(--s-3);
+  border-left: 2px solid color-mix(in srgb, var(--c5-accent) 34%, transparent);
+}
+
+.vl-figure-value {
+  font-size: 1.25rem;
+  color: var(--c5-accent);
+}
+
+.vl-figure-label {
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- Block two, left: Fig. 7 ---------------------------------------------------- */
+
+.vl-who-bar {
+  fill: var(--product);
+  transform-box: fill-box;
+  transform-origin: bottom;
+}
+
+.vl-group-name {
+  font-family: var(--font-label);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  text-anchor: middle;
+  fill: var(--ink-faint);
+}
+
+/* ---- Block two, right: Fig. 8 --------------------------------------------------- */
+
+/* Started at the column's own left edge, and the row names left-aligned in a
+   fixed track, so the heading above and the reading below begin on the same
+   vertical as "Standard structural". Centred, the table floated free of both. */
+.vl-grid {
+  display: grid;
+  grid-template-columns: 9.5rem repeat(5, 2.75rem);
+  gap: 2px;
+  align-content: center;
+  justify-content: start;
+}
+
+.vl-grid-corner {
+  display: block;
+}
+
+.vl-grid-head {
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: var(--fw-medium);
+  text-align: center;
+  color: var(--product);
+}
+
+.vl-grid-row-name {
+  align-self: center;
+  padding-right: var(--s-3);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: var(--ink-muted);
+}
+
+.vl-grid-cell {
+  display: grid;
+  place-items: center;
+  height: 1.375rem;
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--c5-pd) calc(var(--weight) * 92%), #eef4f6);
+
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--c-base) 74%, transparent);
+}
+
+.vl-grid-cell[data-dark='true'] {
+  color: #ffffff;
+}
+
+.vl-grid-cell[data-lead='true'] {
+  font-weight: var(--fw-semibold);
+}
+
+/* The pair that swaps between two rows, which is what reading down a column is
+   for. */
+.vl-grid-cell[data-crossing='true'] {
+  box-shadow: inset 0 0 0 1.5px var(--c5-contested);
+}
+
+/* ---- Block three: Fig. 10 ------------------------------------------------------- */
+
+/*
+ * Three panels on one shared scale, because the comparison between them is the
+ * point: two fall away steeply after their leading indicators and one does not.
+ */
+.vl-shap {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+
+.vl-shap-head {
+  margin-bottom: var(--s-1);
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c5-accent);
+}
+
+.vl-shap-row {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.vl-shap-name {
+  font-size: 0.625rem;
+  line-height: 1.15;
+  text-align: right;
+  color: var(--ink-muted);
+}
+
+.vl-shap-row[data-kind='lead'] .vl-shap-name {
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+}
+
+.vl-shap-row[data-kind='remaining'] .vl-shap-name {
+  color: var(--ink-ghost);
+}
+
+.vl-shap-track {
+  display: block;
+  height: 0.4375rem;
+}
+
+.vl-shap-fill {
+  display: block;
+  width: var(--extent);
+  height: 100%;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--c5-pc) 78%, transparent);
+  transform-origin: left center;
+}
+
+.vl-shap-fill[data-kind='lead'] {
+  background-color: var(--c5-pd);
+}
+
+/* The seven indicators outside the top ten, kept grey as the paper keeps them:
+   it is a residual, not a competitor. */
+.vl-shap-fill[data-kind='remaining'] {
+  background-color: color-mix(in srgb, var(--c-base) 22%, transparent);
+}
+
+.vl-shap-note {
+  margin-top: var(--s-1);
+  font-size: 0.625rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
