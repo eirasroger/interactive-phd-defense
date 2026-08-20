@@ -1,0 +1,184 @@
+/*
+ * Beat 8. The panel's judgement, and the model's score inside it.
+ *
+ * Every row is one product on a shared zero-to-one axis. The band is what six
+ * experts agreed plus the uncertainty their own confidence scores imply, and
+ * the mark is what the model returned. The picture is read by seeing that no
+ * mark leaves its band.
+ */
+.cs {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--s-6);
+  align-content: center;
+}
+
+.cs-head {
+  display: flex;
+  gap: var(--s-8);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.cs-legend {
+  display: flex;
+  gap: var(--s-6);
+}
+
+.cs-key {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.cs-key::before {
+  content: '';
+  width: 1.5rem;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.cs-key-band::before {
+  background-color: color-mix(in srgb, var(--c5-accent) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 42%, transparent);
+}
+
+.cs-key-mark::before {
+  width: 10px;
+  border-radius: 999px;
+  background-color: var(--c5-accent);
+}
+
+/* ---- The rows ------------------------------------------------------------- */
+
+.cs-rows {
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  min-height: 0;
+}
+
+.cs-row {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) 7.5rem;
+  gap: var(--s-4);
+  align-items: center;
+}
+
+.cs-track {
+  position: relative;
+  height: 1.75rem;
+}
+
+/* The axis is the row itself, so a value at 0.05 and a value at 0.96 are
+   comparable across rows without a grid behind them. */
+.cs-track::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--rule);
+}
+
+.cs-band {
+  position: absolute;
+  top: 50%;
+  height: 1.125rem;
+  margin-top: -0.5625rem;
+  border-radius: 5px;
+  background-color: color-mix(in srgb, var(--c5-accent) 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 38%, transparent);
+}
+
+/* The panel's own value, drawn as a hairline inside its band. */
+.cs-consensus {
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 1.125rem;
+  margin-top: -0.5625rem;
+  background-color: color-mix(in srgb, var(--c5-accent) 60%, transparent);
+}
+
+.cs-mark {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  margin-left: -6px;
+  border-radius: 999px;
+  background-color: var(--c5-accent);
+  box-shadow: 0 0 0 3px #ffffff;
+}
+
+.cs-readout {
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+}
+
+.cs-value {
+  font-size: 1.375rem;
+  color: var(--ink);
+}
+
+.cs-against {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+/* ---- What it comes to ------------------------------------------------------- */
+
+.cs-summary {
+  display: grid;
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.cs-scope {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.cs-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-8);
+}
+
+.cs-figure-block {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+}
+
+.cs-figure {
+  font-size: 2rem;
+  color: var(--c5-accent);
+}
+
+.cs-figure-label {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.cs-residual {
+  max-width: 54rem;
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}

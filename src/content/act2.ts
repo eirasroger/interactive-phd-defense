@@ -1,6 +1,12 @@
 import type { CaptionContent } from '@/components/Caption';
 import type { FigureContent } from '@/components/SlideFigure';
 import fig4Url from '@/assets/figures/fig4.png?url';
+import {
+  APPLICATION_CLAIM,
+  LEARNED_CLAIM,
+  RELATIONAL,
+  STAKEHOLDER_CLAIM,
+} from '@/content/c5';
 
 /**
  * Act II copy: one slide per contribution.
@@ -20,6 +26,8 @@ const c1 = (heading: string): CaptionContent => slide('C1', 'Decision framework'
 const c2 = (heading: string): CaptionContent => slide('C2', 'Empirical characterisation', heading);
 const c3 = (heading: string): CaptionContent => slide('C3', 'Screening agent', heading);
 const c4 = (heading: string): CaptionContent => slide('C4', 'Inference', heading);
+const c5 = (heading: string): CaptionContent =>
+  slide('C5', 'Context-adaptive recommender', heading);
 
 /**
  * Six beats over one held pose. The camera stays where it landed, so each of
@@ -84,16 +92,37 @@ export const c4Captions: readonly CaptionContent[] = [
   c4('What this contribution settles.'),
 ];
 
+/**
+ * Eleven beats over one held pose, the longest station in the corridor and the
+ * one the other four feed. One states what the preceding contributions supply
+ * and what the remaining step demands, two build the model, three are the
+ * relational claim drawn as one movement, one is the expert check, two separate
+ * the influence of the stakeholder from the influence of the application, one
+ * reads the model's own attributions, and the last states what the contribution
+ * settles.
+ */
+export const c5Captions: readonly CaptionContent[] = [
+  c5(
+    'The recommendation depends on the product evidence, on stakeholder priorities, and on the intended application.',
+  ),
+  c5(LEARNED_CLAIM),
+  c5('Candidates are scored together, so the order never depends on how they arrived.'),
+  c5(RELATIONAL.pair),
+  c5(RELATIONAL.trio),
+  c5(RELATIONAL.quartet),
+  c5('Six experts ranked thirty-two scenarios, and the model reached their order.'),
+  c5(STAKEHOLDER_CLAIM),
+  c5(APPLICATION_CLAIM),
+  c5('Feature importance reorganises with the context the model is given.'),
+  c5('What this contribution settles.'),
+];
+
 export const act2Captions = {
   c1: c1Captions[0] as CaptionContent,
   c2: c2Captions[0] as CaptionContent,
   c3: c3Captions[0] as CaptionContent,
   c4: c4Captions[0] as CaptionContent,
-  c5: slide(
-    'C5',
-    'Context-adaptive recommender',
-    'The recommendation depends on the composition of the candidate set.',
-  ),
+  c5: c5Captions[0] as CaptionContent,
 } satisfies Record<string, CaptionContent>;
 
 /** Beat captions for the stations whose beats are built. */
@@ -102,6 +131,7 @@ export const act2Beats: Partial<Record<keyof typeof act2Captions, readonly Capti
   c2: c2Captions,
   c3: c3Captions,
   c4: c4Captions,
+  c5: c5Captions,
 };
 
 export const act2Figures: Partial<Record<keyof typeof act2Captions, readonly FigureContent[]>> = {};

@@ -1,0 +1,230 @@
+/*
+ * Beats 5 to 7. A candidate's score, and the set it was computed in.
+ *
+ * Drawn on the field, because this is the one beat that shows the mechanism
+ * acting: the flare between candidates is the attention that produced the
+ * movement underneath it.
+ *
+ * Four rows exist from the first beat and every one of them keeps its place,
+ * so the only thing that moves on the wall is a puck travelling along the axis.
+ */
+.rl {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: var(--s-4);
+  align-content: center;
+  padding: var(--s-8) var(--s-12);
+}
+
+/* ---- The plot -------------------------------------------------------------- */
+
+.rl-plot {
+  position: relative;
+  min-height: 0;
+}
+
+.rl-rows {
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  align-items: center;
+  height: 100%;
+}
+
+.rl-row {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+}
+
+.rl-track {
+  position: relative;
+  height: 100%;
+  display: grid;
+  align-items: center;
+}
+
+.rl-rule {
+  height: 1px;
+  background: linear-gradient(to right, var(--rule), color-mix(in srgb, var(--rule) 40%, transparent));
+}
+
+/* A rail with no candidate on it yet. Drawn from the first beat, because the
+   set can hold five and the wall should say so before the fourth arrives. */
+.rl-row[data-present='false'] .rl-rule {
+  opacity: 0.4;
+}
+
+/* ---- A candidate's score ---------------------------------------------------- */
+
+/* Centred by GSAP's own `xPercent`/`yPercent` rather than by a CSS transform:
+   any later `gsap.set` writing a transform would replace the declaration and
+   drop the puck half its width off its own score. */
+.rl-puck {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  place-items: center;
+}
+
+.rl-halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--standing, var(--c5-accent)) 26%, transparent);
+}
+
+/* Two widths for a two-state claim: §5.2 reports low variability at both ends
+   of the range and high variability in the middle, so the halo says which of
+   the two a candidate is and never how much. A soft edge keeps it a sensitivity
+   cue instead of reading as a measured interval. */
+.rl-row[data-spread='narrow'] .rl-halo {
+  width: 3.25rem;
+  height: 2.5rem;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--standing, var(--c5-accent)) 58%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+.rl-row[data-spread='wide'] .rl-halo {
+  width: 7.5rem;
+  height: 2.75rem;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--standing, var(--c5-accent)) 48%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+.rl-row[data-id='A'],
+.rl-row[data-id='B'] {
+  --standing: var(--c5-contested);
+}
+
+.rl-row[data-id='C'],
+.rl-row[data-id='D'] {
+  --standing: var(--c5-lead);
+}
+
+.rl-readout {
+  position: relative;
+  padding: var(--s-1) var(--s-2);
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--standing) 88%, #0b1418);
+  box-shadow: 0 6px 18px color-mix(in srgb, #000000 40%, transparent);
+
+  font-size: 1rem;
+  color: #0b1418;
+}
+
+/* ---- The flare -------------------------------------------------------------- */
+
+.rl-overlay {
+  position: absolute;
+  inset: 0;
+  margin-left: calc(2.5rem + var(--s-4));
+  pointer-events: none;
+}
+
+.rl-flare {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.rl-link {
+  fill: none;
+  stroke: var(--c5-accent-soft);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--c5-accent-soft) 70%, transparent));
+}
+
+/* ---- The margin of error ------------------------------------------------------ */
+
+/* Positioned over the track, so its width is the published mean absolute error
+   measured on the same axis the pucks sit on. */
+/* `top` and `height` are written by the panel from the rows the margin
+   encloses, so the bracket never reaches down through a candidate it says
+   nothing about. */
+.rl-margin {
+  position: absolute;
+  margin-left: calc(2.5rem + var(--s-4));
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.rl-margin-band {
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  left: 0;
+  right: 0;
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--c5-contested) 22%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c5-contested) 62%, transparent);
+}
+
+.rl-margin-label {
+  position: absolute;
+  top: -1.35rem;
+  white-space: nowrap;
+
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c5-contested) 76%, #e6f2f4);
+}
+
+/* ---- The axis ------------------------------------------------------------------ */
+
+.rl-axis {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--rule);
+}
+
+.rl-axis-label {
+  grid-column: 1 / -1;
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.rl-ticks {
+  position: relative;
+  grid-column: 2;
+  height: 1rem;
+}
+
+.rl-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+}
+
+.rl-note {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}

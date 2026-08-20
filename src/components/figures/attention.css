@@ -1,0 +1,316 @@
+/*
+ * Beat 4. What the model does to a candidate set.
+ *
+ * The board is the field, because everything inside a model is drawn on the
+ * dark ground and everything outside one is drawn on the projected white. C4
+ * set that rule and this station keeps it.
+ *
+ * Five rails cross the board, and the middle column is the only place they are
+ * joined to each other. That geometry is the beat: a score is computed after
+ * every candidate has seen every other one.
+ */
+.at {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--s-6);
+  align-content: center;
+}
+
+/* ---- What one candidate carries in --------------------------------------- */
+
+.at-top {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.at-input {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--s-8);
+  align-items: center;
+}
+
+.at-parts {
+  display: flex;
+  gap: var(--s-6);
+}
+
+.at-part {
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+}
+
+.at-part-figure {
+  font-size: 1.375rem;
+  color: var(--c5-accent);
+}
+
+.at-part-label {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.at-sum {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+  padding-left: var(--s-6);
+  border-left: 1px solid var(--rule);
+}
+
+.at-sum-figure {
+  font-size: 2.25rem;
+  color: var(--ink);
+}
+
+.at-sum-label {
+  max-width: 8rem;
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.at-triplet {
+  display: grid;
+  gap: var(--s-1);
+  justify-items: end;
+}
+
+.at-triplet-label {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.at-triplet-cells {
+  display: flex;
+  gap: 3px;
+}
+
+.at-triplet-cell {
+  padding: 3px var(--s-2);
+  border-radius: 5px;
+  background-color: color-mix(in srgb, var(--c5-accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 30%, transparent);
+
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c5-accent) 86%, var(--c-base));
+}
+
+/* ---- The board ------------------------------------------------------------- */
+
+/* The lane columns are declared once here and inherited by the headings, so a
+   heading can never drift off the stage it names. */
+.at-board {
+  --at-columns: 0.5fr 1fr 1.6fr 0.9fr 1.2fr;
+
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--s-4);
+  min-height: 0;
+  padding: var(--s-6) var(--s-8);
+}
+
+.at-heads {
+  display: grid;
+  grid-template-columns: var(--at-columns);
+  gap: var(--s-4);
+}
+
+/* The first column is the rail's own run-in and names nothing. */
+.at-head[data-key='encode'] {
+  grid-column: 2;
+}
+
+.at-head-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-title);
+  color: var(--c5-accent-soft);
+}
+
+.at-head-detail {
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.at-lanes {
+  position: relative;
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  min-height: 0;
+}
+
+.at-lane {
+  display: grid;
+  grid-template-columns: var(--at-columns);
+  gap: var(--s-4);
+  align-items: center;
+}
+
+.at-rail {
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(to right, transparent, var(--rule-strong));
+}
+
+/* The encoder narrows the rail, which is the only thing the drawing needs to
+   say about three fully connected layers. */
+.at-encoder {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--c5-accent) 46%, transparent),
+    color-mix(in srgb, var(--c5-accent) 22%, transparent)
+  );
+  transform-origin: left center;
+  clip-path: polygon(0 0, 100% 32%, 100% 68%, 0 100%);
+}
+
+.at-zone {
+  height: 2px;
+  background-color: transparent;
+}
+
+.at-join {
+  height: 2px;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--c5-accent) 40%, transparent);
+  transform-origin: left center;
+}
+
+.at-score {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--rule);
+}
+
+/* Position along the rail is a shape, never a reading: this beat is the
+   architecture and the numbers belong to the beats that measured them. */
+.at-score-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  margin-left: -5px;
+  border-radius: 999px;
+  background-color: var(--c5-accent-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c5-accent) 24%, transparent);
+}
+
+.at-lane[data-lane='0'] .at-score-dot {
+  left: 78%;
+}
+.at-lane[data-lane='1'] .at-score-dot {
+  left: 41%;
+}
+.at-lane[data-lane='2'] .at-score-dot {
+  left: 64%;
+}
+.at-lane[data-lane='3'] .at-score-dot {
+  left: 88%;
+}
+.at-lane[data-lane='4'] .at-score-dot {
+  left: 18%;
+}
+
+/* ---- Attention, over the third column -------------------------------------- */
+
+/* Placed by the same column template the lanes use, so the overlay covers
+   exactly the span whose heading says attention happens in it. The row has to
+   be declared: left to `auto` it is sized by the SVG, and an SVG asked for
+   `height: 100%` of an indefinite box falls back to its view box's aspect
+   ratio, which made the overlay as tall as its column is wide. */
+.at-overlay-slot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: var(--at-columns);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--s-4);
+  pointer-events: none;
+}
+
+.at-overlay {
+  grid-column: 3;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.at-link {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c5-accent-soft) 62%, transparent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* The global context is the mean of the set, so it sits on the centre line
+   between the attention column and the scoring head. */
+.at-context {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: var(--at-columns);
+  gap: var(--s-4);
+  align-items: center;
+  pointer-events: none;
+}
+
+.at-context-node {
+  grid-column: 4;
+  justify-self: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background-color: var(--c5-accent-soft);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--c5-accent) 26%, transparent),
+    0 0 22px color-mix(in srgb, var(--c5-accent-soft) 60%, transparent);
+}
+
+/* ---- The two properties the architecture was chosen for ---------------------- */
+
+.at-properties {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-8);
+}
+
+.at-property {
+  display: grid;
+  gap: var(--s-1);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.at-property-figure {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-title);
+  color: var(--c5-accent);
+}
+
+.at-property-label {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}

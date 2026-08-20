@@ -1,0 +1,328 @@
+/*
+ * Beats 9 and 10. The two conditioning inputs, compared.
+ *
+ * Two states over one cell. The first is drawn without numbers because the
+ * source figure has none printed on it; the second prints all twenty, because
+ * its source figure labels every cell.
+ */
+.ad {
+  position: relative;
+}
+
+.ad-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: var(--s-6);
+  align-content: center;
+}
+
+/* ---- Who is deciding -------------------------------------------------------- */
+
+.ad-state[data-state='who'] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ad-who {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: var(--s-16);
+  align-items: center;
+  min-height: 0;
+}
+
+.ad-tiers {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.ad-tier {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.ad-tier-members {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.ad-tier-label {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.ad-tier[data-key='middle'] .ad-tier-label {
+  color: var(--c5-contested);
+}
+
+.ad-tier-note {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.ad-archetypes {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.ad-archetype {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-6);
+  border-radius: 14px;
+  background-color: color-mix(in srgb, var(--c5-who) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c5-who) 26%, transparent);
+}
+
+.ad-archetype-head {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+}
+
+.ad-archetype-code {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  color: var(--c5-who);
+}
+
+.ad-archetype-label {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+/* The gap between the two contested candidates, which is the only thing the
+   stakeholder input moves. Positions are a schematic of the reading beside
+   them; Fig. 7 prints no values for either. */
+.ad-gap {
+  position: relative;
+  height: 1.75rem;
+}
+
+.ad-gap-rule {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: color-mix(in srgb, var(--c5-who) 30%, transparent);
+}
+
+.ad-gap-mark {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: -0.75rem;
+  margin-left: -0.75rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--c5-contested) 16%, #ffffff);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c5-contested) 55%, transparent);
+
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: var(--fw-medium);
+  color: color-mix(in srgb, var(--c5-contested) 84%, var(--c-base));
+}
+
+.ad-archetype[data-gap='closed'] .ad-gap-mark[data-id='A'] {
+  left: 62%;
+}
+.ad-archetype[data-gap='closed'] .ad-gap-mark[data-id='B'] {
+  left: 56%;
+}
+.ad-archetype[data-gap='open'] .ad-gap-mark[data-id='A'] {
+  left: 68%;
+}
+.ad-archetype[data-gap='open'] .ad-gap-mark[data-id='B'] {
+  left: 30%;
+}
+
+.ad-archetype-reading {
+  font-size: 0.875rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- What it is for ----------------------------------------------------------- */
+
+.ad-state[data-state='what'] {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.ad-what {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
+  gap: var(--s-3);
+  min-height: 0;
+}
+
+/* The axis, the plot and the end labels share one height, so a percentage
+   inside any of them resolves against the same definite box. */
+.ad-axis,
+.ad-ends {
+  position: relative;
+}
+
+.ad-axis {
+  margin-top: 2.25rem;
+}
+
+.ad-tick {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+}
+
+.ad-plot {
+  display: grid;
+  grid-template-rows: 2.25rem minmax(0, 1fr);
+  min-height: 0;
+}
+
+.ad-columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ad-column {
+  text-align: center;
+
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.ad-canvas {
+  position: relative;
+  min-height: 0;
+}
+
+.ad-board {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ad-slope-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Three roles, so the two lines that cross are the ones the eye lands on. */
+.ad-slope-line[data-role='crossing'] {
+  stroke: var(--c5-accent);
+  stroke-width: 3;
+}
+
+.ad-slope-line[data-role='held'] {
+  stroke: color-mix(in srgb, var(--c5-lead) 46%, transparent);
+}
+
+.ad-slope-line[data-role='quiet'] {
+  stroke: var(--rule-strong);
+}
+
+/* A node at every published value, so the line has visible stations on it. */
+.ad-node {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background-color: #ffffff;
+  box-shadow: inset 0 0 0 2px var(--rule-strong);
+}
+
+.ad-node[data-role='crossing'] {
+  width: 9px;
+  height: 9px;
+  box-shadow: inset 0 0 0 2.5px var(--c5-accent);
+}
+
+.ad-node[data-role='held'] {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c5-lead) 60%, transparent);
+}
+
+/* Centred by GSAP's `xPercent`/`yPercent`: the build tweens `y` on these, and
+   a tween writing a transform replaces a CSS one outright. */
+.ad-point {
+  position: absolute;
+  padding: 2px 5px;
+  border-radius: 6px;
+  background-color: #ffffff;
+
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+}
+
+.ad-point[data-role='crossing'] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 44%, transparent);
+  font-weight: var(--fw-medium);
+  color: var(--c5-accent);
+}
+
+.ad-point[data-role='held'] {
+  color: color-mix(in srgb, var(--c5-lead) 82%, var(--c-base));
+}
+
+/* The one pair that lands two hundredths apart is separated by geometry, so
+   the two readings stay legible where the lines cross. */
+.ad-point[data-side='above'] {
+  margin-top: -1.3rem;
+}
+
+.ad-point[data-side='below'] {
+  margin-top: 1.3rem;
+}
+
+.ad-end {
+  position: absolute;
+  right: 0;
+}
+
+.ad-end[data-role='quiet'] {
+  opacity: 0.55;
+}
+
+.ad-foot {
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.ad-reading-line {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+.ad-reading-held {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}

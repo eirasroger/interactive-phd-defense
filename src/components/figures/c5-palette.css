@@ -1,0 +1,157 @@
+/*
+ * C5's own chromatic identity, and the ground the model's interior is drawn on.
+ *
+ * The corridor arrives here through C3's indigo and C4's violet. A deep
+ * cyan-teal continues that ramp into a cooler, brighter hue, so the terminal
+ * station reads as arrival while staying clear of the circularity teal the
+ * floor carries and of C1's four indicator families.
+ *
+ * The second ground is C4's device, kept deliberately: everything outside a
+ * model is drawn on the white the corridor projects, and everything inside one
+ * is drawn on a dark field. Two stations sharing that rule is what makes it a
+ * rule instead of a decoration.
+ */
+.c5 {
+  --c5-accent: #0d6e80;
+  --c5-accent-soft: #4aa3b4;
+
+  /* Where a candidate stands. Read at every beat that draws a score. */
+  --c5-lead: #0d6e80;
+  --c5-contested: #b2762a;
+  --c5-trailing: #8a9099;
+
+  /* The two conditioning inputs, separated because the station separates them. */
+  --c5-who: #7a4f9c;
+  --c5-what: #0d6e80;
+
+  --ink: var(--c-base);
+  --ink-muted: color-mix(in srgb, var(--c-base) 66%, transparent);
+  --ink-faint: color-mix(in srgb, var(--c-base) 44%, transparent);
+  --ink-ghost: color-mix(in srgb, var(--c-base) 22%, transparent);
+  --rule: color-mix(in srgb, var(--c-base) 11%, transparent);
+  --rule-strong: color-mix(in srgb, var(--c-base) 22%, transparent);
+  --card: color-mix(in srgb, #ffffff 74%, transparent);
+
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  color: var(--ink);
+}
+
+/*
+ * The field. Its ink tokens carry the same names as the white ground's, so a
+ * component built for one reads correctly inside the other.
+ */
+.c5-field {
+  --ink: #e6f2f4;
+  --ink-muted: color-mix(in srgb, #e6f2f4 62%, transparent);
+  --ink-faint: color-mix(in srgb, #e6f2f4 40%, transparent);
+  --ink-ghost: color-mix(in srgb, #e6f2f4 20%, transparent);
+  --rule: color-mix(in srgb, #e6f2f4 14%, transparent);
+  --rule-strong: color-mix(in srgb, #e6f2f4 28%, transparent);
+  --c5-accent: #5cc0d4;
+  --c5-accent-soft: #92dcea;
+  --c5-lead: #5cc0d4;
+  --c5-trailing: #7d8b92;
+
+  position: relative;
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      ellipse 70% 90% at 50% 0%,
+      color-mix(in srgb, #0d6e80 26%, transparent) 0%,
+      transparent 70%
+    ),
+    linear-gradient(180deg, #0e1c21 0%, #0b1418 100%);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #5cc0d4 22%, transparent),
+    0 24px 60px color-mix(in srgb, var(--c-base) 24%, transparent);
+}
+
+/* The field's own texture, so an empty region still reads as part of a space. */
+.c5-field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, #5cc0d4 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, #5cc0d4 7%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 45%, #000 30%, transparent 100%);
+}
+
+/*
+ * Where a candidate stands in the set it is in.
+ *
+ * Three states, because the argument the station makes is that the middle of a
+ * field behaves differently from either end. Every use pairs the tone with a
+ * position on an axis, so the colour is never the only encoding.
+ */
+[data-standing='lead'] {
+  --standing: var(--c5-lead);
+}
+[data-standing='contested'] {
+  --standing: var(--c5-contested);
+}
+[data-standing='trailing'] {
+  --standing: var(--c5-trailing);
+}
+
+/* Which conditioning input a mark belongs to. */
+[data-input='who'] {
+  --input: var(--c5-who);
+}
+[data-input='what'] {
+  --input: var(--c5-what);
+}
+
+/* The uppercase locator every C5 panel opens with. */
+.c5-index {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c5-accent);
+}
+
+.c5-field .c5-index {
+  color: var(--c5-accent-soft);
+}
+
+/* A quantity, wherever one is set at reading size. */
+.c5-figure {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  /* Not 1: a light-weight numeral needs more than its em box and clips at 1. */
+  line-height: 1.12;
+}
+
+/* A candidate, wherever the station draws one as a token. */
+.c5-token {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--standing, var(--c5-accent)) 14%, #ffffff);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--standing, var(--c5-accent)) 52%, transparent);
+
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  color: color-mix(in srgb, var(--standing, var(--c5-accent)) 82%, var(--c-base));
+}
+
+.c5-field .c5-token {
+  background-color: color-mix(in srgb, var(--standing, var(--c5-accent)) 22%, #0b1418);
+  color: color-mix(in srgb, var(--standing, var(--c5-accent)) 88%, #e6f2f4);
+}

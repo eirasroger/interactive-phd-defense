@@ -1,0 +1,213 @@
+/*
+ * Beat 12. The claim the station exists to make, and what carries out of it.
+ *
+ * The transfer card is drawn at full size on the right rather than listed with
+ * the other two, because a recommender for concrete and a recommender for
+ * construction products are two different contributions, and the row that says
+ * which parts have to be written again is the one that makes the claim honest.
+ */
+.sx {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: var(--s-16);
+  align-content: center;
+  align-items: center;
+}
+
+.sx-column {
+  display: grid;
+  gap: var(--s-8);
+}
+
+.sx-head {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.sx-headline {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: var(--fw-light);
+  /* Not `--lh-tight`: a light-weight display line needs more than its em box
+     and clips at that value. */
+  line-height: 1.16;
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.sx-body {
+  font-size: 1rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- The two supporting claims ---------------------------------------------- */
+
+.sx-points {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.sx-point {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: var(--s-4);
+  align-items: center;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.sx-point-text {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+}
+
+.sx-claim {
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+.sx-figure {
+  padding: 2px var(--s-3);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--c5-accent) 10%, transparent);
+
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--c5-accent);
+}
+
+.sx-glyph {
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  overflow: visible;
+}
+
+/* An SVG child resolves `transform-origin` against the whole view box unless
+   it is told otherwise, and GSAP bakes that wrong origin into the matrix. */
+.sx-band,
+.sx-inside,
+.sx-beam,
+.sx-pivot {
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
+.sx-band {
+  fill: color-mix(in srgb, var(--c5-accent) 22%, transparent);
+  stroke: color-mix(in srgb, var(--c5-accent) 46%, transparent);
+  stroke-width: 1.5;
+}
+
+.sx-inside {
+  fill: var(--c5-accent);
+}
+
+.sx-beam {
+  fill: var(--c5-accent);
+}
+
+.sx-pivot {
+  fill: color-mix(in srgb, var(--c5-accent) 34%, transparent);
+}
+
+/* ---- What carries to another product category --------------------------------- */
+
+.sx-reach {
+  display: grid;
+  gap: var(--s-6);
+  padding: var(--s-8);
+  border-radius: 18px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 24%, transparent),
+    0 20px 48px color-mix(in srgb, var(--c5-accent) 12%, transparent);
+}
+
+.sx-reach-head {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: start;
+}
+
+.sx-reach-label {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  color: var(--c5-accent);
+}
+
+.sx-evaluated {
+  padding: 2px var(--s-3);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--c5-accent) 12%, transparent);
+
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c5-accent) 82%, var(--c-base));
+}
+
+.sx-components {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.sx-component {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: var(--s-4);
+  align-items: start;
+  padding: var(--s-3) var(--s-4);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+
+/* A filled mark carries over; a hollow one is written again from the standard
+   that governs the new category. The two statuses are direct-labelled by the
+   note beside them, so the mark is never the only encoding. */
+.sx-component-mark {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 999px;
+}
+
+.sx-component[data-status='carries'] {
+  background-color: color-mix(in srgb, var(--c5-accent) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 34%, transparent);
+}
+
+.sx-component[data-status='carries'] .sx-component-mark {
+  background-color: var(--c5-accent);
+}
+
+.sx-component[data-status='redefined'] .sx-component-mark {
+  box-shadow: inset 0 0 0 2px var(--rule-strong);
+}
+
+.sx-component-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.sx-component[data-status='carries'] .sx-component-label {
+  font-weight: var(--fw-medium);
+  color: color-mix(in srgb, var(--c5-accent) 86%, var(--c-base));
+}
+
+.sx-component-note {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}

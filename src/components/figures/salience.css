@@ -1,0 +1,186 @@
+/*
+ * Beat 11. What the model reads, under three contexts.
+ *
+ * Five ranks and two connector tracks on one grid, so a lane in a column and
+ * the same lane in the connector beside it resolve against the same row height.
+ * Every child is placed explicitly, which keeps the drawing independent of the
+ * order the panel appends things in.
+ */
+.sl {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--s-6);
+  align-content: center;
+}
+
+.sl-top {
+  display: flex;
+  gap: var(--s-8);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sl-legend {
+  display: flex;
+  gap: var(--s-6);
+}
+
+.sl-legend-key {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.sl-legend-entered::before {
+  content: '';
+  width: 3px;
+  height: 1rem;
+  border-radius: 999px;
+  background-color: var(--c5-accent);
+}
+
+/* ---- The board -------------------------------------------------------------- */
+
+.sl-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem minmax(0, 1fr) 4.5rem minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0 var(--s-2);
+  min-height: 0;
+}
+
+.sl-head[data-key='standard'] {
+  grid-area: 1 / 1;
+}
+.sl-head[data-key='thermal'] {
+  grid-area: 1 / 3;
+}
+.sl-head[data-key='finish'] {
+  grid-area: 1 / 5;
+}
+
+.sl-column[data-key='standard'] {
+  grid-area: 2 / 1;
+}
+.sl-column[data-key='thermal'] {
+  grid-area: 2 / 3;
+}
+.sl-column[data-key='finish'] {
+  grid-area: 2 / 5;
+}
+
+.sl-gap[data-gap='1'] {
+  grid-area: 2 / 2;
+}
+.sl-gap[data-gap='2'] {
+  grid-area: 2 / 4;
+}
+
+.sl-head {
+  display: grid;
+  gap: 2px;
+  padding-bottom: var(--s-3);
+  margin-bottom: var(--s-3);
+  border-bottom: 2px solid color-mix(in srgb, var(--c5-accent) 30%, transparent);
+}
+
+.sl-head-label {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.sl-head-note {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+/* ---- The ladder ------------------------------------------------------------- */
+
+.sl-column {
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  min-height: 0;
+}
+
+.sl-cell {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  align-self: center;
+  padding: var(--s-2) var(--s-3);
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--c-base) 4%, transparent);
+}
+
+.sl-rank {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--ink-ghost);
+}
+
+.sl-name {
+  font-size: 0.875rem;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+/* An indicator with no line into it has entered the top five at this context,
+   which is the reading the beat is built to deliver. */
+.sl-cell[data-entered='true'] {
+  background-color: color-mix(in srgb, var(--c5-accent) 10%, transparent);
+  box-shadow: inset 3px 0 0 0 var(--c5-accent);
+}
+
+.sl-cell[data-entered='true'] .sl-name {
+  font-weight: var(--fw-medium);
+  color: color-mix(in srgb, var(--c5-accent) 88%, var(--c-base));
+}
+
+.sl-cell[data-entered='true'] .sl-rank {
+  color: var(--c5-accent);
+}
+
+/* ---- The connectors ---------------------------------------------------------- */
+
+.sl-gap {
+  min-height: 0;
+}
+
+.sl-connector {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sl-link {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.sl-link[data-move='held'] {
+  stroke: var(--rule-strong);
+}
+
+.sl-link[data-move='up'],
+.sl-link[data-move='down'] {
+  stroke: color-mix(in srgb, var(--c5-accent) 50%, transparent);
+}
+
+.sl-claim {
+  max-width: 60rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}

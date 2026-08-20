@@ -1,0 +1,446 @@
+/*
+ * Beat 2. Where the labels came from, and what each source is worth.
+ *
+ * Three sources drawn as the methods they are, and then the same three read
+ * twice: what each contributed against the share of the objective it carries.
+ *
+ * The sources carry one hue at three strengths rather than three hues.
+ * Provenance here is a scale, from analytically settled through generated to
+ * annotated, and the accent belongs to the end of it that is almost invisible
+ * on the upper band.
+ */
+.sv {
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  gap: var(--s-3);
+  align-content: center;
+}
+
+.sv-claim {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.sv-source[data-key='control'],
+.sv-segment[data-key='control'],
+.sv-ribbon[data-key='control'],
+.sv-legend-entry[data-key='control'] {
+  --tint: color-mix(in srgb, var(--c5-accent) 26%, transparent);
+}
+
+.sv-source[data-key='generated'],
+.sv-segment[data-key='generated'],
+.sv-ribbon[data-key='generated'],
+.sv-legend-entry[data-key='generated'] {
+  --tint: color-mix(in srgb, var(--c5-accent) 54%, transparent);
+}
+
+.sv-source[data-key='expert'],
+.sv-segment[data-key='expert'],
+.sv-ribbon[data-key='expert'],
+.sv-legend-entry[data-key='expert'] {
+  --tint: var(--c5-accent);
+}
+
+/* ---- The three sources -------------------------------------------------------- */
+
+/* The generated source takes more width because it takes more explaining. It is
+   the source a committee presses on, and three equal columns would give the
+   least contested one the same room as the most. */
+.sv-sources {
+  display: grid;
+  grid-template-columns: 27fr 40fr 27fr;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 0 var(--s-12);
+}
+
+.sv-source {
+  display: grid;
+  grid-row: 1 / -1;
+  grid-template-rows: subgrid;
+  gap: var(--s-2);
+  padding-top: var(--s-2);
+  border-top: 3px solid var(--tint);
+}
+
+.sv-source-head {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sv-source-label {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.sv-source-count {
+  font-size: 1.75rem;
+  color: var(--ink);
+}
+
+.sv-source[data-key='expert'] .sv-source-count {
+  color: var(--c5-accent);
+}
+
+.sv-source-produced {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- The three method diagrams -------------------------------------------------- */
+
+/*
+ * Each source carries a figure of its own labelling method at a size that can
+ * actually be read. An earlier pass drew all three at 48px with 8px labels; at
+ * that size a diagram is decoration, because working out what it shows costs
+ * more than the sentence it replaces.
+ */
+.sv-source-figure {
+  align-self: center;
+}
+
+.sv-diagram {
+  display: block;
+  width: 100%;
+  height: 6.25rem;
+  overflow: visible;
+}
+
+.sv-diagram-label {
+  font-family: var(--font-label);
+  font-size: 9px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+.sv-diagram-label[data-kind='accent'] {
+  fill: var(--c5-accent);
+}
+
+/* A named row, so a track carries an indicator rather than an abstraction. */
+.sv-row-name {
+  font-size: 9.5px;
+  text-anchor: end;
+  fill: var(--ink-muted);
+}
+
+.sv-column-name {
+  font-family: var(--font-label);
+  font-size: 9px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  fill: var(--ink-faint);
+}
+
+/* Control: the same three alternatives on every row. */
+.sv-track {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+.sv-alt {
+  fill: color-mix(in srgb, var(--c5-accent) 30%, transparent);
+}
+
+.sv-alt[data-varied='true'] {
+  fill: var(--c5-accent);
+}
+
+.sv-alt-letter {
+  font-family: var(--font-label);
+  font-size: 8.5px;
+  font-weight: var(--fw-semibold);
+  text-anchor: middle;
+  fill: var(--c5-accent);
+}
+
+/* Generated: what the prompt constrains, what comes back, what becomes of it. */
+.sv-panel {
+  fill: color-mix(in srgb, var(--c5-accent) 5%, transparent);
+  stroke: color-mix(in srgb, var(--c5-accent) 24%, transparent);
+  stroke-width: 1;
+}
+
+.sv-field {
+  font-size: 9.5px;
+  fill: var(--ink-muted);
+}
+
+.sv-bullet {
+  fill: var(--c5-accent);
+}
+
+.sv-field-mark {
+  fill: color-mix(in srgb, var(--c5-accent) 32%, transparent);
+}
+
+.sv-field-mark[data-kind='confidence'] {
+  fill: var(--c5-accent);
+}
+
+.sv-feed {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c5-accent) 40%, transparent);
+  stroke-width: 1;
+}
+
+.sv-feed-kept {
+  stroke: var(--c5-accent);
+  stroke-width: 1.5;
+}
+
+.sv-feed-dropped {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+  stroke-dasharray: 2.5 3;
+}
+
+.sv-node {
+  fill: color-mix(in srgb, var(--c5-accent) 10%, transparent);
+  stroke: color-mix(in srgb, var(--c5-accent) 40%, transparent);
+  stroke-width: 1;
+}
+
+.sv-node-label {
+  font-family: var(--font-label);
+  font-size: 9.5px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  fill: var(--c5-accent);
+}
+
+.sv-outcome {
+  font-size: 9.5px;
+  fill: var(--ink-muted);
+}
+
+.sv-outcome[data-kind='kept'] {
+  fill: var(--c5-accent);
+}
+
+.sv-outcome[data-kind='dropped'] {
+  fill: var(--ink-faint);
+}
+
+/* Expert: six labelled batches, and the pair that is measured across two. */
+.sv-case {
+  fill: color-mix(in srgb, var(--c5-accent) 16%, transparent);
+}
+
+.sv-case[data-marked='true'] {
+  fill: var(--c5-accent);
+}
+
+.sv-check {
+  fill: none;
+  stroke: var(--c5-accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 2.5;
+}
+
+/* ---- What each source says, and what it is worth ---------------------------------- */
+
+.sv-detail {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+.sv-source-gives {
+  grid-row: 5;
+  align-self: end;
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--rule);
+
+  font-size: 0.875rem;
+  line-height: var(--lh-snug);
+  color: var(--ink);
+}
+
+/* ---- Volume against influence ------------------------------------------------------ */
+
+.sv-influence {
+  display: grid;
+  gap: var(--s-1);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--rule);
+}
+
+/* The two bands are named beside themselves. Set above and below they read as
+   headings for the whole figure, and a reader has to work out which band each
+   one belongs to. */
+.sv-influence-body {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: var(--s-4);
+}
+
+.sv-band-labels {
+  position: relative;
+}
+
+.sv-band-label {
+  position: absolute;
+  inset-inline: 0;
+  transform: translateY(-50%);
+
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  text-align: right;
+  color: var(--ink-muted);
+}
+
+/* Aligned to the centre of the band each one names. */
+.sv-band-label {
+  top: calc(0.875rem + var(--band) / 2);
+}
+
+.sv-band-label[data-kind='objective'] {
+  top: auto;
+  bottom: calc(var(--band) / 2);
+  transform: translateY(50%);
+}
+
+.sv-ribbon-frame {
+  --band: 1.5rem;
+
+  position: relative;
+  height: 8rem;
+}
+
+.sv-band-labels {
+  --band: 1.5rem;
+}
+
+/*
+ * Height stated, never inferred.
+ *
+ * With `inset` alone the board is an absolutely positioned replaced element
+ * whose height is `auto`, so Chrome drops the `bottom` offset and resolves the
+ * height from the view box's own ratio. The board came out 20px short of the
+ * frame and the lower band's readouts, positioned against the frame, sat below
+ * the band they belonged to. `learnings.md` §71.
+ */
+.sv-ribbon-board {
+  position: absolute;
+  top: 0.875rem;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: calc(100% - 0.875rem);
+}
+
+.sv-segment {
+  fill: var(--tint);
+}
+
+.sv-ribbon {
+  fill: var(--tint);
+  opacity: 0.34;
+}
+
+/* The readouts sit inside the block they measure. */
+.sv-legend {
+  position: absolute;
+  inset-inline: 0;
+  height: var(--band);
+}
+
+.sv-legend[data-kind='volume'] {
+  top: 0.875rem;
+}
+
+.sv-legend[data-kind='objective'] {
+  bottom: 0;
+}
+
+.sv-legend-entry {
+  position: absolute;
+  transform: translateX(-50%);
+
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6875rem;
+  font-weight: var(--fw-medium);
+  line-height: var(--band);
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+/* Control's block is pale enough to take ink rather than paper. */
+.sv-legend-entry[data-key='control'] {
+  color: color-mix(in srgb, var(--c5-accent) 92%, var(--c-base));
+}
+
+/* Six-tenths of one percent is narrower than its own readout, so that one is
+   lifted clear of the band and hung off the end of the board. */
+.sv-legend-entry[data-tiny='true'] {
+  transform: translateX(-100%);
+  padding-right: var(--s-2);
+  color: var(--c5-accent);
+}
+
+.sv-legend[data-kind='volume'] .sv-legend-entry[data-tiny='true'] {
+  top: -0.875rem;
+  line-height: 0.875rem;
+}
+
+.sv-amplified {
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+  justify-content: flex-end;
+}
+
+.sv-amplified-figure {
+  font-size: 1.625rem;
+  color: var(--c5-accent);
+}
+
+.sv-amplified-note {
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+}
+
+/* ---- The partition ------------------------------------------------------------------- */
+
+.sv-split {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-6);
+  align-items: baseline;
+  padding-top: var(--s-1);
+  border-top: 1px solid var(--rule);
+}
+
+.sv-split-figure {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-title);
+  white-space: nowrap;
+  color: var(--c5-accent);
+}
+
+.sv-split-note {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}

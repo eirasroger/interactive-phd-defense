@@ -1,0 +1,379 @@
+/*
+ * Beat 1. The station's establishing shot.
+ *
+ * The paper's overview figure drawn at scale. Four contributions deliver
+ * evidence from the corridor on the left, the decision's own context plugs into
+ * the underside of the model, and one pass returns an ordering on the right. The
+ * model sits in the middle on the dark ground this deck reserves for the inside
+ * of a model, and it is the only object on the wall carrying weight.
+ *
+ * Every position comes from `Converge.ts`'s board. The frame holds the board's
+ * aspect ratio and every label is placed as a percentage of it, so a label and
+ * the mark it names cannot drift apart at any stage size. Layout here is
+ * appearance only: type, tone and the row rhythm inside the two tables.
+ *
+ * Nothing on the beat is counted. How many indicators a profile carries depends
+ * on the product category, and the application categories are defined per
+ * category, so evidence is drawn as a band with width and the two context inputs
+ * are named rather than enumerated.
+ */
+.cv {
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: center;
+  gap: var(--s-6);
+}
+
+/* ---- The board and its overlay ------------------------------------------------ */
+
+.cv-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1420 / 424;
+}
+
+.cv-board {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/*
+ * Anything anchored to a board coordinate. `top` is the coordinate itself and
+ * the block hangs from it, so a caption's first line sits on the point it names.
+ */
+.cv-frame > .cv-ledger,
+.cv-frame > .cv-card,
+.cv-frame > .cv-context,
+.cv-frame > .cv-readout,
+.cv-frame > .cv-locator,
+.cv-frame > .cv-out-note {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.cv-locator {
+  line-height: 1.35;
+}
+
+.cv-locator-out {
+  text-align: right;
+}
+
+.cv-locator-context {
+  text-align: center;
+  color: var(--ink-faint);
+}
+
+/* ---- What the corridor delivers ----------------------------------------------- */
+
+/* Four equal rows across the band's own height, so a contribution's centre and
+   the centre of the band leaving it are the same point by construction. */
+.cv-ledger {
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+}
+
+.cv-source {
+  display: grid;
+  align-content: center;
+  gap: 1px;
+}
+
+.cv-source-head {
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+}
+
+.cv-source-code {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  color: var(--c5-accent);
+}
+
+.cv-source-label {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.cv-source-note {
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-faint);
+}
+
+/* ---- The evidence, travelling -------------------------------------------------- */
+
+.cv-flow-stop {
+  stop-color: var(--c5-accent);
+}
+
+/* A band, because a profile has width and the width is not a number this
+   station claims. It gains density as it approaches the model, which is the
+   direction of travel stated without an arrowhead. */
+.cv-ribbon {
+  fill: url(#cv-flow);
+}
+
+.cv-filament {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c5-accent) 42%, transparent);
+  stroke-width: 1;
+}
+
+/*
+ * Light travelling with the flow.
+ *
+ * A lit copy of the same bands, shown through a soft-edged window that crosses
+ * the lane. The window is a mask rectangle in the board's own units and it moves
+ * on a CSS transform, so the wall stays alive with no timeline to own, nothing
+ * to dispose of when the panel is replaced, and no dependence on path length.
+ */
+.cv-ribbon-lit {
+  fill: color-mix(in srgb, var(--c5-accent) 26%, transparent);
+}
+
+.cv-sweep-band {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: cv-sweep 5.2s cubic-bezier(0.45, 0, 0.35, 1) infinite;
+}
+
+@keyframes cv-sweep {
+  0% {
+    transform: translateX(0);
+  }
+  58%,
+  100% {
+    transform: translateX(544px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-sweep-band {
+    animation: none;
+    transform: translateX(544px);
+  }
+}
+
+/* ---- The fittings -------------------------------------------------------------- */
+
+/* Where a flow meets the model. The band arrives somewhere rather than stopping
+   at a boundary, which is the difference between a diagram and a device. */
+.cv-port {
+  fill: var(--c5-accent-soft);
+}
+
+.cv-port-context {
+  fill: var(--input, var(--c5-accent-soft));
+}
+
+.cv-port-out {
+  fill: var(--c5-lead);
+}
+
+/* The one direction nothing else on the wall uses, which is what makes context
+   read as a different kind of input from the evidence. */
+.cv-riser {
+  stroke: var(--input, var(--c5-accent));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.72;
+}
+
+/* ---- What the model returns ------------------------------------------------------ */
+
+.cv-leader {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c5-accent) 40%, transparent);
+  stroke-width: 1.25;
+}
+
+.cv-leader[data-standing='lead'] {
+  stroke: color-mix(in srgb, var(--c5-lead) 76%, transparent);
+  stroke-width: 1.5;
+}
+
+/* The readout's anchor. Every leader terminates on it, so the column reads as
+   one instrument rather than five loose rows. */
+.cv-spine {
+  fill: color-mix(in srgb, var(--c5-accent) 50%, transparent);
+}
+
+.cv-readout {
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+}
+
+/* A ledger, so the station's product carries the weight of a readout and not of
+   a caption. The rule under each row is the one under the row above it. */
+.cv-row {
+  display: grid;
+  grid-template-columns: 1.5rem 1.75rem minmax(0, 1fr);
+  gap: 0 var(--s-3);
+  align-items: center;
+  padding-left: var(--s-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.cv-rank {
+  font-size: 0.75rem;
+  color: var(--ink-ghost);
+}
+
+.cv-row[data-standing='lead'] .cv-rank {
+  color: var(--c5-lead);
+}
+
+.cv-bar {
+  display: block;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: var(--rule);
+}
+
+/* Lengths are the standard structural column of Fig. 8. No score is printed on
+   the opening beat, so the shape carries the measurement and nothing else. */
+.cv-bar-fill {
+  display: block;
+  width: var(--extent);
+  height: 100%;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--c5-accent) 30%, transparent);
+  transform-origin: left center;
+}
+
+.cv-row[data-standing='lead'] .cv-bar {
+  height: 0.625rem;
+}
+
+.cv-row[data-standing='lead'] .cv-bar-fill {
+  background-color: var(--c5-lead);
+}
+
+.cv-out-note {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  text-align: right;
+  color: var(--c5-accent);
+}
+
+/* ---- The model ------------------------------------------------------------------- */
+
+.cv-card {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-8);
+  border-radius: 18px;
+  text-align: center;
+}
+
+.cv-stage-index {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c5-accent-soft);
+}
+
+.cv-stage-name {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: var(--fw-light);
+  /* Not `--lh-tight`: a light-weight display line clips at that value. */
+  line-height: 1.12;
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.cv-stage-line {
+  max-width: 16rem;
+  font-size: 0.8125rem;
+  text-wrap: balance;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
+
+/* ---- The context, plugging in from underneath -------------------------------------- */
+
+.cv-context {
+  display: grid;
+  gap: 1px;
+  text-align: center;
+}
+
+.cv-context-label {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-title);
+  color: var(--input);
+}
+
+.cv-context-note {
+  font-size: 0.75rem;
+  line-height: var(--lh-snug);
+  text-wrap: balance;
+  color: var(--ink-muted);
+}
+
+/* ---- What follows ------------------------------------------------------------------ */
+
+/* The claim, and an index of the three beats that specify it. Numbered because
+   the audience is about to walk them in this order. */
+.cv-forward {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+  gap: var(--s-16);
+  align-items: start;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.cv-claim {
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.cv-moves {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-6);
+}
+
+.cv-move {
+  display: grid;
+  gap: var(--s-2);
+  padding-top: var(--s-2);
+  border-top: 1px solid color-mix(in srgb, var(--c5-accent) 30%, transparent);
+}
+
+.cv-move-index {
+  font-size: 0.6875rem;
+  color: var(--c5-accent);
+}
+
+.cv-move-label {
+  font-size: 0.8125rem;
+  line-height: var(--lh-snug);
+  color: var(--ink-muted);
+}
