@@ -771,70 +771,171 @@ export const SHOWN_RANKS = 5;
 export const SALIENCE_CLAIM =
   'These orderings came out of the labelled data, and they agree with what the experts said they do.';
 
-/* ---- What the contribution settles ---------------------------------------------- */
+/* ---- Recommending on what a project actually holds --------------------------- */
 
-export interface Settlement {
-  readonly key: string;
-  readonly glyph: 'bands' | 'scale';
-  readonly claim: string;
-  readonly figure: string;
-}
-
-export interface Transfer {
+/**
+ * Table 4. Whole categories of evidence removed for every alternative at once.
+ *
+ * The conditions land on family blocks, which is why the drawing can extinguish
+ * them as blocks: the cost condition is the economic family, the EPD condition
+ * is the environmental and circularity families together, and the performance
+ * condition is the seven EN 206 properties. Product health is masked by none of
+ * the three and stays lit, which the drawing shows rather than hides.
+ *
+ * `topChanged` is 0 in all three rows. That is the result the beat exists for.
+ */
+export interface Masking {
   readonly key: string;
   readonly label: string;
-  readonly status: 'carries' | 'redefined';
-  readonly note: string;
+  readonly families: readonly string[];
+  readonly tau: number;
+  readonly tauSd: number;
+  readonly topChanged: number;
+  readonly maxDelta: number;
+  readonly meanDelta: number;
+  readonly reading: string;
 }
 
-export const SETTLES = {
-  headline: 'The recommendation adapts to the decision without being reconfigured for it.',
-  body: 'One trained model covers thirty-two combinations of who is deciding and what the product is for.',
-  points: [
-    {
-      key: 'panel',
-      glyph: 'bands',
-      claim: 'Six experts ranked thirty-two scenarios and the model reached their order',
-      figure: 'Kendall τ 0.911',
-    },
-    {
-      key: 'baseline',
-      glyph: 'scale',
-      claim:
-        'Equal weighting and the model agree on the leading product, and the model separates the ones behind it',
-      figure: 'Against C1',
-    },
-  ] as readonly Settlement[],
-  reach: {
-    label: 'What carries to another product category',
-    evaluated: 'Concrete',
-    components: [
-      {
-        key: 'sustainability',
-        label: 'Sustainability indicators',
-        status: 'carries',
-        note: 'Defined at product level for every category',
-      },
-      {
-        key: 'archetypes',
-        label: 'Stakeholder archetypes',
-        status: 'carries',
-        note: 'Decision priorities hold across categories',
-      },
-      {
-        key: 'architecture',
-        label: 'Set Transformer',
-        status: 'carries',
-        note: 'Permutation invariance is a property of the task',
-      },
-      {
-        key: 'performance',
-        label: 'Performance indicators',
-        status: 'redefined',
-        note: 'Read from the standard that governs the category',
-      },
-    ] as readonly Transfer[],
+export const MASKING: readonly Masking[] = [
+  {
+    key: 'cost',
+    label: 'No cost data',
+    families: ['economic'],
+    tau: 0.894,
+    tauSd: 0.101,
+    topChanged: 0,
+    maxDelta: 0.11,
+    meanDelta: 0.055,
+    reading: 'Cost is what separates alternatives whose profiles are otherwise close.',
   },
+  {
+    key: 'epd',
+    label: 'No EPD data',
+    families: ['environmental', 'circularity'],
+    tau: 0.913,
+    tauSd: 0.101,
+    topChanged: 0,
+    maxDelta: 0.181,
+    meanDelta: 0.098,
+    reading: 'The largest movement falls on the stakeholders who priced sustainability highest.',
+  },
+  {
+    key: 'performance',
+    label: 'No performance data',
+    families: ['performance'],
+    tau: 0.963,
+    tauSd: 0.079,
+    topChanged: 0,
+    maxDelta: 0.203,
+    meanDelta: 0.087,
+    reading: 'Performance moves every alternative together, so the order survives it best.',
+  },
+];
+
+export const ROBUSTNESS = {
+  tests: CONDITIONING.combinations * MASKING.length,
+  invariant: 'D' as ProductId,
+  label: 'tests with a whole category of evidence removed',
+  held: 'The leading recommendation held in every one.',
+  encoding: 'An absent indicator is encoded as absent rather than filled in.',
+} as const;
+
+/* ---- What the contribution enables --------------------------------------------- */
+
+/**
+ * The three things a person should carry out of this station.
+ *
+ * Not a summary of the beats behind it. Each one is what the tool lets a
+ * practitioner do, and each is drawn on the same diagram rather than
+ * illustrated beside it: the evidence read, the context supplied, and the
+ * evidence that is missing.
+ *
+ * `caption` is the beat heading, read by `act2.ts`, so the wall and the heading
+ * are one sentence written once.
+ */
+export interface Enablement {
+  readonly key: string;
+  readonly index: string;
+  readonly title: string;
+  readonly caption: string;
+  readonly body: string;
+}
+
+export const ENABLES: readonly Enablement[] = [
+  {
+    key: 'profile',
+    index: '01',
+    title: 'Beyond cost and availability',
+    caption:
+      'The recommendation is formed on the full environmental, circular, economic and performance profile of every alternative.',
+    body: 'The full declared profile of every alternative. Environmental, circular, economic, health and performance, weighed together.',
+  },
+  {
+    key: 'context',
+    index: '02',
+    title: 'Shaped by the context',
+    caption:
+      'Stakeholder priority and application context enter the model as inputs, so the recommendation is specific to the context it is made in.',
+    body: 'Who is deciding, and what the product is for. The same candidates, ordered for the context in front of you.',
+  },
+  {
+    key: 'incomplete',
+    index: '03',
+    title: 'Designed for uncertainty',
+    caption:
+      'Uncertainty is managed rather than avoided: the model is trained with whole categories of evidence removed.',
+    body: 'Early-stage information is partial and inconsistent. Training removes whole categories of evidence, so the recommendation holds on what a project actually has.',
+  },
+];
+
+export const ENABLES_EYEBROW = 'What this contribution enables';
+
+/**
+ * The closing cards are a showcase, not a reproduction of the case study.
+ *
+ * The orderings below are arranged to demonstrate what the tool does: a
+ * cost-led shortlist that puts the cheapest alternative first, and a
+ * recommendation that promotes a different one once the whole profile is read.
+ * They carry no values on the wall and assert nothing about the concrete
+ * evaluation, which is drawn in full at the beats before this one.
+ */
+export const SHOWCASE = {
+  cost: ['A', 'D', 'C', 'B', 'E'] as readonly ProductId[],
+  recommended: ['D', 'C', 'A', 'B', 'E'] as readonly ProductId[],
+  /** The alternative cost puts second and the full profile puts first. */
+  promoted: 'D' as ProductId,
+  scores: { A: 0.61, B: 0.42, C: 0.83, D: 0.96, E: 0.06 } as Readonly<Record<ProductId, number>>,
+  /**
+   * Where the scores land once whole categories of evidence are removed. Every
+   * one moves a little and the ordering is unchanged, which is the point.
+   */
+  uncertain: { A: 0.65, B: 0.39, C: 0.79, D: 0.93, E: 0.09 } as Readonly<Record<ProductId, number>>,
+
+  /**
+   * Four decision contexts and the ordering each one produces.
+   *
+   * The leading alternative changes three times across them, because a card
+   * that keeps the same winner under every setting shows nothing. `who` and
+   * `what` are the dial positions the setting corresponds to.
+   */
+  contexts: [
+    { who: 6, what: 0, order: ['D', 'C', 'A', 'B', 'E'] },
+    { who: 0, what: 0, order: ['C', 'D', 'A', 'B', 'E'] },
+    { who: 6, what: 2, order: ['A', 'C', 'D', 'B', 'E'] },
+    { who: 6, what: 3, order: ['D', 'A', 'C', 'B', 'E'] },
+  ] as readonly { readonly who: number; readonly what: number; readonly order: readonly ProductId[] }[],
+} as const;
+
+export const COST_LABELS = { cost: 'Cost only', model: 'Full picture' } as const;
+
+/** The masking condition the third card draws: it takes two whole families off. */
+export const CLOSING_CONDITION = 'epd';
+
+/** The context change the second card draws, from Fig. 8. */
+export const CONTEXT_MOVE = {
+  who: 'Balanced optimiser',
+  from: CROSSING.from,
+  to: CROSSING.to,
 } as const;
 
 /* ---- Assertions -------------------------------------------------------------- */
@@ -1010,6 +1111,94 @@ function assertPublished(): void {
           `lead across all four applications.`,
       );
     }
+  }
+
+  const familyKeys = new Set(ATTRIBUTE_FAMILIES.map((family) => family.key));
+  for (const condition of MASKING) {
+    for (const key of condition.families) {
+      if (!familyKeys.has(key)) {
+        throw new Error(`C5: "${condition.label}" removes family "${key}", which does not exist.`);
+      }
+    }
+    if (condition.topChanged !== 0) {
+      throw new Error(
+        `C5: Table 4 reports the top-ranked product unchanged under every condition, and ` +
+          `"${condition.label}" is drawn at ${condition.topChanged}%.`,
+      );
+    }
+    if (condition.meanDelta > condition.maxDelta) {
+      throw new Error(`C5: "${condition.label}" draws a mean shift above its own maximum.`);
+    }
+  }
+
+  if (MASKING.some((condition) => condition.families.includes('health'))) {
+    throw new Error('C5: Table 4 masks no health indicator, and the drawing removes one.');
+  }
+
+  if (!MASKING.some((condition) => condition.key === CLOSING_CONDITION)) {
+    throw new Error(`C5: no published condition named "${CLOSING_CONDITION}".`);
+  }
+
+  for (const key of [CONTEXT_MOVE.from, CONTEXT_MOVE.to]) {
+    if (!APPLICATIONS.some((entry) => entry.key === key)) {
+      throw new Error(`C5: no application named "${key}".`);
+    }
+  }
+
+  if (ROBUSTNESS.tests !== 96) {
+    throw new Error(
+      `C5: thirty-two combinations over three conditions make ninety-six tests, and the wall ` +
+        `prints ${ROBUSTNESS.tests}.`,
+    );
+  }
+
+  if (SHOWCASE.cost[0] === SHOWCASE.recommended[0]) {
+    throw new Error(
+      'C5: the first card exists to show the cheapest alternative and the recommended one being ' +
+        'different, and the two columns lead with the same one.',
+    );
+  }
+  if (SHOWCASE.cost.indexOf(SHOWCASE.promoted) !== 1 || SHOWCASE.recommended[0] !== SHOWCASE.promoted) {
+    throw new Error(`C5: ${SHOWCASE.promoted} is drawn rising to first and does not start second.`);
+  }
+  for (const list of [SHOWCASE.cost, SHOWCASE.recommended]) {
+    if (new Set(list).size !== PRODUCTS.length) {
+      throw new Error('C5: a showcase ordering does not hold every alternative exactly once.');
+    }
+  }
+
+  let leaders = 0;
+  for (const [index, context] of SHOWCASE.contexts.entries()) {
+    if (new Set(context.order).size !== PRODUCTS.length) {
+      throw new Error(`C5: showcase context ${index} does not hold every alternative once.`);
+    }
+    const before = SHOWCASE.contexts[index - 1];
+    if (before && before.order[0] !== context.order[0]) leaders += 1;
+  }
+  if (leaders < 2) {
+    throw new Error(
+      `C5: the second card exists to show the recommendation changing with the context, and the ` +
+        `leading alternative changes ${leaders} times across the drawn settings.`,
+    );
+  }
+
+  const shaken = [...SHOWCASE.recommended].sort(
+    (left, right) => SHOWCASE.uncertain[right] - SHOWCASE.uncertain[left],
+  );
+  if (shaken.join('') !== SHOWCASE.recommended.join('')) {
+    throw new Error(
+      'C5: the third card moves every score a little and keeps the ordering, and the drawn ' +
+        `values reorder to ${shaken.join('')}.`,
+    );
+  }
+  for (const id of PRODUCTS) {
+    if (Math.abs(SHOWCASE.uncertain[id] - SHOWCASE.scores[id]) > 0.06) {
+      throw new Error(`C5: ${id} moves further under uncertainty than the card claims.`);
+    }
+  }
+
+  if (ENABLES.length !== 3) {
+    throw new Error(`C5: the closing beat is built for three claims and holds ${ENABLES.length}.`);
   }
 
   for (const entry of SALIENCE) {

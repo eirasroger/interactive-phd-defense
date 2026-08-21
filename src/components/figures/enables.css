@@ -1,0 +1,306 @@
+/*
+ * The closing frame of the corridor. Three cards, one beat, on the projected
+ * white. Title, two lines, then the figure that performs the claim.
+ */
+.en {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--s-6);
+  align-content: center;
+}
+
+.en-eyebrow {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c5-accent);
+}
+
+.en-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-8);
+  min-height: 0;
+}
+
+.en-card {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--s-2);
+  padding: var(--s-8) var(--s-8) var(--s-6);
+  border-radius: 20px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 16%, transparent),
+    0 22px 54px color-mix(in srgb, var(--c5-accent) 11%, transparent);
+}
+
+.en-title {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+}
+
+.en-body {
+  font-size: 0.8125rem;
+  line-height: var(--lh-normal);
+  color: var(--ink-muted);
+}
+
+.en-stage {
+  display: grid;
+  align-items: center;
+  min-height: 0;
+  margin-top: var(--s-4);
+}
+
+.en-art {
+  display: block;
+  grid-row: 1;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/*
+ * Anything the timeline scales resolves its origin against its own box.
+ *
+ * The group matters as much as the mark inside it. A `<g>` scaled with
+ * `transformOrigin: center` and no `transform-box` resolves that origin against
+ * the whole view box and bakes a translation into the matrix, which slides the
+ * group sideways. The symptom is a connector that no longer meets the token it
+ * was measured against.
+ */
+.en-node-row,
+.en-seed,
+.en-strip-bar,
+.en-slab,
+.en-slab-absent,
+.en-pip,
+.en-hold,
+.en-spread,
+.en-bar,
+.en-dial {
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
+/* ---- 01. Cost, and what the recommendation reads instead --------------------------- */
+
+.en-seed {
+  fill: var(--c5-contested);
+}
+
+.en-seed-label {
+  font-family: var(--font-label);
+  font-size: 9px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  fill: var(--c5-contested);
+}
+
+.en-strip-bar {
+  fill: color-mix(in srgb, var(--c5-accent) 42%, transparent);
+}
+
+.en-strip-bar[data-seed='true'] {
+  fill: color-mix(in srgb, var(--c5-contested) 62%, transparent);
+}
+
+.en-hairline {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.en-column-head {
+  font-family: var(--font-label);
+  font-size: 8.5px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+.en-node-row {
+  --standing: var(--c5-trailing);
+}
+
+.en-node-row[data-standing='lead'],
+.en-link[data-standing='lead'] {
+  --standing: var(--c5-lead);
+}
+
+/* The pair the two orderings disagree about. */
+.en-node-row[data-standing='moved'],
+.en-link[data-standing='moved'] {
+  --standing: var(--c5-contested);
+}
+
+/* Opaque, because it is what covers the connector running underneath it. */
+.en-pip {
+  fill: color-mix(in srgb, var(--standing) 13%, #ffffff);
+  stroke: color-mix(in srgb, var(--standing) 48%, transparent);
+  stroke-width: 1.5;
+}
+
+.en-pip-letter {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  fill: color-mix(in srgb, var(--standing) 84%, var(--c-base));
+}
+
+.en-link {
+  --standing: var(--c5-trailing);
+  fill: none;
+  stroke: color-mix(in srgb, var(--standing) 40%, transparent);
+  stroke-width: 1.5;
+  stroke-linecap: butt;
+}
+
+.en-link[data-standing='moved'] {
+  stroke: color-mix(in srgb, var(--c5-contested) 80%, transparent);
+  stroke-width: 2;
+}
+
+.en-link[data-standing='lead'] {
+  stroke: color-mix(in srgb, var(--c5-lead) 62%, transparent);
+}
+
+/* ---- 02. Two settings, one recommendation ------------------------------------------ */
+
+.en-dial-face {
+  fill: color-mix(in srgb, var(--c5-accent) 6%, transparent);
+}
+
+.en-segment {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c5-accent) 30%, transparent);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition:
+    stroke 320ms ease,
+    stroke-width 320ms ease;
+}
+
+/* The setting the ordering underneath belongs to. */
+.en-segment[data-active='true'] {
+  stroke: var(--c5-accent);
+  stroke-width: 6.5;
+}
+
+.en-pointer-arm {
+  stroke: color-mix(in srgb, var(--c5-accent) 60%, transparent);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.en-pointer-tip {
+  fill: var(--c5-accent);
+}
+
+.en-dial-hub {
+  fill: color-mix(in srgb, var(--c5-accent) 70%, transparent);
+}
+
+.en-dial-label {
+  font-family: var(--font-label);
+  font-size: 8.5px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+/* ---- 02 and 03. The ordering -------------------------------------------------------- */
+
+.en-row {
+  --standing: var(--c5-trailing);
+}
+
+.en-row[data-standing='lead'] {
+  --standing: var(--c5-lead);
+}
+
+.en-letter {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  fill: color-mix(in srgb, var(--standing) 76%, var(--c-base));
+}
+
+.en-bar {
+  fill: var(--standing);
+}
+
+/* ---- 03. Evidence that is not there -------------------------------------------------- */
+
+.en-slab {
+  fill: color-mix(in srgb, var(--c5-accent) 38%, transparent);
+  stroke: none;
+}
+
+/* What an indicator leaves behind once the model is told its value is gone. */
+.en-slab-absent {
+  fill: none;
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.en-hold {
+  fill: color-mix(in srgb, var(--c5-lead) 7%, transparent);
+  stroke: color-mix(in srgb, var(--c5-lead) 34%, transparent);
+  stroke-width: 1.25;
+}
+
+/* ---- 02. Ribbons into rank slots ------------------------------------------------- */
+
+.en-ribbon {
+  --standing: var(--c5-trailing);
+  fill: none;
+  stroke: color-mix(in srgb, var(--standing) 34%, transparent);
+  stroke-width: 3;
+  stroke-linecap: butt;
+  transition: stroke 320ms ease;
+}
+
+.en-ribbon[data-standing='lead'] {
+  --standing: var(--c5-lead);
+  stroke: color-mix(in srgb, var(--c5-lead) 78%, transparent);
+  stroke-width: 4;
+}
+
+.en-slot {
+  --standing: var(--c5-trailing);
+}
+
+.en-slot[data-standing='lead'] {
+  --standing: var(--c5-lead);
+}
+
+.en-slot-disc {
+  fill: color-mix(in srgb, var(--standing) 10%, #ffffff);
+  stroke: color-mix(in srgb, var(--standing) 40%, transparent);
+  stroke-width: 1.25;
+}
+
+.en-slot-index {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  fill: color-mix(in srgb, var(--standing) 70%, var(--c-base));
+  transition: fill 320ms ease;
+}
+
+/* ---- 03. What the score is known to within ---------------------------------------- */
+
+.en-spread {
+  fill: color-mix(in srgb, var(--standing) 26%, transparent);
+}

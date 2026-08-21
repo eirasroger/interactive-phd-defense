@@ -1,11 +1,7 @@
 import type { CaptionContent } from '@/components/Caption';
 import type { FigureContent } from '@/components/SlideFigure';
 import fig4Url from '@/assets/figures/fig4.png?url';
-import {
-  ARCHITECTURE_CLAIM,
-  LEARNED_CLAIM,
-  VALIDATION_CLAIM,
-} from '@/content/c5';
+import { ARCHITECTURE_CLAIM, LEARNED_CLAIM, VALIDATION_CLAIM } from '@/content/c5';
 
 /**
  * Act II copy: one slide per contribution.
@@ -97,8 +93,8 @@ export const c4Captions: readonly CaptionContent[] = [
  * and what the remaining step demands, two build the model, three are the
  * relational claim drawn as one movement, one is the expert check, two separate
  * the influence of the stakeholder from the influence of the application, one
- * reads the model's own attributions, and the last states what the contribution
- * settles.
+ * reads the model's own attributions, and the last states what the
+ * contribution enables.
  */
 export const c5Captions: readonly CaptionContent[] = [
   c5(
@@ -107,7 +103,9 @@ export const c5Captions: readonly CaptionContent[] = [
   c5(LEARNED_CLAIM),
   c5(ARCHITECTURE_CLAIM),
   c5(VALIDATION_CLAIM),
-  c5('What this contribution settles.'),
+  c5(
+    'The recommendation accounts for the whole product, adapts to the context, and holds under uncertainty.',
+  ),
 ];
 
 export const act2Captions = {

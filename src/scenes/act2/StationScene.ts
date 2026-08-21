@@ -77,6 +77,7 @@ export class StationScene implements SceneInstance {
   private readonly slots: readonly Slot[];
   private readonly captions: HTMLElement[] = [];
   private current: SlidePanel | null = null;
+  private caption = -1;
   private build: gsap.core.Timeline | null = null;
 
   constructor(private readonly content: StationContent) {
@@ -137,6 +138,11 @@ export class StationScene implements SceneInstance {
     const wanted = Math.min(index, sources.length - 1);
     const shown = this.captions[wanted];
     if (!shown) return;
+
+    // Beats that share a caption leave it exactly where it is. Re-revealing the
+    // same heading reads as the title blinking out and back on every click.
+    if (this.caption === wanted) return;
+    this.caption = wanted;
 
     // The claim leaves the same way the panel under it does, and it spends its
     // opacity early: `EASE.exit` holds a heading near full for most of its

@@ -2,6 +2,7 @@ import { createAttention } from '@/components/figures/Attention';
 import { createBudget } from '@/components/figures/Budget';
 import { createBurden } from '@/components/figures/Burden';
 import { createConverge } from '@/components/figures/Converge';
+import { createEnables } from '@/components/figures/Enables';
 import { createCorpus } from '@/components/figures/Corpus';
 import { createFramework } from '@/components/figures/Framework';
 import { createLandscape } from '@/components/figures/Landscape';
@@ -11,7 +12,6 @@ import { createParadox } from '@/components/figures/Paradox';
 import { createContext } from '@/components/figures/Context';
 import { createHandover } from '@/components/figures/Handover';
 import { createReach } from '@/components/figures/Reach';
-import { createSettle } from '@/components/figures/Settle';
 import { createSemantic } from '@/components/figures/Semantic';
 import { createSupervision } from '@/components/figures/Supervision';
 import { createValidation } from '@/components/figures/Validation';
@@ -155,7 +155,7 @@ const PANELS: Readonly<Record<string, () => readonly SlidePanel[]>> = {
     createSupervision(),
     createAttention(),
     createValidation(),
-    createSettle(),
+    createEnables(),
   ],
 };
 
