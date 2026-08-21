@@ -131,18 +131,16 @@
   --standing: var(--c5-trailing);
 }
 
-.en-node-row[data-standing='lead'],
-.en-link[data-standing='lead'] {
-  --standing: var(--c5-lead);
-}
-
-/* The pair the two orderings disagree about. */
-.en-node-row[data-standing='moved'],
-.en-link[data-standing='moved'] {
+/* The alternative a cost-led shortlist would put first. */
+.en-node-row[data-standing='cost'] {
   --standing: var(--c5-contested);
 }
 
-/* Opaque, because it is what covers the connector running underneath it. */
+/* The alternative the full picture puts first. */
+.en-node-row[data-standing='lead'] {
+  --standing: var(--c5-lead);
+}
+
 .en-pip {
   fill: color-mix(in srgb, var(--standing) 13%, #ffffff);
   stroke: color-mix(in srgb, var(--standing) 48%, transparent);
@@ -159,18 +157,17 @@
 .en-link {
   --standing: var(--c5-trailing);
   fill: none;
-  stroke: color-mix(in srgb, var(--standing) 40%, transparent);
+  stroke: color-mix(in srgb, var(--standing) 34%, transparent);
   stroke-width: 1.5;
   stroke-linecap: butt;
 }
 
-.en-link[data-standing='moved'] {
-  stroke: color-mix(in srgb, var(--c5-contested) 80%, transparent);
-  stroke-width: 2;
-}
-
-.en-link[data-standing='lead'] {
-  stroke: color-mix(in srgb, var(--c5-lead) 62%, transparent);
+/* Laid over the neutral connector and faded out along it, so where the accent
+   is gone the line is indistinguishable from the other four. */
+.en-link-accent {
+  fill: none;
+  stroke-width: 2.75;
+  stroke-linecap: butt;
 }
 
 /* ---- 02. Two settings, one recommendation ------------------------------------------ */

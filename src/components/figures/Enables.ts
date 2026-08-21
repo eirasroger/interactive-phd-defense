@@ -143,14 +143,26 @@ function profileArt(): Art {
 
   const from = SHOWCASE.cost;
   const to = SHOWCASE.recommended;
-  const moved = (id: ProductId): boolean => from.indexOf(id) !== to.indexOf(id);
 
-  const standingOf = (id: ProductId): string =>
-    id === SHOWCASE.promoted ? 'lead' : moved(id) ? 'moved' : 'rest';
+  /*
+   * Two marks carry colour and nothing else does.
+   *
+   * On the left, the alternative cost would pick. On the right, the one the
+   * full picture picks. Every other token on either side is the same neutral,
+   * because a column that tints three of its five says the ordering is about
+   * those three when it is about the one at the top.
+   */
+  const costPick = from[0]!;
+  const modelPick = to[0]!;
 
-  const nodeFor = (id: ProductId, x: number, rank: number) => {
+  const standingOf = (id: ProductId, side: 'cost' | 'model'): string => {
+    if (side === 'cost') return id === costPick ? 'cost' : 'rest';
+    return id === modelPick ? 'lead' : 'rest';
+  };
+
+  const nodeFor = (id: ProductId, x: number, rank: number, side: 'cost' | 'model') => {
     const group = svg('g', { class: 'en-node-row' });
-    group.dataset['standing'] = standingOf(id);
+    group.dataset['standing'] = standingOf(id, side);
     group.append(
       svg('circle', { class: 'en-pip', cx: String(x), cy: String(rowY(rank)), r: String(PIP_R) }),
       text(id, 'en-pip-letter', {
@@ -162,8 +174,8 @@ function profileArt(): Art {
     return group;
   };
 
-  const leftNodes = from.map((id, rank) => nodeFor(id, COL_LEFT, rank));
-  const rightNodes = to.map((id, rank) => nodeFor(id, COL_RIGHT, rank));
+  const leftNodes = from.map((id, rank) => nodeFor(id, COL_LEFT, rank, 'cost'));
+  const rightNodes = to.map((id, rank) => nodeFor(id, COL_RIGHT, rank, 'model'));
 
   /*
    * Centre to centre, with the tokens painted opaque on top of the links.
@@ -179,15 +191,60 @@ function profileArt(): Art {
   const LINK_X2 = COL_RIGHT;
   const MIDLINE = (LINK_X1 + LINK_X2) / 2;
 
-  const links = from.map((id) => {
+  /*
+   * The two connectors that carry a choice are drawn as a gradient along their
+   * own span: the cost pick leaves its colour behind on the way across, and
+   * the model's pick takes its colour on. Everything else stays neutral.
+   */
+  const gradients = svg('defs');
+
+  /**
+   * A ramp that fades a colour out to nothing along the span.
+   *
+   * The accent is an overlay, so where it reaches zero the neutral connector
+   * underneath is all that is left. That is what makes the far end of a
+   * carrying link identical to every other link, in weight as well as tone: a
+   * stroke cannot taper, but an overlay that disappears can.
+   */
+  const rampFor = (id: string, colour: string, towards: 'right' | 'left'): string => {
+    const ramp = svg('linearGradient', {
+      id,
+      gradientUnits: 'userSpaceOnUse',
+      x1: String(LINK_X1),
+      y1: '0',
+      x2: String(LINK_X2),
+      y2: '0',
+    });
+    const solid = towards === 'right' ? '0%' : '100%';
+    const clear = towards === 'right' ? '100%' : '0%';
+    const stops = [
+      svg('stop', { offset: solid, 'stop-color': colour, 'stop-opacity': '1' }),
+      svg('stop', { offset: '50%', 'stop-color': colour, 'stop-opacity': '0.42' }),
+      svg('stop', { offset: clear, 'stop-color': colour, 'stop-opacity': '0' }),
+    ];
+    ramp.append(...(towards === 'right' ? stops : [stops[2]!, stops[1]!, stops[0]!]));
+    gradients.appendChild(ramp);
+    return `url(#${id})`;
+  };
+
+  const leaving = rampFor('en-ramp-leaving', 'var(--c5-contested)', 'right');
+  const arriving = rampFor('en-ramp-arriving', 'var(--c5-lead)', 'left');
+  element.appendChild(gradients);
+
+  const pathFor = (id: ProductId): string => {
     const start = rowY(from.indexOf(id));
     const end = rowY(to.indexOf(id));
-    const link = svg('path', {
-      class: 'en-link',
-      d: `M ${LINK_X1} ${start} C ${MIDLINE} ${start} ${MIDLINE} ${end} ${LINK_X2} ${end}`,
-    });
-    link.dataset['standing'] = standingOf(id);
-    return link;
+    return `M ${LINK_X1} ${start} C ${MIDLINE} ${start} ${MIDLINE} ${end} ${LINK_X2} ${end}`;
+  };
+
+  // Every connector is the same neutral line. Two of them carry an accent on
+  // top of it, and the accent is what fades.
+  const links = from.map((id) => svg('path', { class: 'en-link', d: pathFor(id) }));
+
+  const accents = [costPick, modelPick].map((id) => {
+    const accent = svg('path', { class: 'en-link-accent', d: pathFor(id) });
+    accent.style.stroke = id === costPick ? leaving : arriving;
+    return accent;
   });
 
   const promoted = rightNodes[to.indexOf(SHOWCASE.promoted)]!;
@@ -199,7 +256,7 @@ function profileArt(): Art {
    */
   const wipe = createWipe(element, CARD.width, CARD.height, 'x');
   const linkGroup = svg('g', { class: 'en-links', 'clip-path': wipe.clip });
-  linkGroup.append(...links);
+  linkGroup.append(...links, ...accents);
 
   element.append(
     linkGroup,
@@ -219,19 +276,19 @@ function profileArt(): Art {
     gsap.set([seed, seedLabel], { opacity: 0 });
     gsap.set(bars, { opacity: 1, scaleY: 1, x: 0 });
     gsap.set([rule, ...columns], { opacity: 1, y: 0, scale: 1 });
-    gsap.set(links, { opacity: 1 });
+    gsap.set([...links, ...accents], { opacity: 1 });
     gsap.set(wipe.rect, shown(wipe));
   };
 
   const clear = (): void => {
-    gsap.set([seed, seedLabel, rule, ...columns, ...links, ...bars], { opacity: 0 });
+    gsap.set([seed, seedLabel, rule, ...columns, ...links, ...accents, ...bars], { opacity: 0 });
     gsap.set(wipe.rect, hidden(wipe));
   };
 
   const build = (line: gsap.core.Timeline, start: number): void => {
     clear();
     gsap.set([...columns, ...bars], { scale: 1, x: 0, y: 0, scaleY: 1 });
-    gsap.set(links, { opacity: 1 });
+    gsap.set([...links, ...accents], { opacity: 1 });
 
     line
       .fromTo(
