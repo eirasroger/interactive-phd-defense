@@ -95,15 +95,52 @@ export const BACKBONE = {
   line: 'A different method at each stage, decided by what the stage needs.',
 } as const;
 
+/* ---- Cross-cutting theme 2 — the conditions the architecture is designed around ---- */
+
 /**
- * Cross-cutting theme 2, unwritten.
+ * Cross-cutting theme 2, and why two sections share one slide.
  *
- * Here so the crossing into it can be designed and rehearsed before its
- * composition exists. The move through the sea is the deck's, not the theme's.
+ * Missing evidence and context sensitivity are the same kind of claim: neither
+ * belongs to a stage, both were taken as properties of the problem, and the
+ * architecture answers each of them the whole way down. Argued apart they are
+ * two more slides about the pipeline; argued together they are one statement
+ * about how it was designed.
  */
-export const THEME_TWO = {
+export const CONDITIONS = {
   eyebrow: 'Act III · Cross-cutting',
-  heading: 'The second cross-cutting theme',
-  body: ['Placeholder. What this slide holds is still to be decided.'],
-  accent: 'ai',
+  heading: 'Missing data and context as structural conditions',
+  line: 'Both run the length of the pipeline, and both are answered at every stage.',
+} as const;
+
+/**
+ * The two cards.
+ *
+ * Both are a claim, then the three things that make it true. They are shaped
+ * alike because they are the same kind of statement, and the difference between
+ * them is carried by the drawing rather than by the layout.
+ *
+ * Plain sentences. Every line here is a decision the committee can put a
+ * question to, and a sentence they have to decode gets asked about for the wrong
+ * reason. No quantity, no method name, no per-contribution detail: all three
+ * were made once already at the station that owns them.
+ */
+export const CARDS = {
+  evidence: {
+    heading: 'The missing-data thread',
+    lead: 'The pipeline is built to run on incomplete information.',
+    steps: [
+      'It targets early design and early construction, where product decisions carry the most influence and the evidence is thinnest.',
+      'Inference recovers part of what a product has not declared.',
+      'The recommender accepts missing values as valid input and returns a recommendation anyway.',
+    ],
+  },
+  context: {
+    heading: 'Context sensitivity',
+    lead: 'Context decides which indicators matter, and how much.',
+    steps: [
+      'Admissibility and feasibility settle which products can be considered at all.',
+      'Application and stakeholder priority set the weight each indicator carries.',
+      'The recommendation is therefore made for the needs of the project at hand.',
+    ],
+  },
 } as const;

@@ -11,11 +11,12 @@ import { RUN, SECTION } from '@/config/corridor';
 /**
  * The volume Act III is argued inside.
  *
- * Once the plan has cleared there is nothing in the frame, and a composition set
- * on nothing reads as a slide rather than as a place. What replaces the corridor
- * is the thing the corridor was always moving: data, as a volume the camera is
- * standing in. It belongs to the zone rather than to a scene, so the themes that
- * follow can travel through it and it will be where they left it.
+ * A composition set on nothing reads as a slide rather than as a place. What the
+ * building opens onto is the thing the corridor was always moving: data, as a
+ * volume the camera is standing in. It arrives with the roof, so the plan is
+ * read inside it and the themes after it inherit a world rather than meet one.
+ * It belongs to the zone rather than to a scene, so those themes can travel
+ * through it and it will be where they left it.
  *
  * **Many and small, at the density the engine demos already run at.** A few
  * hundred large sprites is a screensaver: every one of them is an object, and an

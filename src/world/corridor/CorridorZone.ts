@@ -58,7 +58,7 @@ const CEILING = {
 const DRAIN = { delay: 0.7, seconds: 2.6 } as const;
 
 /**
- * The figure leaving, and the field it leaves behind.
+ * The figure leaving.
  *
  * Longer than the camera's own drift on purpose. The move is over at 1.9 s and
  * the composition begins arriving at 1.65 s, so the last second of the clearing
@@ -71,11 +71,26 @@ const DRAIN = { delay: 0.7, seconds: 2.6 } as const;
  * by moving at four times the average speed through the middle, and a
  * seventy-five metre front doing that is a wipe with soft edges.
  *
- * The residual field arrives on its own curve, starting where the clearing is
- * half done and settling after it, so the frame is never empty and never has
- * two things resolving on the same beat.
+ * What is left once it has gone is the sea, which is already there: it belongs
+ * to the roof coming off rather than to the drawing leaving. See `FIELD`.
  */
-const CLEARING = { seconds: 2.9, ease: 'sine.inOut', field: { from: 0.45, seconds: 2.2 } } as const;
+const CLEARING = { seconds: 2.9, ease: 'sine.inOut' } as const;
+
+/**
+ * The volume filling, and why it fills with the roof rather than after the plan.
+ *
+ * The sea is the place Act III is argued inside, and a place first met on the
+ * slide that needs it reads as a backdrop being switched on. It arrives on the
+ * climb instead, so the plan is read *inside* the volume from the first frame it
+ * is legible in, and the theme after it inherits a world that was already there
+ * rather than one that appears as the drawing goes.
+ *
+ * Behind the drain, so the shell is on its way to nothing before anything is
+ * seen through it, and settled well before the camera is. Leaving is quicker
+ * than arriving and takes no delay: stepping back into Act II is a room closing
+ * over the camera, and a field lingering inside a lit gallery is a fault.
+ */
+const FIELD = { delay: 1.1, seconds: 3.2, out: 1.2 } as const;
 
 /** What the shell is worth once the drawing is carrying the information. */
 const VOID = new Color(0x05070a);
@@ -198,9 +213,11 @@ class Corridor implements ZoneInstance {
   private readonly shell: Object3D;
   private readonly skins: readonly Skin[];
   private readonly drain = { level: 0 };
-  private readonly clearing = { level: 0, field: 0 };
+  private readonly clearing = { level: 0 };
+  private readonly field = { level: 0 };
   private closed = true;
   private dispersed = false;
+  private flooded = false;
 
   constructor(private readonly context: ZoneContext) {
     const { assets, quality, stage } = context;
@@ -305,6 +322,7 @@ class Corridor implements ZoneInstance {
   setProgress(progress: number, animate: boolean): void {
     const open = progress >= RISE.opens;
     this.setCeiling(!open, animate);
+    this.setField(open, animate);
     this.flow.trace(open, !animate);
     this.setClearing(progress >= RISE.disperses, animate);
     this.projection.setProgress(progress, animate);
@@ -372,8 +390,8 @@ class Corridor implements ZoneInstance {
    * Act III's cross-cutting themes are about the pipeline rather than about a
    * place, and a plan drawing held under them for six scenes is a backdrop the
    * audience stops seeing by the second one. So the corridor is spent here: the
-   * drawing and the flow clear on one front, and what stays is a field with no
-   * layout in it.
+   * drawing and the flow clear on one front, and what is left standing is the
+   * sea, which has been there since the roof came off.
    *
    * Nothing about this is a scene's business. It is the zone's own last state,
    * driven by the same progress that opened the ceiling, so entering the theme
@@ -390,7 +408,6 @@ class Corridor implements ZoneInstance {
 
     if (!animate) {
       this.clearing.level = level;
-      this.clearing.field = level;
       this.applyClearing();
       return;
     }
@@ -401,22 +418,42 @@ class Corridor implements ZoneInstance {
       ease: CLEARING.ease,
       onUpdate: () => this.applyClearing(),
     });
-
-    // Coming back is the drawing being read again, and the field has no place
-    // under a figure. It goes first on the way back, and last on the way out.
-    gsap.to(this.clearing, {
-      field: level,
-      duration: dispersed ? CLEARING.field.seconds : CLEARING.seconds * 0.4,
-      delay: dispersed ? CLEARING.seconds * CLEARING.field.from : 0,
-      ease: dispersed ? 'power2.out' : 'power2.in',
-      onUpdate: () => this.applyClearing(),
-    });
   }
 
   private applyClearing(): void {
     this.plan.setCleared(this.clearing.level);
     this.flow.setCleared(this.clearing.level);
-    this.sea.setLevel(this.clearing.field);
+  }
+
+  /**
+   * The sea, which the overlook stands in rather than arrives at.
+   *
+   * Same gate as the ceiling, because it is the same event: the roof comes off
+   * and what is outside the building is not a sky but the volume the pipeline
+   * moves. Driven from zone progress like everything else here, so a jump into
+   * any Act III scene finds the field at the level the deck says it is at.
+   */
+  private setField(present: boolean, animate: boolean): void {
+    if (present === this.flooded) return;
+    this.flooded = present;
+
+    gsap.killTweensOf(this.field);
+
+    const level = present ? 1 : 0;
+
+    if (!animate) {
+      this.field.level = level;
+      this.sea.setLevel(level);
+      return;
+    }
+
+    gsap.to(this.field, {
+      level,
+      duration: present ? FIELD.seconds : FIELD.out,
+      delay: present ? FIELD.delay : 0,
+      ease: present ? 'power2.out' : 'power2.in',
+      onUpdate: () => this.sea.setLevel(this.field.level),
+    });
   }
 
   /**
@@ -476,6 +513,7 @@ class Corridor implements ZoneInstance {
     this.context.stage.remove(this.root);
     gsap.killTweensOf(this.drain);
     gsap.killTweensOf(this.clearing);
+    gsap.killTweensOf(this.field);
     this.flow.dispose();
     this.plan.dispose();
     this.projection.dispose();

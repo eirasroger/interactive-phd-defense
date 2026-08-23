@@ -1,0 +1,264 @@
+/*
+ * Cross-cutting theme 2 — the two conditions the architecture is designed
+ * around.
+ *
+ * Two cards on the dark, one beat each. Each is a claim with its drawing beside
+ * it, and they open to the same size because they are the same kind of
+ * statement: an asymmetry at rest would be read as one of them mattering more.
+ * They open at different moments, which is where the difference belongs.
+ *
+ * **A card is a surface, and this is the dark translation of Act II's.** The
+ * white cards at C5 are a 20px radius, `--s-8` of padding, an inset hairline in
+ * the station's accent and a soft tinted shadow. All of that carries over; only
+ * the ground changes, so the shadow lifts the panel off the sea rather than
+ * settling it onto a page.
+ */
+.cnd {
+  --accent: var(--c-ai);
+  /* The claim's column. Fixed, so nothing in it reflows while a card opens. */
+  --claim: 340px;
+
+  display: flex;
+  align-items: start;
+  gap: var(--s-8);
+  width: 100%;
+  min-height: 0;
+}
+
+/*
+ * `--open` is the whole gesture, and every quantity below is a function of it.
+ *
+ * One tween drives it. The width, both heights, the drawing's light and each
+ * step's light are derived here rather than animated separately, so they cannot
+ * cross, cannot drift, and read as one surface opening instead of six things
+ * arriving. The earlier version ran six tweens on six delays and no amount of
+ * tuning them made it continuous.
+ */
+.cnd-card {
+  --open: 1;
+  --shut: 0.3;
+  --wide: 0.48;
+  /* The two heights the opening travels through, so both are exactly linear
+     in `--open` and the card can never stall in one dimension while another
+     is still moving. Both are whole numbers on a fixed 1920x1080 surface. */
+  --run-height: 258px;
+  --frame-height: 250px;
+
+  display: grid;
+  grid-template-columns: var(--claim) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  column-gap: var(--s-8);
+  row-gap: var(--s-3);
+  align-content: start;
+  flex: none;
+  width: calc((var(--shut) + (var(--wide) - var(--shut)) * var(--open)) * 100%);
+
+  padding: var(--s-8);
+  border-radius: 20px;
+  background-color: color-mix(in srgb, var(--c-surface) 88%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c-ai) 15%, transparent),
+    0 26px 62px color-mix(in srgb, #000000 52%, transparent);
+}
+
+.cnd-title,
+.cnd-lead,
+.cnd-steps {
+  grid-column: 1;
+}
+
+.cnd-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  color: var(--accent);
+  margin: 0;
+}
+
+.cnd-lead {
+  font-size: 1rem;
+  line-height: var(--lh-normal);
+  color: var(--c-text);
+  margin: 0;
+}
+
+/* ---- The run ---------------------------------------------------------------------- */
+
+/*
+ * Ruled and numbered, never bulleted.
+ *
+ * A dash in front of a sentence is a handout. A tabular index set in the accent,
+ * with hairlines doing the separating, is the treatment the stations already
+ * give an ordered set, and it separates by geometry rather than by a mark.
+ *
+ * Both runs reserve the same height, so the two cards are the same size once
+ * both are open: left to wrap, the longer sentences on one make it taller than
+ * the other and the pair reads as one of them mattering more. Packed to the top,
+ * because the reserved height is there to match the other card and not to be
+ * shared out between the steps.
+ */
+.cnd-steps {
+  display: grid;
+  align-content: start;
+  margin: calc(var(--open) * var(--s-2)) 0 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  /*
+   * An exact height, never a `max-height`.
+   *
+   * A `max-height` reveal stops the moment it passes the content's own height,
+   * so the run finished growing around `--open: 0.59` while the card's width
+   * carried on to 1. That is the stall: the card opened, stopped, and opened
+   * again, and no ease can fix a quantity that is flat over the last third of
+   * its travel. A definite height is linear in the scalar by construction.
+   *
+   * `--run-height` is also what makes the two cards the same size: both reserve
+   * it, so the longer sentences on one do not make it taller than the other.
+   */
+  height: calc(var(--open) * var(--run-height));
+}
+
+/*
+ * A step is lit by how far open the card is, never by a delay of its own.
+ *
+ * The opening edge uncovers the run from the top, so a step whose light is on a
+ * separate clock is either cut through by that edge or arrives in a space that
+ * has been empty for a moment. `--at` is where on the card's own travel this
+ * step comes up, and the quarter after it is the fade.
+ */
+.cnd-step {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  column-gap: var(--s-4);
+  align-items: baseline;
+  padding-block: var(--s-4);
+  border-top: 1px solid color-mix(in srgb, var(--c-ai) 11%, transparent);
+  opacity: clamp(0, calc((var(--open) - var(--at, 0)) / 0.26), 1);
+}
+
+.cnd-step:first-child {
+  border-top: 0;
+  padding-top: var(--s-1);
+}
+
+.cnd-step:last-child {
+  padding-bottom: 0;
+}
+
+.cnd-index {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--c-ai) 85%, transparent);
+}
+
+.cnd-step-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.62;
+  color: var(--c-text-muted);
+}
+
+/* ---- The drawing, and how it is uncovered ---------------------------------------------- */
+
+/*
+ * The frame keeps its size; the column grows past it.
+ *
+ * So the opening is a reveal and not a scale, and it needs no motion of its own:
+ * the card's width is already doing the work. The light comes up over the last
+ * two thirds of the travel, which is late enough that the drawing is never a
+ * sliver and early enough that it is never a thing that appears afterwards.
+ */
+.cnd-stage {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  align-self: center;
+  overflow: hidden;
+  height: calc(var(--open) * var(--frame-height));
+  opacity: clamp(0, calc((var(--open) - 0.18) / 0.46), 1);
+}
+
+.cnd-frame {
+  position: relative;
+  width: 350px;
+  height: var(--frame-height);
+}
+
+.cnd-board {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ---- Card one: the silhouette ------------------------------------------------------- */
+
+/*
+ * The record, column by column.
+ *
+ * Solid and unlit. The columns are the ordinary case and the card is about what
+ * happens where they are absent, so nothing about them competes with the curve.
+ */
+.sl-bar {
+  fill: color-mix(in srgb, var(--c-ai) 30%, transparent);
+}
+
+/*
+ * A value that is not firmly known.
+ *
+ * The column is still drawn, at the height the record implies, and it is drawn
+ * as an outline in a broken line. That is the whole of the card's vocabulary:
+ * one mark, two states, and the difference visible at any distance. An earlier
+ * pass drew a curve riding over the gaps and nobody could say what the line was.
+ */
+.sl-bar-absent {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c-ai) 62%, transparent);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 5;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---- Card two: the profile ---------------------------------------------------------- */
+
+/* One faint reference, so a change in reach is legible as a change in reach. */
+.pf-ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c-ai) 13%, transparent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/*
+ * Where the form stood under the first context.
+ *
+ * It stays behind the second, so the change is the picture rather than something
+ * the audience has to hold in memory across a click.
+ */
+.pf-ghost {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c-ai) 30%, transparent);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.pf-form {
+  fill: color-mix(in srgb, var(--c-ai) 16%, transparent);
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--c-ai) 38%, transparent));
+}
+
+.pf-node {
+  fill: var(--accent);
+}
+
+/* touch */

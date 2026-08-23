@@ -7,9 +7,8 @@ import type { SceneDefinition } from '@/engine/scene/types';
 import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { act2Scenes } from '@/scenes/act2';
 import { CORRIDOR_ASSETS, corridorZone, opened } from '@/world/corridor/CorridorZone';
-import { THEME_TWO } from '@/content/act3';
 import { BackboneScene } from './BackboneScene';
-import { ThemeScene } from './ThemeScene';
+import { ConditionsScene } from './ConditionsScene';
 import { RiseScene } from './RiseScene';
 
 const CHAPTER = 'Act III — The Overlook';
@@ -189,7 +188,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
    */
   {
     id: 'theme-two',
-    title: 'Cross-cutting theme 2',
+    title: 'Missing data and context as structural conditions',
     chapter: CHAPTER,
     zone: corridorZone.id,
     world: 'recessed',
@@ -201,7 +200,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
     air: opened,
     travel: { seconds: DIVE.seconds, ease: EASE.camera },
     assets: [...CORRIDOR_ASSETS],
-    create: () => new ThemeScene(THEME_TWO),
+    create: () => new ConditionsScene(),
   },
 ];
 
