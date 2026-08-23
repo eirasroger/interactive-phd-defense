@@ -15,7 +15,7 @@ import {
   UniformsUtils,
   Vector3,
 } from 'three';
-import { SCREENS, SHOT_DISTANCE, type Screen } from '@/config/corridor';
+import { SCREENS, SHOT_DISTANCE, stationProgress, type Screen } from '@/config/corridor';
 
 const RIG = {
   behind: 1.3,
@@ -186,7 +186,7 @@ export function createProjector(): Projector {
 
     setProgress(progress, animate) {
       lit.forEach((beam, index) => {
-        const on = progress >= index / SCREENS.length - 1e-6 ? 1 : 0;
+        const on = progress >= stationProgress(index) - 1e-6 ? 1 : 0;
         gsap.killTweensOf(beam);
         if (!animate || on === 0) {
           beam.level = on;

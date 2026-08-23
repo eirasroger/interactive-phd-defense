@@ -234,23 +234,44 @@ export const FLOW_ROUTES: readonly FlowRoute[] = [
  * decides where that is — `scenes/act3/index.ts` asserts the two still agree.
  */
 /**
- * The corridor's scene run: five stations, the overlook, and the dispersal.
+ * The corridor's scene run, and the two states the overlook is made of.
  *
- * Zone progress is derived from the deck's order, so the two states the
- * overlook is made of are positions in this run rather than authored numbers.
- * The run is fixed at seven: Act III's remaining themes live in the abstract
- * space the dispersal hands over to, and nothing after it looks at a corridor.
- * `scenes/act3/index.ts` asserts the deck against this.
+ * Zone progress is derived from the deck's order, so the states the world can be
+ * in are positions in this run rather than authored numbers. Act III's themes
+ * stay inside the corridor zone even though there is no corridor left in them:
+ * what they are argued inside is the sea, the sea belongs to this zone, and a
+ * zone change would take it away and put a hard cut where the dive is.
+ *
+ * Adding a theme means raising `CORRIDOR_RUN` and nothing else. The thresholds
+ * are indices into the run, so they move with it, and
+ * `scenes/act3/index.ts` asserts the deck against them at load.
  */
-const CORRIDOR_RUN = 7;
+const ACT2_STATIONS = 5;
+const CORRIDOR_RUN = ACT2_STATIONS + 3;
 
 export const RISE = {
   /** The ceiling comes off, the shell drains and the plan is read. */
-  opens: (CORRIDOR_RUN - 2) / (CORRIDOR_RUN - 1),
-  /** The plan clears and the corridor stops being what the talk is looking at. */
-  disperses: 1,
+  opens: ACT2_STATIONS / (CORRIDOR_RUN - 1),
+  /** The plan clears, and the sea it clears into is what Act III stands in. */
+  disperses: (ACT2_STATIONS + 1) / (CORRIDOR_RUN - 1),
   lift: 24,
 } as const;
+
+/**
+ * Where station `index` stands in the corridor's run.
+ *
+ * The projector and its screens light a station as the camera reaches it, and
+ * what they are handed is zone progress, which is a fraction of a run whose
+ * length they do not control. Reading it as `index / SCREENS.length` is only
+ * correct while the run is exactly the five stations plus one, and it fails
+ * silently the moment Act III gains a scene: every station's progress shifts
+ * down, the threshold does not, and the camera stands at C5 in front of a wall
+ * that was never lit. Nothing errors and nothing looks broken except the thing
+ * the whole act is read off.
+ *
+ * So the position comes from the run, once, here.
+ */
+export const stationProgress = (index: number): number => index / (CORRIDOR_RUN - 1);
 
 /**
  * How the figure leaves, and why it leaves in a direction.

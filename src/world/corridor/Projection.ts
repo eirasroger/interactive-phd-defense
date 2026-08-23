@@ -11,7 +11,7 @@ import {
   Vector2,
   Vector3,
 } from 'three';
-import { SCREENS, type Screen } from '@/config/corridor';
+import { SCREENS, stationProgress, type Screen } from '@/config/corridor';
 
 const THROW = {
   spread: 1.5,
@@ -180,7 +180,7 @@ export function createProjection(): Projection {
     // Dark until the deck reaches its own gallery.
     setProgress(progress, animate) {
       lamps.forEach((lamp, index) => {
-        const on = progress >= index / SCREENS.length - 1e-6 ? 1 : 0;
+        const on = progress >= stationProgress(index) - 1e-6 ? 1 : 0;
         gsap.killTweensOf(lamp.lit);
         if (!animate || on === 0) {
           lamp.lit.level = on;

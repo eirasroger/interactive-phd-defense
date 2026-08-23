@@ -94,3 +94,16 @@ export const BACKBONE = {
   heading: 'Artificial intelligence as the methodological backbone',
   line: 'A different method at each stage, decided by what the stage needs.',
 } as const;
+
+/**
+ * Cross-cutting theme 2, unwritten.
+ *
+ * Here so the crossing into it can be designed and rehearsed before its
+ * composition exists. The move through the sea is the deck's, not the theme's.
+ */
+export const THEME_TWO = {
+  eyebrow: 'Act III · Cross-cutting',
+  heading: 'The second cross-cutting theme',
+  body: ['Placeholder. What this slide holds is still to be decided.'],
+  accent: 'ai',
+} as const;

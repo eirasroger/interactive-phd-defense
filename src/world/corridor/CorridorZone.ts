@@ -9,7 +9,7 @@ import { createFlow, type Flow } from './Flow';
 import { createPlanDrawing, type PlanDrawing } from './PlanDrawing';
 import { createProjection, type Projection } from './Projection';
 import { createProjector, type Projector } from './Projector';
-import { createResidual, type Residual } from './Residual';
+import { createDataSea, type DataSea } from './DataSea';
 
 export const SHELL_ASSET = 'corridorShell';
 export const CEILING_ASSET = 'corridorCeiling';
@@ -194,7 +194,7 @@ class Corridor implements ZoneInstance {
   private readonly plan: PlanDrawing;
   private readonly projection: Projection;
   private readonly projector: Projector;
-  private readonly residual: Residual;
+  private readonly sea: DataSea;
   private readonly shell: Object3D;
   private readonly skins: readonly Skin[];
   private readonly drain = { level: 0 };
@@ -233,13 +233,13 @@ class Corridor implements ZoneInstance {
     this.plan = createPlanDrawing();
     this.projection = createProjection();
     this.projector = createProjector();
-    this.residual = createResidual();
+    this.sea = createDataSea(quality.particleBudget);
     this.root.add(
       this.flow.object,
       this.plan.object,
       this.projection.object,
       this.projector.object,
-      this.residual.object,
+      this.sea.object,
     );
 
     this.lightEnfilade();
@@ -416,7 +416,7 @@ class Corridor implements ZoneInstance {
   private applyClearing(): void {
     this.plan.setCleared(this.clearing.level);
     this.flow.setCleared(this.clearing.level);
-    this.residual.setLevel(this.clearing.field);
+    this.sea.setLevel(this.clearing.field);
   }
 
   /**
@@ -465,7 +465,7 @@ class Corridor implements ZoneInstance {
 
   update(dt: number): void {
     this.flow.update(dt);
-    this.residual.update(dt);
+    this.sea.update(dt);
   }
 
   suspend(): void {
@@ -480,7 +480,7 @@ class Corridor implements ZoneInstance {
     this.plan.dispose();
     this.projection.dispose();
     this.projector.dispose();
-    this.residual.dispose();
+    this.sea.dispose();
     this.root.traverse((child) => {
       const mesh = child as Mesh;
       if (mesh.isMesh) mesh.geometry.dispose();

@@ -7,7 +7,9 @@ import type { SceneDefinition } from '@/engine/scene/types';
 import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { act2Scenes } from '@/scenes/act2';
 import { CORRIDOR_ASSETS, corridorZone, opened } from '@/world/corridor/CorridorZone';
+import { THEME_TWO } from '@/content/act3';
 import { BackboneScene } from './BackboneScene';
+import { ThemeScene } from './ThemeScene';
 import { RiseScene } from './RiseScene';
 
 const CHAPTER = 'Act III — The Overlook';
@@ -107,6 +109,31 @@ const overlook = (pull = 1, arc: number = OVERLOOK.arc): CameraPose => {
 const DRIFT = { pull: 1.06, seconds: 1.9 } as const;
 
 /**
+ * The dive, and why the crossing between two flat compositions is a camera move.
+ *
+ * From here on Act III is text over a volume, and two slides in the same volume
+ * separated by a cross-dissolve are two slides. Travelling between them is the
+ * one thing this deck can do that a deck cannot: the camera leaves the overlook,
+ * drops out of the plan's altitude and levels off inside the sea, and the second
+ * theme arrives with the bubbles still going past. It is the same mechanism as
+ * every other transition in the talk, which is why it costs nothing to own.
+ *
+ * **Where it stops matters more than how it gets there.** Levelling out is what
+ * makes the sea read as a place with a horizon rather than as a texture: at the
+ * overlook the camera looks down into the volume, and here it looks along it.
+ */
+const DIVE = {
+  seconds: 3.4,
+  /** Well inside the volume, near the mouth end, on the axis. */
+  eye: 26,
+  /** Slightly above the eye, so the level-off has a horizon in it. */
+  aim: 30,
+  from: 46,
+  to: -74,
+  fov: 46,
+} as const;
+
+/**
  * Act III opens inside Act II's world, and that is the whole point.
  *
  * The scene stays in the corridor zone: the corridor is the subject, not the
@@ -151,6 +178,30 @@ export const act3Scenes: readonly SceneDefinition[] = [
     travel: { seconds: DRIFT.seconds, ease: EASE.camera },
     assets: [...CORRIDOR_ASSETS],
     create: () => new BackboneScene(),
+  },
+  /**
+   * The second theme, and the dive that reaches it.
+   *
+   * Still in the corridor zone, because the sea is: crossing out of the zone
+   * here would take the volume away and leave a cut where the move is. There is
+   * no corridor left in the frame by this point, and that is the intended
+   * reading of a zone whose last state is the sea it drained into.
+   */
+  {
+    id: 'theme-two',
+    title: 'Cross-cutting theme 2',
+    chapter: CHAPTER,
+    zone: corridorZone.id,
+    world: 'recessed',
+    pose: {
+      position: at([0, SECTION.floor + DIVE.eye, DIVE.from]),
+      target: at([0, SECTION.floor + DIVE.aim, DIVE.to]),
+      fov: DIVE.fov,
+    },
+    air: opened,
+    travel: { seconds: DIVE.seconds, ease: EASE.camera },
+    assets: [...CORRIDOR_ASSETS],
+    create: () => new ThemeScene(THEME_TWO),
   },
 ];
 
