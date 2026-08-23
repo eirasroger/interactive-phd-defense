@@ -1,0 +1,156 @@
+/*
+ * The closing frame: contribution, implications, and where the work stops.
+ *
+ * Two zones above and one across the foot. The pair above are read against each
+ * other — what the work adds and what it is good for — and the one below is said
+ * about both of them, so it takes the full measure rather than a third column.
+ *
+ * **Set out the way C5's second beat sets out its two halves.** No card around
+ * anything: a zone is its own name in the accent over a hairline, and what it
+ * holds stands on the ground. That is what lets three zones of different shapes
+ * share one surface without reading as three boxes. Only a drawing gets a panel,
+ * because a drawing needs a ground of its own to be read against.
+ *
+ * Translated for the dark, since C5 is a projected white slide and this stands
+ * in the sea: the rule is drawn in the accent rather than in ink, and the panel
+ * is a raised surface rather than an inset one.
+ */
+.std {
+  --accent: var(--c-ai);
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  column-gap: var(--s-16);
+  row-gap: var(--s-12);
+  width: 100%;
+  min-height: 0;
+}
+
+/* Said about both of the zones above it, so it takes the width of both. */
+.std-zone[data-zone='limits'] {
+  grid-column: 1 / -1;
+}
+
+/*
+ * Three equal zones, and nothing marks one of them.
+ *
+ * They are one statement read across, so no zone is ever the active one and
+ * there is no accent to travel. An earlier pass lit them in turn across three
+ * beats, which made the closing frame a build rather than a thing to stand on.
+ */
+.std-zone {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--s-3);
+  align-content: start;
+  min-width: 0;
+}
+
+/*
+ * A zone's name, and the only place its accent is at full strength.
+ *
+ * The station eyebrows in Act II are set exactly this way, so the register
+ * carries: this is the label of a region, not a heading, and it should never be
+ * mistaken for one.
+ */
+.std-label {
+  font-family: var(--font-label);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c-ai) 88%, transparent);
+}
+
+/*
+ * The rule that sets the zone out.
+ *
+ * `transform-origin: left` and `scaleX`, because it is drawn rather than faded,
+ * and it is a plain element so there is no view box for the origin to resolve
+ * against wrongly.
+ */
+.std-rule {
+  height: 1px;
+  transform-origin: left center;
+  background-color: color-mix(in srgb, var(--c-ai) 34%, transparent);
+}
+
+/* ---- What the two upper zones hold --------------------------------------------------- */
+
+.std-body {
+  display: grid;
+  gap: 0;
+  align-content: start;
+  margin-top: var(--s-2);
+}
+
+/*
+ * A row, separated by a hairline rather than marked by a bullet.
+ *
+ * The same treatment C5 gives its indicator rows. A dash in front of a sentence
+ * is a handout, and separation by geometry is the `dataviz` rule at text scale.
+ */
+.std-row {
+  padding-block: var(--s-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--c-ai) 9%, transparent);
+}
+
+.std-row p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--c-text-muted) 94%, transparent);
+}
+
+/*
+ * Where the zone's drawing goes.
+ *
+ * Reserved from the first frame rather than left out, so the composition is
+ * built against the space the figure will take instead of being rebuilt around
+ * it later. A raised surface rather than C5's inset one, because on the dark an
+ * inset panel is a hole and on the white it is a screen.
+ */
+.std-panel {
+  margin-top: var(--s-6);
+  height: 172px;
+  border-radius: 14px;
+  background-color: color-mix(in srgb, var(--c-surface) 74%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-ai) 11%, transparent);
+}
+
+/* ---- What the foot holds -------------------------------------------------------------- */
+
+/*
+ * Four entries across, not a list.
+ *
+ * A limitation set as a bullet reads as a concession; set as a lead with a line
+ * under it, it reads as a boundary the work knows it has. This is the row C5
+ * runs under its architecture panel, at the measure of both zones above.
+ */
+.std-items {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-8);
+  margin-top: var(--s-4);
+}
+
+.std-item {
+  display: grid;
+  gap: var(--s-1);
+  align-content: start;
+}
+
+.std-item-lead {
+  margin: 0;
+  font-size: 1rem;
+  line-height: var(--lh-snug);
+  color: color-mix(in srgb, var(--c-ai) 84%, transparent);
+}
+
+.std-item-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--c-text-muted) 90%, transparent);
+}

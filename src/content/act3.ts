@@ -144,3 +144,68 @@ export const CARDS = {
     ],
   },
 } as const;
+
+/* ---- The closing frame ------------------------------------------------------------- */
+
+/**
+ * What the work contributes, what it is for, and where it stops.
+ *
+ * Three zones on one frame, because the three are read against each other: a
+ * contribution with no stated limit is a claim, and a limit with no stated
+ * contribution is an apology. The pair above are what the work adds and what it
+ * is good for; the one across the foot is said about both of them.
+ *
+ * **Placeholder.** Every line below is structure, not content. Nothing here is a
+ * finding and none of it should be defended until the presenter has written it:
+ * a line on this frame is a claim about the work, and an invented one reads as a
+ * result.
+ */
+export const STANDING = {
+  eyebrow: 'Act III · Closing',
+  heading: 'Contribution, implications, and where the work stops',
+  line: 'What the thesis adds, what it is good for, and what it does not settle.',
+} as const;
+
+export interface StandingZone {
+  readonly key: 'knowledge' | 'practice';
+  readonly label: string;
+  readonly rows: readonly string[];
+}
+
+export const STANDING_ZONES: readonly StandingZone[] = [
+  {
+    key: 'knowledge',
+    label: 'Contribution to knowledge',
+    rows: [
+      'Placeholder. The first thing established that was not established before.',
+      'Placeholder. The second.',
+      'Placeholder. The third.',
+    ],
+  },
+  {
+    key: 'practice',
+    label: 'Practical implications',
+    rows: [
+      'Placeholder. Who can act on this, and on which decision.',
+      'Placeholder. What it changes about how that decision is made.',
+      'Placeholder. What adoption asks for.',
+    ],
+  },
+];
+
+/**
+ * The foot of the frame, as short entries rather than a list.
+ *
+ * A limitation set as a bullet reads as a concession; set as an entry with a
+ * lead and a line under it, it reads as a boundary the work knows it has. Four
+ * across, on the measure of both zones above.
+ */
+export const STANDING_LIMITS = {
+  label: 'Limitations and future work',
+  items: [
+    { lead: 'Placeholder', note: 'What the evidence does not cover.' },
+    { lead: 'Placeholder', note: 'What the method assumes.' },
+    { lead: 'Placeholder', note: 'Where the results may not carry.' },
+    { lead: 'Placeholder', note: 'The next question this opens.' },
+  ],
+} as const;

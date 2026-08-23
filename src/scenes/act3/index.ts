@@ -9,6 +9,7 @@ import { act2Scenes } from '@/scenes/act2';
 import { CORRIDOR_ASSETS, corridorZone, opened } from '@/world/corridor/CorridorZone';
 import { BackboneScene } from './BackboneScene';
 import { ConditionsScene } from './ConditionsScene';
+import { StandingScene } from './StandingScene';
 import { RiseScene } from './RiseScene';
 
 const CHAPTER = 'Act III — The Overlook';
@@ -133,6 +134,22 @@ const DIVE = {
 } as const;
 
 /**
+ * The last move of the deck, and why it is a glide.
+ *
+ * The camera is already inside the sea and levelled off, so this carries on
+ * along the volume and settles slightly lower rather than descending again. A
+ * second dive would say a third place; the argument here is the same place,
+ * later, with the whole of it behind the audience.
+ */
+const GLIDE = {
+  seconds: 3,
+  eye: 21,
+  aim: 24,
+  from: -36,
+  to: -158,
+} as const;
+
+/**
  * Act III opens inside Act II's world, and that is the whole point.
  *
  * The scene stays in the corridor zone: the corridor is the subject, not the
@@ -201,6 +218,30 @@ export const act3Scenes: readonly SceneDefinition[] = [
     travel: { seconds: DIVE.seconds, ease: EASE.camera },
     assets: [...CORRIDOR_ASSETS],
     create: () => new ConditionsScene(),
+  },
+  /**
+   * The closing frame, and the last thing the deck stands in.
+   *
+   * A glide rather than a second dive: the camera is already in the volume and
+   * levelled, so what this move does is carry on along it and settle a little
+   * lower. The theme before it arrived on a descent, and repeating that here
+   * would say a third place rather than the same one, later.
+   */
+  {
+    id: 'standing',
+    title: 'Contribution, implications, and where the work stops',
+    chapter: CHAPTER,
+    zone: corridorZone.id,
+    world: 'recessed',
+    pose: {
+      position: at([0, SECTION.floor + GLIDE.eye, GLIDE.from]),
+      target: at([0, SECTION.floor + GLIDE.aim, GLIDE.to]),
+      fov: DIVE.fov,
+    },
+    air: opened,
+    travel: { seconds: GLIDE.seconds, ease: EASE.camera },
+    assets: [...CORRIDOR_ASSETS],
+    create: () => new StandingScene(),
   },
 ];
 

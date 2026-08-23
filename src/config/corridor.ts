@@ -247,7 +247,7 @@ export const FLOW_ROUTES: readonly FlowRoute[] = [
  * `scenes/act3/index.ts` asserts the deck against them at load.
  */
 const ACT2_STATIONS = 5;
-const CORRIDOR_RUN = ACT2_STATIONS + 3;
+const CORRIDOR_RUN = ACT2_STATIONS + 4;
 
 export const RISE = {
   /** The ceiling comes off, the shell drains and the plan is read. */
