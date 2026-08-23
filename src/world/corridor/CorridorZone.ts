@@ -9,6 +9,7 @@ import { createFlow, type Flow } from './Flow';
 import { createPlanDrawing, type PlanDrawing } from './PlanDrawing';
 import { createProjection, type Projection } from './Projection';
 import { createProjector, type Projector } from './Projector';
+import { createResidual, type Residual } from './Residual';
 
 export const SHELL_ASSET = 'corridorShell';
 export const CEILING_ASSET = 'corridorCeiling';
@@ -55,6 +56,26 @@ const CEILING = {
  * before the camera settles rather than resolving under the audience's eyes.
  */
 const DRAIN = { delay: 0.7, seconds: 2.6 } as const;
+
+/**
+ * The figure leaving, and the field it leaves behind.
+ *
+ * Longer than the camera's own drift on purpose. The move is over at 1.9 s and
+ * the composition begins arriving at 1.65 s, so the last second of the clearing
+ * runs underneath a claim already on screen: the incoming thing starts before
+ * the outgoing one has finished, which is the whole of why a transition reads
+ * as expensive rather than as two states joined by a fade.
+ *
+ * `ease` is the camera's, not the interface's. `power2.inOut` is crisp on a
+ * panel and wrong on something the size of a building — it spends its soft ends
+ * by moving at four times the average speed through the middle, and a
+ * seventy-five metre front doing that is a wipe with soft edges.
+ *
+ * The residual field arrives on its own curve, starting where the clearing is
+ * half done and settling after it, so the frame is never empty and never has
+ * two things resolving on the same beat.
+ */
+const CLEARING = { seconds: 2.9, ease: 'sine.inOut', field: { from: 0.45, seconds: 2.2 } } as const;
 
 /** What the shell is worth once the drawing is carrying the information. */
 const VOID = new Color(0x05070a);
@@ -173,10 +194,13 @@ class Corridor implements ZoneInstance {
   private readonly plan: PlanDrawing;
   private readonly projection: Projection;
   private readonly projector: Projector;
+  private readonly residual: Residual;
   private readonly shell: Object3D;
   private readonly skins: readonly Skin[];
   private readonly drain = { level: 0 };
+  private readonly clearing = { level: 0, field: 0 };
   private closed = true;
+  private dispersed = false;
 
   constructor(private readonly context: ZoneContext) {
     const { assets, quality, stage } = context;
@@ -209,11 +233,13 @@ class Corridor implements ZoneInstance {
     this.plan = createPlanDrawing();
     this.projection = createProjection();
     this.projector = createProjector();
+    this.residual = createResidual();
     this.root.add(
       this.flow.object,
       this.plan.object,
       this.projection.object,
       this.projector.object,
+      this.residual.object,
     );
 
     this.lightEnfilade();
@@ -280,6 +306,7 @@ class Corridor implements ZoneInstance {
     const open = progress >= RISE.opens;
     this.setCeiling(!open, animate);
     this.flow.trace(open, !animate);
+    this.setClearing(progress >= RISE.disperses, animate);
     this.projection.setProgress(progress, animate);
     this.projector.setProgress(progress, animate);
   }
@@ -340,6 +367,59 @@ class Corridor implements ZoneInstance {
   }
 
   /**
+   * The figure leaving, so the argument can carry on without it.
+   *
+   * Act III's cross-cutting themes are about the pipeline rather than about a
+   * place, and a plan drawing held under them for six scenes is a backdrop the
+   * audience stops seeing by the second one. So the corridor is spent here: the
+   * drawing and the flow clear on one front, and what stays is a field with no
+   * layout in it.
+   *
+   * Nothing about this is a scene's business. It is the zone's own last state,
+   * driven by the same progress that opened the ceiling, so entering the theme
+   * from a jump or stepping back into the overlook both find the world in the
+   * condition the deck says it is in.
+   */
+  private setClearing(dispersed: boolean, animate: boolean): void {
+    if (dispersed === this.dispersed) return;
+    this.dispersed = dispersed;
+
+    gsap.killTweensOf(this.clearing);
+
+    const level = dispersed ? 1 : 0;
+
+    if (!animate) {
+      this.clearing.level = level;
+      this.clearing.field = level;
+      this.applyClearing();
+      return;
+    }
+
+    gsap.to(this.clearing, {
+      level,
+      duration: CLEARING.seconds,
+      ease: CLEARING.ease,
+      onUpdate: () => this.applyClearing(),
+    });
+
+    // Coming back is the drawing being read again, and the field has no place
+    // under a figure. It goes first on the way back, and last on the way out.
+    gsap.to(this.clearing, {
+      field: level,
+      duration: dispersed ? CLEARING.field.seconds : CLEARING.seconds * 0.4,
+      delay: dispersed ? CLEARING.seconds * CLEARING.field.from : 0,
+      ease: dispersed ? 'power2.out' : 'power2.in',
+      onUpdate: () => this.applyClearing(),
+    });
+  }
+
+  private applyClearing(): void {
+    this.plan.setCleared(this.clearing.level);
+    this.flow.setCleared(this.clearing.level);
+    this.residual.setLevel(this.clearing.field);
+  }
+
+  /**
    * The building becoming its own plan.
    *
    * One scalar drives every material, so there is no state to get out of step:
@@ -385,6 +465,7 @@ class Corridor implements ZoneInstance {
 
   update(dt: number): void {
     this.flow.update(dt);
+    this.residual.update(dt);
   }
 
   suspend(): void {
@@ -394,10 +475,12 @@ class Corridor implements ZoneInstance {
   dispose(): void {
     this.context.stage.remove(this.root);
     gsap.killTweensOf(this.drain);
+    gsap.killTweensOf(this.clearing);
     this.flow.dispose();
     this.plan.dispose();
     this.projection.dispose();
     this.projector.dispose();
+    this.residual.dispose();
     this.root.traverse((child) => {
       const mesh = child as Mesh;
       if (mesh.isMesh) mesh.geometry.dispose();

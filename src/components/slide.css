@@ -65,6 +65,17 @@
   display: none;
 }
 
+/*
+ * Statements sharing one cell, for a slide whose beats replace the claim.
+ *
+ * The column is as tall as the longest of them and never reflows, which is the
+ * same rule the evidence stack follows one column over: a swap must not move
+ * anything the reader has already found.
+ */
+.slide-statements[data-swap] > * {
+  grid-area: 1 / 1;
+}
+
 .slide-statement {
   display: grid;
   grid-template-columns: 2px 1fr;

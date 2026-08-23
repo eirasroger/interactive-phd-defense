@@ -1,0 +1,264 @@
+/*
+ * Cross-cutting theme 1 — the backbone.
+ *
+ * A spine the width of the frame, and four vertebrae hanging off it that look
+ * nothing like each other. That is the whole slide.
+ *
+ * **Difference is the design.** The claim is that one technology takes a
+ * different form at every stage, so the four shapes have to be different before
+ * anything on the slide is read. What they share is the blue, which has meant
+ * *learned* since Act I, and the line they hang from. Amber appears once, at the
+ * one place a person stands in the pipeline, and nowhere else.
+ */
+.bb {
+  --bb-accent: var(--c-ai);
+  --bb-soft: color-mix(in srgb, var(--c-ai) 58%, transparent);
+  --bb-faint: color-mix(in srgb, var(--c-ai) 34%, transparent);
+
+  display: grid;
+  width: 100%;
+  min-height: 0;
+}
+
+/* The frame carries the board's aspect ratio, so the drawing and the words
+   anchored to it scale together and land on the same points at any stage size. */
+.bb-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1440 / 486;
+}
+
+.bb-board {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.bb-family,
+.bb-verb,
+.bb-need {
+  position: absolute;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* ---- The spine ------------------------------------------------------------------ */
+
+.bb-spine-end {
+  stop-color: color-mix(in srgb, var(--c-ai) 26%, transparent);
+}
+
+.bb-spine-mid {
+  stop-color: color-mix(in srgb, var(--c-ai) 88%, transparent);
+}
+
+.bb-glint-edge {
+  stop-color: transparent;
+}
+
+.bb-glint-core {
+  stop-color: color-mix(in srgb, #dceaff 88%, transparent);
+}
+
+/*
+ * The one piece of continuous motion on the slide.
+ *
+ * Keyframes rather than a timeline: the presenter stands here for half a minute
+ * and the frame has to stay alive for all of it, with nothing for a beat to own
+ * and nothing to dispose of when the scene is left.
+ */
+.bb-glint {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: bb-travel 7.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+@keyframes bb-travel {
+  0% {
+    transform: translateX(0);
+  }
+  62%,
+  100% {
+    transform: translateX(1760px);
+  }
+}
+
+.bb-riser {
+  fill: var(--bb-faint);
+}
+
+/*
+ * The pulse that runs down a riser as it draws, once.
+ *
+ * It used to loop, and four verticals twitching for the whole half minute the
+ * presenter stands here is motion with nothing to say. It fires with the riser
+ * now and the frame is still afterwards, which leaves the spine's own light as
+ * the only thing still moving.
+ */
+.bb-drop {
+  fill: var(--bb-accent);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c-ai) 65%, transparent));
+}
+
+/* ---- The vertebrae --------------------------------------------------------------- */
+
+/* Many arriving, one leaving. Thin, because the count is not the point. */
+.bb-strand {
+  fill: none;
+  stroke: var(--bb-faint);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The one strand an ordering puts on top. */
+.bb-strand-lead {
+  stroke: var(--bb-accent);
+  stroke-width: 2;
+}
+
+.bb-out {
+  fill: none;
+  stroke: var(--bb-soft);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* What arrived incomplete. The only broken line on the board. */
+.bb-gap {
+  fill: none;
+  stroke: var(--bb-soft);
+  stroke-width: 2;
+  stroke-dasharray: 6 7;
+  vector-effect: non-scaling-stroke;
+}
+
+.bb-core {
+  fill: var(--bb-accent);
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--c-ai) 75%, transparent));
+}
+
+.bb-head {
+  fill: color-mix(in srgb, var(--c-ai) 45%, transparent);
+}
+
+/* An ordering, drawn as rows. Length carries the standing and the top row is the
+   only one lit, so the arrangement reads before any of it is measured. */
+.bb-row {
+  fill: color-mix(in srgb, var(--c-ai) 30%, transparent);
+}
+
+.bb-row-lead {
+  fill: var(--bb-accent);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c-ai) 55%, transparent));
+}
+
+.bb-rail {
+  fill: none;
+  stroke: var(--bb-faint);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.bb-held {
+  fill: color-mix(in srgb, var(--c-emphasis) 20%, transparent);
+  stroke: color-mix(in srgb, var(--c-emphasis) 80%, transparent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.bb-passed {
+  fill: var(--bb-accent);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c-ai) 60%, transparent));
+}
+
+/*
+ * The only warm mark on the slide.
+ *
+ * Amber is reserved for the one place a person stands in the pipeline, so it
+ * appears exactly once and never as decoration. It is taller than the channel it
+ * crosses, because what stops here is not a property of the channel.
+ */
+.bb-gate {
+  fill: var(--c-emphasis);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c-emphasis) 45%, transparent));
+}
+
+/*
+ * How sure the model is, breathing.
+ *
+ * Three rings on one slow cycle, offset so the spread reads as a spread rather
+ * than as a target. This is the vertebra that returns a distribution, and it is
+ * the only one that is still moving once the build is over.
+ */
+.bb-ring {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c-ai) 26%, transparent);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bb-breathe 6.2s ease-in-out infinite;
+  animation-delay: calc(var(--ring, 0) * 0.55s);
+}
+
+@keyframes bb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.09);
+    opacity: 0.45;
+  }
+}
+
+/* ---- What each vertebra is asked to do -------------------------------------------- */
+
+/*
+ * Which family of model answers here.
+ *
+ * Set in the accent, directly under the riser, because it is what the spine is
+ * delivering to this stage. Read across, the four are the argument on their own:
+ * a language model, the same driven as an agent with a person in it, supervised
+ * deep learning, and supervised deep learning whose labels a language model
+ * wrote.
+ */
+.bb-family {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: var(--lh-snug);
+  color: var(--bb-accent);
+}
+
+.bb-verb {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-title);
+  color: var(--c-text);
+}
+
+.bb-need {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  line-height: var(--lh-snug);
+  color: var(--c-text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-glint,
+  .bb-ring {
+    animation: none;
+  }
+}

@@ -233,10 +233,52 @@ export const FLOW_ROUTES: readonly FlowRoute[] = [
  * The ceiling opens at the end of the corridor's run, and the deck is what
  * decides where that is — `scenes/act3/index.ts` asserts the two still agree.
  */
+/**
+ * The corridor's scene run: five stations, the overlook, and the dispersal.
+ *
+ * Zone progress is derived from the deck's order, so the two states the
+ * overlook is made of are positions in this run rather than authored numbers.
+ * The run is fixed at seven: Act III's remaining themes live in the abstract
+ * space the dispersal hands over to, and nothing after it looks at a corridor.
+ * `scenes/act3/index.ts` asserts the deck against this.
+ */
+const CORRIDOR_RUN = 7;
+
 export const RISE = {
-  opens: 1,
+  /** The ceiling comes off, the shell drains and the plan is read. */
+  opens: (CORRIDOR_RUN - 2) / (CORRIDOR_RUN - 1),
+  /** The plan clears and the corridor stops being what the talk is looking at. */
+  disperses: 1,
   lift: 24,
 } as const;
+
+/**
+ * How the figure leaves, and why it leaves in a direction.
+ *
+ * A uniform fade to black is the one move a slide deck can already do, and it
+ * says nothing. The figure clears the way the pipeline runs, from the mouth
+ * through to C5, so the last thing to go is the station the camera climbed out
+ * of and the direction reads as the argument finishing.
+ *
+ * `soft` is what makes it a dissolve rather than a wipe: the front is nineteen
+ * metres deep on a run of seventy-five, so a quarter of the figure is
+ * mid-departure at any moment and no edge is ever visible as a line. `grain`
+ * bends that front by a low-frequency function of position, enough that rooms
+ * do not empty in rank order.
+ *
+ * The drawing and the flow share it, because two layers of one figure leaving
+ * on separately tuned curves is two things leaving.
+ */
+export const SWEEP = { soft: 19, grain: 0.42 } as const;
+
+/**
+ * Where the clearing front stands at `level`.
+ *
+ * A full soft-edge behind the mouth at 0, so nothing has started; one past C5
+ * at 1, so nothing is left.
+ */
+export const sweepFront = (level: number): number =>
+  -SWEEP.soft * 2 + level * (RUN + SWEEP.soft * 3);
 
 export interface Screen {
   readonly key: string;

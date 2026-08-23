@@ -1,5 +1,5 @@
-import { BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial } from 'three';
-import { CELLS, SECTION, WALL, type Cell } from '@/config/corridor';
+import { BufferAttribute, BufferGeometry, Color, Group, Mesh, ShaderMaterial } from 'three';
+import { CELLS, SECTION, SWEEP, WALL, sweepFront, type Cell } from '@/config/corridor';
 
 const INK = 0xe4e9f0;
 
@@ -33,6 +33,49 @@ const FILL = { opacity: 0.9, lift: 0.005 } as const;
  */
 const HEAD = 0.02;
 
+const PLAN_VERTEX = `
+varying float vRun;
+varying float vAcross;
+void main() {
+  vRun = -position.z;
+  vAcross = position.x;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const PLAN_FRAGMENT = `
+uniform vec3 uColor;
+uniform float uOpacity;
+uniform float uFront;
+uniform float uSoft;
+uniform float uGrain;
+varying float vRun;
+varying float vAcross;
+void main() {
+  float grain = sin(vAcross * 0.31) * cos(vRun * 0.17 + 1.7);
+  float front = uFront + grain * uSoft * uGrain;
+  float alpha = uOpacity * smoothstep(front, front + uSoft, vRun);
+  if (alpha < 0.004) discard;
+  gl_FragColor = vec4(uColor, alpha);
+}
+`;
+
+const ink = (color: number): ShaderMaterial =>
+  new ShaderMaterial({
+    uniforms: {
+      uColor: { value: new Color(color) },
+      uOpacity: { value: 0 },
+      uFront: { value: sweepFront(0) },
+      uSoft: { value: SWEEP.soft },
+      uGrain: { value: SWEEP.grain },
+    },
+    vertexShader: PLAN_VERTEX,
+    fragmentShader: PLAN_FRAGMENT,
+    transparent: true,
+    depthWrite: false,
+    fog: false,
+  });
+
 interface Rect {
   readonly x0: number;
   readonly x1: number;
@@ -45,6 +88,12 @@ export interface PlanDrawing {
   readonly object: Group;
   /** 0 the building, 1 the drawing. */
   setDrawn(level: number): void;
+  /**
+   * 0 the whole figure, 1 an empty field. Independent of `setDrawn`, because
+   * the two answer different questions: whether the drawing has replaced the
+   * building, and whether the drawing is still being read.
+   */
+  setCleared(level: number): void;
   dispose(): void;
 }
 
@@ -72,20 +121,8 @@ export function createPlanDrawing(): PlanDrawing {
   object.name = 'plan';
   object.visible = false;
 
-  const walls = new MeshBasicMaterial({
-    color: INK,
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-    fog: false,
-  });
-  const ground = new MeshBasicMaterial({
-    color: GROUND,
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-    fog: false,
-  });
+  const walls = ink(INK);
+  const ground = ink(GROUND);
   const bands = new Mesh(plate(wallBands()), walls);
   bands.renderOrder = 1;
   const floors = new Mesh(plate(floorPlates()), ground);
@@ -93,13 +130,32 @@ export function createPlanDrawing(): PlanDrawing {
 
   object.add(floors, bands);
 
+  let drawn = 0;
+  let cleared = 0;
+
+  const apply = (): void => {
+    object.visible = drawn > 0.002 && cleared < 0.999;
+    walls.uniforms['uOpacity']!.value = drawn;
+    ground.uniforms['uOpacity']!.value = drawn * FILL.opacity;
+
+    const front = sweepFront(cleared);
+    walls.uniforms['uFront']!.value = front;
+    ground.uniforms['uFront']!.value = front;
+  };
+
+  apply();
+
   return {
     object,
 
     setDrawn(level) {
-      object.visible = level > 0.002;
-      walls.opacity = level;
-      ground.opacity = level * FILL.opacity;
+      drawn = level;
+      apply();
+    },
+
+    setCleared(level) {
+      cleared = level;
+      apply();
     },
 
     dispose() {

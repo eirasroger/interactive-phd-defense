@@ -7,6 +7,7 @@ import type { SceneDefinition } from '@/engine/scene/types';
 import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { act2Scenes } from '@/scenes/act2';
 import { CORRIDOR_ASSETS, corridorZone, opened } from '@/world/corridor/CorridorZone';
+import { BackboneScene } from './BackboneScene';
 import { RiseScene } from './RiseScene';
 
 const CHAPTER = 'Act III — The Overlook';
@@ -65,11 +66,11 @@ const at = ([x, y, z]: Vec3): Vec3 => [
   z + ZONE_ORIGIN.corridor[2],
 ];
 
-const overlook = (): CameraPose => {
+const overlook = (pull = 1, arc: number = OVERLOOK.arc): CameraPose => {
   const halfFrame = Math.atan(
     Math.tan((OVERLOOK.fov / 2) * DEGREES) * (STAGE.width / STAGE.height),
   );
-  const distance = RUN / OVERLOOK.fill / 2 / Math.tan(halfFrame);
+  const distance = (RUN / OVERLOOK.fill / 2 / Math.tan(halfFrame)) * pull;
   const elevation = OVERLOOK.elevation * DEGREES;
   const middle = -RUN / 2;
 
@@ -81,9 +82,29 @@ const overlook = (): CameraPose => {
     ]),
     target: at([0, SECTION.floor + OVERLOOK.aim, middle]),
     fov: OVERLOOK.fov,
-    arc: OVERLOOK.arc,
+    arc,
   };
 };
+
+/**
+ * The move refusing to stop dead.
+ *
+ * The theme is a two-dimensional composition and the camera has nothing left to
+ * find, so this is not a camera move: it is the last few percent of the rise's
+ * own easing, spent while the figure underneath it clears. A locked frame with
+ * only opacity changing in it is the specific thing that reads flat, because
+ * nothing in the image tells the eye it is still looking at a place. Six per
+ * cent of the distance over one and nine tenths of a second is small enough
+ * that nobody can name it and enough that the frame stays alive.
+ *
+ * No arc. A crane path over a six per cent pull is a wobble.
+ *
+ * The length is what brackets the dissolve: `entryDelay` is the travel less a
+ * quarter second, so the composition begins arriving at 1.65 s against a
+ * clearing that runs to 2.9 s, and the incoming thing starts before the
+ * outgoing one has finished.
+ */
+const DRIFT = { pull: 1.06, seconds: 1.9 } as const;
 
 /**
  * Act III opens inside Act II's world, and that is the whole point.
@@ -106,6 +127,31 @@ export const act3Scenes: readonly SceneDefinition[] = [
     assets: [...CORRIDOR_ASSETS],
     create: () => new RiseScene(),
   },
+  /**
+   * The first cross-cutting theme, and the last scene the corridor is mounted
+   * for.
+   *
+   * `recessed` is the honest declaration even though almost nothing is left to
+   * recede: the composition is the subject and the world behind it is a field.
+   * It inherits `opened` so the dimming is a transform of the air the plan was
+   * read through rather than a second rig that can drift away from it.
+   *
+   * The dissolve is not here. It belongs to the zone, because what leaves is
+   * the zone's own figure, and entering this scene by a jump has to find the
+   * world in the same state as walking into it.
+   */
+  {
+    id: 'ai',
+    title: 'AI as the methodological backbone',
+    chapter: CHAPTER,
+    zone: corridorZone.id,
+    world: 'recessed',
+    pose: overlook(DRIFT.pull, 0),
+    air: opened,
+    travel: { seconds: DRIFT.seconds, ease: EASE.camera },
+    assets: [...CORRIDOR_ASSETS],
+    create: () => new BackboneScene(),
+  },
 ];
 
 /**
@@ -118,11 +164,17 @@ export const act3Scenes: readonly SceneDefinition[] = [
  */
 const corridorRun = [...act2Scenes, ...act3Scenes];
 const progress = zoneProgressByIndex(corridorRun);
-const rise = corridorRun.findIndex((scene) => scene.id === 'whole');
 
-if (progress[rise] !== RISE.opens) {
-  throw new Error(
-    `Act III: 'whole' sits at zone progress ${progress[rise]}, but RISE.opens is ` +
-      `${RISE.opens}. Update RISE in config/corridor.ts to match the deck.`,
-  );
+for (const [id, threshold] of [
+  ['whole', RISE.opens],
+  ['ai', RISE.disperses],
+] as const) {
+  const index = corridorRun.findIndex((scene) => scene.id === id);
+  if (progress[index] !== threshold) {
+    throw new Error(
+      `Act III: '${id}' sits at zone progress ${progress[index]}, but its threshold is ` +
+        `${threshold}. Update CORRIDOR_RUN in config/corridor.ts to the corridor's ` +
+        `scene count (${corridorRun.length}).`,
+    );
+  }
 }

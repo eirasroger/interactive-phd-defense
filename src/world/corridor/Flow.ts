@@ -10,7 +10,7 @@ import {
   UniformsLib,
   UniformsUtils,
 } from 'three';
-import { FLOW, FLOW_ROUTES, SECTION, type PlanPoint } from '@/config/corridor';
+import { FLOW, FLOW_ROUTES, SECTION, SWEEP, sweepFront, type PlanPoint } from '@/config/corridor';
 
 const TEAL = 0x2dd4a7;
 
@@ -49,9 +49,13 @@ attribute float aV;
 varying float vU;
 varying float vV;
 varying float vDepth;
+varying float vRun;
+varying float vAcross;
 void main() {
   vU = aU;
   vV = aV;
+  vRun = -position.z;
+  vAcross = position.x;
   vec4 seen = modelViewMatrix * vec4(position, 1.0);
   vDepth = -seen.z;
   gl_Position = projectionMatrix * seen;
@@ -74,12 +78,17 @@ uniform float uEdge;
 uniform float uFade;
 uniform float uSpan;
 uniform float uReveal;
+uniform float uSweep;
+uniform float uSweepSoft;
+uniform float uSweepGrain;
 uniform vec3 fogColor;
 uniform float fogNear;
 uniform float fogFar;
 varying float vU;
 varying float vV;
 varying float vDepth;
+varying float vRun;
+varying float vAcross;
 void main() {
   float core = smoothstep(0.0, uEdge, 1.0 - abs(vV));
   float ends = smoothstep(0.0, uFade, vU) * smoothstep(0.0, uFade, uSpan - vU);
@@ -90,7 +99,12 @@ void main() {
   float trace = uTrace * (1.0 - smoothstep(0.0, wake, abs(lead)));
   float level = uBase + token * token * uLead + trace * trace * 3.0;
   float haze = 1.0 - smoothstep(fogNear, fogFar, vDepth);
-  float alpha = core * ends * haze * uReveal;
+  // The same front the drawing clears on, so the two layers of one figure
+  // leave together rather than on two curves that can drift apart.
+  float grain = sin(vAcross * 0.31) * cos(vRun * 0.17 + 1.7);
+  float front = uSweep + grain * uSweepSoft * uSweepGrain;
+  float standing = smoothstep(front, front + uSweepSoft, vRun);
+  float alpha = core * ends * haze * uReveal * standing;
   if (alpha < 0.004) discard;
   gl_FragColor = vec4(uColor * level, alpha);
 }
@@ -106,6 +120,12 @@ export interface Flow {
    * backwards or by jump.
    */
   trace(on: boolean, settle: boolean): void;
+  /**
+   * How much of the network has been cleared, 0 to 1, on the front the plan
+   * drawing uses. The pulse keeps running in whatever is still standing: the
+   * signal is the last thing to stop, which is the point of keeping it.
+   */
+  setCleared(level: number): void;
   suspend(): void;
   dispose(): void;
 }
@@ -221,6 +241,10 @@ export function createFlow(): Flow {
       if (settle) running.progress(0.5);
     },
 
+    setCleared(level) {
+      set('uSweep', sweepFront(level));
+    },
+
     suspend() {
       running?.kill();
       running = null;
@@ -265,6 +289,9 @@ function channel(origin: number, span: number): ShaderMaterial {
         uFade: { value: spec.fade },
         uSpan: { value: span },
         uReveal: { value: 0 },
+        uSweep: { value: sweepFront(0) },
+        uSweepSoft: { value: SWEEP.soft },
+        uSweepGrain: { value: SWEEP.grain },
       },
     ]),
     vertexShader: VERTEX,

@@ -8,6 +8,15 @@ export interface SlideSpec {
   readonly eyebrow?: string;
   readonly heading: string;
   readonly accent?: Accent;
+  /**
+   * Statements share one cell instead of stacking down the column.
+   *
+   * For a slide whose beats replace the claim rather than add to it. Accrual is
+   * the default because most slides build; a slide that swaps needs every
+   * statement in the same place, or the one on screen moves down the column as
+   * later beats reserve room they are not using yet.
+   */
+  readonly swap?: boolean;
 }
 
 export interface Statement {
@@ -50,7 +59,10 @@ export function createSlide(spec: SlideSpec): Slide {
     ? el('p', { className: 'slide-eyebrow', text: spec.eyebrow })
     : null;
   const heading = el('h2', { className: 'slide-heading', text: spec.heading });
-  const statements = el('div', { className: 'slide-statements' });
+  const statements = el('div', {
+    className: 'slide-statements',
+    ...(spec.swap ? { attrs: { 'data-swap': '' } } : {}),
+  });
 
   const head = el('div', {
     className: 'slide-head',

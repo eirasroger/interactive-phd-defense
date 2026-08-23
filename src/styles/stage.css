@@ -174,6 +174,55 @@
   background: currentcolor;
 }
 
+/*
+ * Act III's abstract space: a claim across the top, evidence across the width.
+ *
+ * A cross-cutting theme states a property of the whole architecture, and the
+ * evidence is that four stages have the same shape. Four things being alike is
+ * a comparison, and a comparison is read across, so the claim runs as a banner
+ * and the cards take the full measure underneath it. The two-column form used
+ * for a finding would give the comparison half the width it needs.
+ */
+.scene-layer[data-align='theme'] .theme {
+  display: grid;
+  gap: var(--s-12);
+  width: 100%;
+}
+
+.scene-layer[data-align='theme'] .caption {
+  max-width: 92rem;
+  gap: var(--s-4);
+}
+
+/*
+ * Title size rather than display, and held to two lines.
+ *
+ * The banner is competing with nothing above it, so the claim can be large; it
+ * is competing with four cards below it, so it cannot be the whole slide.
+ */
+.scene-layer[data-align='theme'] .caption-heading {
+  font-size: 3rem;
+}
+
+/*
+ * The scrim, and why it is not `wide`.
+ *
+ * `wide` veils the frame at three quarters, which is right over a lit park and
+ * wrong over the residual field, whose whole budget is a fraction of what that
+ * would take back off it. This one is heavy where the claim is read and lets
+ * the ground come back under the cards, so the field does the job it was kept
+ * for.
+ */
+.scene-layer[data-align='theme']::before {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--c-base) 94%, transparent) 0%,
+    color-mix(in srgb, var(--c-base) 86%, transparent) 34%,
+    color-mix(in srgb, var(--c-base) 66%, transparent) 78%,
+    color-mix(in srgb, var(--c-base) 54%, transparent) 100%
+  );
+}
+
 /* Full-width compositions veil the whole frame, but softly: the world stays
    readable as a depth field rather than being switched off. */
 .scene-layer[data-align='wide']::before {
