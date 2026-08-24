@@ -1,0 +1,444 @@
+/*
+ * The conclusions: four findings, each with the evidence that makes it true
+ * drawn beside it.
+ *
+ * **The pipeline is not on this slide.** It has been the subject of the whole
+ * deck, walked in Act II, read from above at the top of Act III and argued twice
+ * since. A sixth picture of it would be the talk repeating itself in its last
+ * minute. What the audience has not been shown is the four findings side by
+ * side, which is what a conclusion frame is for.
+ *
+ * **Nothing outside a panel moves.** Four panels in a fixed grid whose rows are
+ * reserved at the open height from the first frame, so a panel opening on its
+ * beat grows inside the room it already held and nothing below it is pushed
+ * anywhere. A closing frame whose parts appear in one corner and vanish from
+ * another is a frame nobody can read while it is being spoken over.
+ *
+ * Surfaces are the dark translation of C5's and the conditions slide's card: an
+ * 18px radius, an inset accent hairline and a deep shadow that lifts the panel
+ * off the sea. Each is driven by a single `--open` scalar, so the ground, the
+ * hairline, the shadow and the texture cannot drift apart while it comes up.
+ */
+/*
+ * The two heights the opening travels between, and why they are exact.
+ *
+ * A `max-height` reveal stops the moment it passes the content's own height, so
+ * the panel would finish growing partway through the scalar and then coast,
+ * which no ease can fix because the quantity is flat over the last of its
+ * travel. A definite height is linear in the scalar by construction.
+ *
+ * The stage is a fixed 1920x1080 surface and does not reflow, so a height solved
+ * once is solved. `--tall` is what the panel measures with its drawing in;
+ * `--shut` is the number, the rule and the claim with the panel's own padding.
+ */
+.cc {
+  --accent: var(--c-ai);
+  --shut: 188px;
+  --tall: 330px;
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, var(--tall));
+  align-items: start;
+  gap: var(--s-4);
+  width: 100%;
+  min-height: 0;
+}
+
+/* ---- A panel -------------------------------------------------------------------------- */
+
+.cc-panel {
+  --open: 1;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  column-gap: var(--s-8);
+  align-items: start;
+  height: calc(var(--shut) + (var(--tall) - var(--shut)) * var(--open));
+  overflow: hidden;
+  padding: var(--s-6);
+  border-radius: 18px;
+
+  background:
+    radial-gradient(
+      ellipse 76% 140% at 4% 0%,
+      color-mix(in srgb, var(--accent) calc(3% + 9% * var(--open)), transparent) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--c-surface) calc(26% + 56% * var(--open)), transparent) 0%,
+      color-mix(in srgb, var(--c-surface) calc(14% + 38% * var(--open)), transparent) 100%
+    );
+
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) calc(8% + 12% * var(--open)), transparent),
+    0 calc(16px * var(--open)) calc(44px * var(--open))
+      color-mix(in srgb, #000000 calc(46% * var(--open)), transparent);
+}
+
+/* The panel's own texture, so the ground reads as a surface rather than a fill. */
+.cc-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: calc(0.12 + 0.3 * var(--open));
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--accent) 6%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--accent) 6%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 58% 110% at 3% 0%, #000000 0%, transparent 70%);
+}
+
+/* ---- The words ------------------------------------------------------------------------ */
+
+.cc-words {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.cc-index {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--accent) 82%, transparent);
+}
+
+.cc-rule {
+  height: 1px;
+  margin-bottom: var(--s-2);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 42%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 12%, transparent) 78%,
+    transparent 100%
+  );
+}
+
+/*
+ * The claim, at the size a conclusion is entitled to.
+ *
+ * Display weight. This is the sentence the committee writes down, and every
+ * other sentence in the act has been set smaller than it on purpose.
+ */
+.cc-lead {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: var(--fw-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-title);
+  color: var(--c-text);
+}
+
+/*
+ * The sentence under the claim, lit with the drawing rather than with the panel.
+ *
+ * A shut panel carries its claim and nothing else, which is what makes the four
+ * of them readable as an agenda before any of them is opened.
+ */
+.cc-note {
+  margin: var(--s-3) 0 0;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  opacity: calc((var(--open) - 0.34) * 2.6);
+  color: color-mix(in srgb, var(--c-text-muted) 94%, transparent);
+}
+
+/* ---- The drawings --------------------------------------------------------------------- */
+
+/*
+ * Colour on this frame is spent on data and nowhere else.
+ *
+ * The panel chrome is one accent for all four. Inside a drawing the colours are
+ * the semantic scales the stations already declared: C3's pass and fail on the
+ * screening figure, C4's violet for an inferred value, C5's two conditioning
+ * inputs on the slope. Lifted for the dark ground, and every one of them is
+ * paired with a position or a shape, so colour is never the only encoding.
+ */
+.cc-figure {
+  --known: #5b9dff;
+  --absent: #737f8f;
+  --infer: #a98cf0;
+  --pass: #4fbf85;
+  --fail: #cf6b68;
+  --ctx-a: #b892e8;
+  --ctx-b: #5cc0d4;
+
+  position: relative;
+  width: 420px;
+  /*
+   * Lit later than the panel, and never by an intermediate custom property.
+   *
+   * `opacity` clamps its own input, so the ramp is written as a plain `calc`
+   * that starts at a third of the travel and is complete before the panel
+   * arrives: the contents come up inside a surface that already exists rather
+   * than expanding with it. Text growing with its own container is the specific
+   * thing that reads as a page loading.
+   *
+   * A `clamp()` behind a custom property was the first version of this and it
+   * resolved to an invalid opacity, which falls back to 1 silently: every shut
+   * panel rendered its note at full strength and clipped it against its own
+   * height. Nothing errors, and it looks like a layout bug.
+   */
+  opacity: calc((var(--open) - 0.34) * 2.6);
+  /* Arrives from slightly below, so the drawing rises into the room the panel
+     opened rather than fading onto it. */
+  transform: translateY(calc(16px * (1 - var(--open))));
+}
+
+.cc-board {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.cc-board circle,
+.cc-board rect {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ---- 01 · The ordering holds where the values do not ---------------------------------- */
+
+/*
+ * An interval, and the value inside it.
+ *
+ * The band is deliberately flat and unremarkable: it is what is not known, and a
+ * band with a gradient or a cap would be making a distributional claim the work
+ * does not support.
+ */
+.cc-band {
+  fill: color-mix(in srgb, var(--known) 15%, transparent);
+  stroke: color-mix(in srgb, var(--known) 22%, transparent);
+  stroke-width: 1;
+}
+
+/* The intervals keep moving, because they are the part that is not settled. */
+.cc-band {
+  animation: cc-widen 9s ease-in-out infinite;
+}
+
+.cc-band:nth-of-type(2) {
+  animation-delay: -2.2s;
+}
+.cc-band:nth-of-type(3) {
+  animation-delay: -4.4s;
+}
+.cc-band:nth-of-type(4) {
+  animation-delay: -6.6s;
+}
+
+@keyframes cc-widen {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(1.045);
+  }
+}
+
+.cc-point {
+  fill: var(--known);
+}
+
+/*
+ * The order through the markers.
+ *
+ * Monotonic by construction, and the one line on the drawing that is solid and
+ * at full strength. The whole finding is that this line is readable while the
+ * bands under it are not.
+ */
+.cc-order {
+  fill: none;
+  stroke: color-mix(in srgb, var(--known) 78%, transparent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cc-rank {
+  fill: color-mix(in srgb, var(--c-text-muted) 78%, transparent);
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+
+/* ---- 02 · Admissible first, preferred second ------------------------------------------ */
+
+/*
+ * The rule, and the only hard edge in the set of four.
+ *
+ * Compliance is a binary condition, so the line that carries it is drawn as one:
+ * full strength, no softening, and nothing crosses it that has not passed.
+ */
+.cc-gate {
+  fill: none;
+  stroke: color-mix(in srgb, var(--pass) 52%, transparent);
+  stroke-width: 1.6;
+  stroke-dasharray: none;
+}
+
+/* Where a candidate stood before the screening ran. */
+.cc-socket {
+  fill: none;
+  stroke: color-mix(in srgb, var(--absent) 30%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.cc-token {
+  fill: color-mix(in srgb, var(--pass) 82%, transparent);
+}
+
+/*
+ * A candidate that did not pass.
+ *
+ * Held, not deleted. A screened-out product still exists and is still a product;
+ * what it is not is a member of the set preference is evaluated over, and a
+ * hollow token in the fail tone says exactly that much.
+ */
+.cc-token.is-out {
+  fill: color-mix(in srgb, var(--fail) 18%, transparent);
+  stroke: color-mix(in srgb, var(--fail) 62%, transparent);
+  stroke-width: 1.5;
+}
+
+.cc-bar {
+  fill: color-mix(in srgb, var(--pass) 30%, transparent);
+}
+
+/* ---- 03 · What is missing, and what is recovered -------------------------------------- */
+
+.cc-cell {
+  fill: color-mix(in srgb, var(--known) 42%, transparent);
+}
+
+/*
+ * An absence, in the dash the candidate set and the declaration have used since
+ * Act I. By the fourth appearance it needs no legend.
+ */
+.cc-cell.is-absent {
+  fill: none;
+  stroke: color-mix(in srgb, var(--absent) 62%, transparent);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+  animation: cc-drift 10s linear infinite;
+}
+
+@keyframes cc-drift {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 12;
+  }
+}
+
+/*
+ * A value that was estimated rather than declared.
+ *
+ * Never the tone a reported value carries. A recovered attribute drawn the same
+ * as a reported one is the pipeline claiming more than it has, and the whole
+ * conclusion is that the difference stays visible downstream.
+ */
+.cc-cell.is-inferred {
+  fill: color-mix(in srgb, var(--infer) 40%, transparent);
+  stroke: color-mix(in srgb, var(--infer) 78%, transparent);
+  stroke-width: 1.2;
+  animation: cc-pulse 6s ease-in-out infinite;
+}
+
+@keyframes cc-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* How often each field is reported across the corpus. */
+.cc-coverage {
+  fill: color-mix(in srgb, var(--known) 26%, transparent);
+}
+
+/* ---- 04 · The same set, ranked twice -------------------------------------------------- */
+
+/*
+ * Five candidates, five colours, held across both columns.
+ *
+ * The colour is what makes a crossing readable: without a stable identity per
+ * token the slope is a bundle of lines rather than an order changing. Every
+ * token also holds its horizontal column, so colour is never the only encoding.
+ */
+.cc-cand[data-candidate='0'],
+.cc-slope[data-candidate='0'] {
+  --cand: #5b9dff;
+}
+.cc-cand[data-candidate='1'],
+.cc-slope[data-candidate='1'] {
+  --cand: #4fbf85;
+}
+.cc-cand[data-candidate='2'],
+.cc-slope[data-candidate='2'] {
+  --cand: #e0a544;
+}
+.cc-cand[data-candidate='3'],
+.cc-slope[data-candidate='3'] {
+  --cand: #cf6b68;
+}
+.cc-cand[data-candidate='4'],
+.cc-slope[data-candidate='4'] {
+  --cand: #a98cf0;
+}
+
+.cc-cand {
+  fill: color-mix(in srgb, var(--cand) 22%, var(--c-surface));
+  stroke: var(--cand);
+  stroke-width: 1.8;
+}
+
+.cc-slope {
+  fill: none;
+  stroke: color-mix(in srgb, var(--cand) 55%, transparent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+/* Which context each column is ranked under. A swatch and nothing else: a legend
+   on a drawing this small is a paragraph explaining a picture meant to save one. */
+.cc-ctx.is-a {
+  fill: var(--ctx-a);
+}
+
+.cc-ctx.is-b {
+  fill: var(--ctx-b);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-band,
+  .cc-cell.is-absent,
+  .cc-cell.is-inferred {
+    animation: none;
+  }
+}

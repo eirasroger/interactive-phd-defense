@@ -8,6 +8,7 @@ import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { act2Scenes } from '@/scenes/act2';
 import { CORRIDOR_ASSETS, corridorZone, opened } from '@/world/corridor/CorridorZone';
 import { BackboneScene } from './BackboneScene';
+import { ConclusionsScene } from './ConclusionsScene';
 import { ConditionsScene } from './ConditionsScene';
 import { StandingScene } from './StandingScene';
 import { RiseScene } from './RiseScene';
@@ -134,7 +135,7 @@ const DIVE = {
 } as const;
 
 /**
- * The last move of the deck, and why it is a glide.
+ * The move onto the closing frame, and why it is a glide.
  *
  * The camera is already inside the sea and levelled off, so this carries on
  * along the volume and settles slightly lower rather than descending again. A
@@ -147,6 +148,32 @@ const GLIDE = {
   aim: 24,
   from: -36,
   to: -158,
+} as const;
+
+/**
+ * The last move of the deck, and the only ascent in it.
+ *
+ * Act III's moves so far are a climb, a drift, a dive and a glide, and a fifth
+ * level glide would be the fourth identical move in a row. The camera instead
+ * rises back out of the sea it has been inside since the second theme and
+ * levels off looking down on the plan, which closes the act's arc on the shot it
+ * opened with: the corridor read from above, this time with the building gone
+ * and only the five points left.
+ *
+ * Longer than an ordinary hop and shorter than the rise. The rise had a building
+ * draining under it and had to be watched; this one is carrying the audience to
+ * a vantage they already know, and a move that outlasts its own content is a
+ * presenter standing in silence waiting for a camera.
+ */
+const ASCENT = {
+  seconds: 4.6,
+  /** Well above the volume, so the sea reads as something being left. */
+  eye: 58,
+  /** Below the eye, so the camera settles looking down rather than along. */
+  aim: 28,
+  from: -150,
+  to: -238,
+  fov: 42,
 } as const;
 
 /**
@@ -242,6 +269,30 @@ export const act3Scenes: readonly SceneDefinition[] = [
     travel: { seconds: GLIDE.seconds, ease: EASE.camera },
     assets: [...CORRIDOR_ASSETS],
     create: () => new StandingScene(),
+  },
+  /**
+   * The conclusions, and the last frame of the deck.
+   *
+   * Still the corridor zone, because the figure on it is the corridor: the five
+   * points stand exactly where `corridorPlan.json` put the five rooms, and
+   * leaving the zone here would take away the volume the camera is rising out
+   * of and put a cut where the ascent is.
+   */
+  {
+    id: 'conclusions',
+    title: 'Conclusions',
+    chapter: CHAPTER,
+    zone: corridorZone.id,
+    world: 'recessed',
+    pose: {
+      position: at([0, SECTION.floor + ASCENT.eye, ASCENT.from]),
+      target: at([0, SECTION.floor + ASCENT.aim, ASCENT.to]),
+      fov: ASCENT.fov,
+    },
+    air: opened,
+    travel: { seconds: ASCENT.seconds, ease: EASE.camera },
+    assets: [...CORRIDOR_ASSETS],
+    create: () => new ConclusionsScene(),
   },
 ];
 

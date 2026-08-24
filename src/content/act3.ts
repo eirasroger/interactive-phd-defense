@@ -289,3 +289,65 @@ export const STANDING_LIMITS = {
     },
   ],
 } as const;
+
+/* ---- The conclusions ---------------------------------------------------------------- */
+
+/**
+ * The last frame of the talk.
+ *
+ * **Four findings, each drawn.** The pipeline has been the subject of the whole
+ * deck and it is not redrawn here: an audience that has walked the corridor,
+ * read it from above and watched it argued twice does not need a sixth picture
+ * of it. What it has not been shown is the four findings side by side, each with
+ * the evidence that makes it true underneath it, which is what a conclusion
+ * slide is for.
+ *
+ * **Nothing moves position.** Every panel holds its place and its reserved room
+ * for the whole scene. A beat opens the panel it belongs to in place; a closing
+ * frame whose parts arrive in one corner and leave from another is a frame
+ * nobody can read while it is being spoken over.
+ *
+ * The fifth conclusion is a statement about the other four rather than a fifth
+ * finding, so it is set once under the heading and never illustrated.
+ */
+export const CONCLUSIONS = {
+  eyebrow: 'Act III · Conclusions',
+  heading: 'Conclusions',
+  line: 'The five contributions function as one traceable architecture.',
+} as const;
+
+export interface ConclusionPanel {
+  readonly key: 'comparison' | 'sequence' | 'evidence' | 'context';
+  readonly index: string;
+  /** The claim. The sentence the committee writes down. */
+  readonly lead: string;
+  /** What makes it true, and what the drawing beside it shows. */
+  readonly note: string;
+}
+
+export const CONCLUSION_PANELS: readonly ConclusionPanel[] = [
+  {
+    key: 'comparison',
+    index: '01',
+    lead: 'Relative comparison is the evaluation logic early design can sustain.',
+    note: 'Absolute quantification needs complete product data that arrives only once design is settled. The ordering across alternatives holds where the values cannot.',
+  },
+  {
+    key: 'sequence',
+    index: '02',
+    lead: 'Feasibility and preference are distinct operations, resolved in sequence.',
+    note: 'Screening establishes which products are admissible under the governing constraints. Preference is evaluated only over what passes.',
+  },
+  {
+    key: 'evidence',
+    index: '03',
+    lead: 'Incomplete evidence is characterised, and then carried forward.',
+    note: 'The extent and distribution of unreported information were measured across the corpus. Inference recovers part of it, and what stays uncertain remains visible.',
+  },
+  {
+    key: 'context',
+    index: '04',
+    lead: 'Preference is relational, and conditioned on the context of the decision.',
+    note: 'The same candidate set ranks differently under different applications and priorities, and the model adapts without anyone quantifying weights in advance.',
+  },
+];
