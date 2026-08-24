@@ -148,64 +148,144 @@ export const CARDS = {
 /* ---- The closing frame ------------------------------------------------------------- */
 
 /**
- * What the work contributes, what it is for, and where it stops.
+ * The closing frame, titled as the thesis titles the chapter behind it.
  *
- * Three zones on one frame, because the three are read against each other: a
- * contribution with no stated limit is a claim, and a limit with no stated
- * contribution is an apology. The pair above are what the work adds and what it
- * is good for; the one across the foot is said about both of them.
- *
- * **Placeholder.** Every line below is structure, not content. Nothing here is a
- * finding and none of it should be defended until the presenter has written it:
- * a line on this frame is a claim about the work, and an invented one reads as a
- * result.
+ * Three bands on one surface, one per beat, and the title does not change
+ * between them. What the work establishes, what it is good for, and where it
+ * stops are read against each other: a contribution with no stated limit is a
+ * claim, and a limit with no stated contribution is an apology. The frame is
+ * composed whole from the first beat and each beat lights one band of it, so
+ * the presenter is filling a composition rather than assembling one.
  */
 export const STANDING = {
   eyebrow: 'Act III · Closing',
-  heading: 'Contribution, implications, and where the work stops',
-  line: 'What the thesis adds, what it is good for, and what it does not settle.',
+  heading: 'Implications, limitations, and future work',
 } as const;
 
-export interface StandingZone {
-  readonly key: 'knowledge' | 'practice';
-  readonly label: string;
-  readonly rows: readonly string[];
+export type StandingIcon =
+  | 'comparison'
+  | 'context'
+  | 'partial'
+  | 'earlier'
+  | 'declaration'
+  | 'coverage'
+  | 'threshold';
+
+export interface StandingRow {
+  /** The name this claim gets when it comes back as a question. */
+  readonly lead: string;
+  /** One sentence, cut to the column it is set in. */
+  readonly note: string;
+  readonly icon: StandingIcon;
 }
 
-export const STANDING_ZONES: readonly StandingZone[] = [
+export interface StandingBand {
+  readonly key: 'knowledge' | 'practice';
+  readonly label: string;
+  readonly rows: readonly StandingRow[];
+}
+
+/**
+ * The first two bands.
+ *
+ * Theoretical contributions carries three claims and no more. An earlier pass
+ * had five, two of which were methodological sequencing rather than knowledge,
+ * and one of which restated the first in different words. A theoretical
+ * contribution is a claim about the problem class; how the pipeline is ordered
+ * internally is a method, and it is argued at the station that owns it.
+ *
+ * Practical implications is ordered by distance from the decision. Design and
+ * procurement act on the recommendation; the three after them act on the
+ * evidence it runs on.
+ *
+ * Every note is cut to three lines on the column it is set in. A band is read
+ * across in one glance and then talked over, and a fourth line in one column of
+ * four is the thing that breaks the row.
+ */
+export const STANDING_BANDS: readonly StandingBand[] = [
   {
     key: 'knowledge',
-    label: 'Contribution to knowledge',
+    label: 'Theoretical contributions',
     rows: [
-      'Placeholder. The first thing established that was not established before.',
-      'Placeholder. The second.',
-      'Placeholder. The third.',
+      {
+        lead: 'Relative comparison as the evaluation logic for early design',
+        note: 'Comparison across candidates is established as a valid mode of evaluation where absolute accounting cannot be supported, its validity resting on evidence assembled consistently for each.',
+        icon: 'comparison',
+      },
+      {
+        lead: 'Context integrated into the recommendation itself',
+        note: 'The recommendation is conditioned on the application and on the priorities of the project, so the ranking is produced for the case at hand.',
+        icon: 'context',
+      },
+      {
+        lead: 'Evaluation under incomplete evidence',
+        note: 'Uncertainty and partial information are treated as working conditions of early design, so products are ranked without requiring complete declarations.',
+        icon: 'partial',
+      },
     ],
   },
   {
     key: 'practice',
     label: 'Practical implications',
     rows: [
-      'Placeholder. Who can act on this, and on which decision.',
-      'Placeholder. What it changes about how that decision is made.',
-      'Placeholder. What adoption asks for.',
+      {
+        lead: 'Design and procurement',
+        note: 'An operational instrument for sustainable and circular selection at the stage the decision is taken, which was not previously available.',
+        icon: 'earlier',
+      },
+      {
+        lead: 'Manufacturers',
+        note: 'The analysis shows where documentation is reported inconsistently, and what must be stated more precisely for products to be compared on equal terms.',
+        icon: 'declaration',
+      },
+      {
+        lead: 'Programme operators',
+        note: 'Coverage and categorisation consistency across the corpus are quantified, showing where reporting requirements would benefit from harmonisation.',
+        icon: 'coverage',
+      },
+      {
+        lead: 'Regulators',
+        note: 'Verification at the product specification level can be automated, and its reliability is set by the scope of mandatory disclosure.',
+        icon: 'threshold',
+      },
     ],
   },
 ];
 
 /**
- * The foot of the frame, as short entries rather than a list.
+ * The third band, read as a matrix rather than as a list.
  *
- * A limitation set as a bullet reads as a concession; set as an entry with a
- * lead and a line under it, it reads as a boundary the work knows it has. Four
- * across, on the measure of both zones above.
+ * Three boundaries across, and two named rows down: what the work does not
+ * cover, and the research that covers it. An earlier pass ran the two sentences
+ * one under the other inside a single entry and left the reader to work out
+ * which was which from the colour alone, which is a legend nobody was given.
+ * Naming the two rows in the gutter costs two words and removes the question.
+ *
+ * Three columns. Regulatory scope is a real boundary and a minor one, and
+ * giving it a quarter of the closing frame would rank it with the evidence base
+ * and the case study. It is a spoken answer if the question comes.
  */
 export const STANDING_LIMITS = {
   label: 'Limitations and future work',
+  /** The two rows, named in the gutter. */
+  rows: { limit: 'Limitation', next: 'Future work' },
   items: [
-    { lead: 'Placeholder', note: 'What the evidence does not cover.' },
-    { lead: 'Placeholder', note: 'What the method assumes.' },
-    { lead: 'Placeholder', note: 'Where the results may not carry.' },
-    { lead: 'Placeholder', note: 'The next question this opens.' },
+    {
+      lead: 'EPDs as the evidence base',
+      limit:
+        'For some construction products an EPD does not carry the whole picture, and the rest of the evidence sits in separate documents.',
+      next: 'Associating the documents that describe one product, and adapting the pipeline once the digital product passport carries them together.',
+    },
+    {
+      lead: 'Concrete as the case study',
+      limit:
+        'The pipeline was exercised on concrete, chosen for the relevance of the product and for the maturity of its declarations.',
+      next: 'Extension to other construction products, where performance indicators differ, to establish whether transfer learning is sufficient or deeper adaptation is warranted.',
+    },
+    {
+      lead: 'Attributes covered by inference',
+      limit: 'Inference was demonstrated for end-of-life attributes and for global warming potential.',
+      next: 'Extension to technical performance and cost, which vary with application context and with market conditions.',
+    },
   ],
 } as const;

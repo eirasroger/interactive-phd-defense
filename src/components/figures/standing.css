@@ -1,156 +1,480 @@
 /*
- * The closing frame: contribution, implications, and where the work stops.
+ * The closing frame: three bands, three beats, one title.
  *
- * Two zones above and one across the foot. The pair above are read against each
- * other — what the work adds and what it is good for — and the one below is said
- * about both of them, so it takes the full measure rather than a third column.
+ * **This is the dark translation of the card surface C5 and the conditions
+ * slide use.** An 18px radius, an inset hairline in the band's own accent, a
+ * soft tinted ground and a deep shadow that lifts the panel off the sea rather
+ * than settling it onto a page. What changes here is that the surface is a
+ * variable rather than a constant: a band that has not been reached is the same
+ * panel with its light taken out of it.
  *
- * **Set out the way C5's second beat sets out its two halves.** No card around
- * anything: a zone is its own name in the accent over a hairline, and what it
- * holds stands on the ground. That is what lets three zones of different shapes
- * share one surface without reading as three boxes. Only a drawing gets a panel,
- * because a drawing needs a ground of its own to be read against.
- *
- * Translated for the dark, since C5 is a projected white slide and this stands
- * in the sea: the rule is drawn in the accent rather than in ink, and the panel
- * is a raised surface rather than an inset one.
+ * **One scalar per band.** `--open` runs 0 to 1 and every piece of the chrome is
+ * a function of it: the ground, the tint under the label, the inset hairline,
+ * the drop shadow, the grid texture and the accent every word inside is set in.
+ * Nine properties on nine clocks cannot be made to read as one surface coming
+ * up, and this is the lesson the conditions card already paid for.
  */
 .std {
-  --accent: var(--c-ai);
-
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: auto auto;
-  column-gap: var(--s-16);
-  row-gap: var(--s-12);
+  grid-template-rows: repeat(3, auto);
+  gap: var(--s-4);
   width: 100%;
   min-height: 0;
 }
 
-/* Said about both of the zones above it, so it takes the width of both. */
-.std-zone[data-zone='limits'] {
-  grid-column: 1 / -1;
+/* ---- The three hues ---------------------------------------------------------------- */
+
+/*
+ * Colour, and why there are three of them.
+ *
+ * Blue has meant *learned* since Act I and takes the theoretical claims. Amber
+ * is this deck's colour for the one place a person stands in the pipeline, and
+ * the practical band is entirely about people, so it takes amber. Violet is
+ * neither, and takes the boundary and the work past it.
+ *
+ * All three are lifted for a dark ground rather than borrowed flat from the
+ * projected white: `--c-ai` as it stands, the amber opened up from the economic
+ * family's `#a05a12`, which goes to mud on the dark, and the violet opened up
+ * from C5's `--c5-who`. Each clears 4.5:1 against the band ground at the weight
+ * it is set in, and no two of them are ever adjacent in the same row.
+ */
+.std-band[data-band='knowledge'] {
+  --band: #5b9dff;
+  --band-lift: #a8c8ff;
+  --tint: 13%;
+}
+
+.std-band[data-band='practice'] {
+  --band: #e0a544;
+  --band-lift: #f2cd8e;
+  --tint: 11%;
 }
 
 /*
- * Three equal zones, and nothing marks one of them.
- *
- * They are one statement read across, so no zone is ever the active one and
- * there is no accent to travel. An earlier pass lit them in turn across three
- * beats, which made the closing frame a build rather than a thing to stand on.
+ * `--tint` is per band rather than one constant, because the three hues do not
+ * carry equally on this ground. Amber reads at a lower mix than either of the
+ * others and violet reads at the lowest of the three, so a single value gives
+ * three bands of visibly different presence. These land them level.
  */
-.std-zone {
+.std-band[data-band='horizon'] {
+  --band: #9a72e6;
+  --band-lift: #c3a8f4;
+  --tint: 17%;
+}
+
+/* ---- A band ------------------------------------------------------------------------ */
+
+/*
+ * The surface, and every quantity on it derived from `--open`.
+ *
+ * At 0 the panel is a hairline with its name on it: the frame's architecture is
+ * readable from the first beat, so each click fills a region that was already
+ * standing rather than adding one. At 1 it is the full card.
+ *
+ * The shadow scales with the scalar as well. A shadow at full strength under an
+ * unlit panel says the panel is present and switched off, which is a UI state;
+ * a shadow that arrives with the light says the surface is coming forward.
+ */
+.std-band {
+  --open: 1;
+
+  position: relative;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: var(--s-3);
+  gap: var(--s-2);
   align-content: start;
   min-width: 0;
+  padding: var(--s-4) var(--s-6) var(--s-6);
+  border-radius: 18px;
+
+  background:
+    radial-gradient(
+      ellipse 78% 150% at 6% 0%,
+      color-mix(in srgb, var(--band) calc(var(--tint) * var(--open)), transparent) 0%,
+      transparent 64%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--c-surface) calc(4% + 78% * var(--open)), transparent) 0%,
+      color-mix(in srgb, var(--c-surface) calc(2% + 48% * var(--open)), transparent) 100%
+    );
+
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--band) calc(7% + 15% * var(--open)), transparent),
+    0 calc(16px * var(--open)) calc(44px * var(--open))
+      color-mix(in srgb, #000000 calc(46% * var(--open)), transparent);
 }
 
 /*
- * A zone's name, and the only place its accent is at full strength.
+ * The band's own texture, so a region still reads as part of a surface where
+ * nothing is standing on it. Masked to the top-left, where the label is, and
+ * carried away before it reaches the words.
+ */
+.std-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: calc(0.42 * var(--open));
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--band) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--band) 6%, transparent) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 62% 120% at 4% 0%, #000000 0%, transparent 72%);
+}
+
+/*
+ * The band's name.
  *
  * The station eyebrows in Act II are set exactly this way, so the register
- * carries: this is the label of a region, not a heading, and it should never be
- * mistaken for one.
+ * carries: this is the label of a region and it should never be mistaken for a
+ * heading. It is the one thing legible before its beat, which is what makes the
+ * unlit band a named region rather than an empty panel.
  */
 .std-label {
+  position: relative;
   font-family: var(--font-label);
   font-size: 0.6875rem;
   font-weight: var(--fw-semibold);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--c-ai) 88%, transparent);
+  color: color-mix(in srgb, var(--band-lift) calc(52% + 38% * var(--open)), transparent);
 }
 
 /*
- * The rule that sets the zone out.
+ * The rule that sets the band out.
  *
  * `transform-origin: left` and `scaleX`, because it is drawn rather than faded,
  * and it is a plain element so there is no view box for the origin to resolve
- * against wrongly.
+ * against wrongly. It carries a gradient rather than a flat tint, so the far end
+ * of a rule the width of the frame does not read as heavier than the near end.
  */
 .std-rule {
+  position: relative;
   height: 1px;
   transform-origin: left center;
-  background-color: color-mix(in srgb, var(--c-ai) 34%, transparent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--band) 46%, transparent) 0%,
+    color-mix(in srgb, var(--band) 16%, transparent) 76%,
+    transparent 100%
+  );
 }
 
-/* ---- What the two upper zones hold --------------------------------------------------- */
+/* ---- The first two bands: columns, read across -------------------------------------- */
 
-.std-body {
+/*
+ * Three columns or four, and both read across in one glance.
+ *
+ * A band states a property of the whole architecture and its evidence is that
+ * three or four things are alike, which is a comparison, and a comparison is
+ * read across. The stacked form used for a finding would give it a third of the
+ * width it needs.
+ */
+.std-cols {
+  position: relative;
   display: grid;
-  gap: 0;
-  align-content: start;
+  gap: var(--s-8);
+  align-items: start;
   margin-top: var(--s-2);
 }
 
-/*
- * A row, separated by a hairline rather than marked by a bullet.
- *
- * The same treatment C5 gives its indicator rows. A dash in front of a sentence
- * is a handout, and separation by geometry is the `dataviz` rule at text scale.
- */
-.std-row {
-  padding-block: var(--s-3);
-  border-bottom: 1px solid color-mix(in srgb, var(--c-ai) 9%, transparent);
+.std-cols[data-count='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.std-row p {
+.std-cols[data-count='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.std-col {
+  display: grid;
+  gap: 0;
+  align-content: start;
+  min-width: 0;
+}
+
+/* ---- The marks --------------------------------------------------------------------- */
+
+/*
+ * Where a mark sits.
+ *
+ * Over its column rather than beside it. A mark to the left of a paragraph is an
+ * ornament in the margin; a mark over one is the head of the column, and it is
+ * the first thing read on a band the presenter is about to talk through.
+ */
+.std-mark {
+  width: 46px;
+  height: 46px;
+  margin-bottom: var(--s-3);
+  color: color-mix(in srgb, var(--band-lift) calc(30% + 58% * var(--open)), transparent);
+}
+
+.std-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/*
+ * The three element roles of the icon set, at this frame's size.
+ *
+ * 2.8 on a 64 grid drawn at 46px lands near two device pixels, which is the
+ * weight the objective marks carry at 84px with a 1.5 stroke. Same set, half the
+ * size, one apparent weight.
+ */
+.std-icon .icon-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.std-icon .icon-dot {
+  fill: currentColor;
+  stroke: none;
+  /* Scaled about their own centres, not the viewBox origin. */
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Absence, in the dash the candidate set and the declaration have used since
+   Act I. Revealed by opacity rather than drawn on, because the draw-on writes
+   `stroke-dasharray` and would replace this pattern with a solid line. */
+.std-icon .icon-dash {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 4 4.5;
+}
+
+/* Scaffolding: the baselines a profile is measured on. Present, and
+   deliberately not competing with what stands on them. */
+.std-icon .icon-faint {
+  opacity: 0.4;
+}
+
+/* ---- What keeps moving once a band has settled -------------------------------------- */
+
+/*
+ * Four marks carry one element that does not stop.
+ *
+ * Slow, small, and each one saying the thing its mark is about: the
+ * recommendation moves within the set, an absence stays unresolved, an audit
+ * runs across the corpus. Everything else is still. A frame where seven marks
+ * are all in motion is a screensaver, and the presenter stands here for three
+ * beats.
+ */
+.std-icon .life-travel {
+  animation: std-travel 11s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes std-travel {
+  0%,
+  32% {
+    transform: translateY(0);
+  }
+  50%,
+  82% {
+    transform: translateY(32px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* An absence that is still open. The pattern travels rather than the line. */
+.std-icon .life-dash {
+  animation: std-dash 9s linear infinite;
+}
+
+@keyframes std-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 17;
+  }
+}
+
+/* A value that is present and uncertain, which is what inference returns. */
+.std-icon .life-fill {
+  animation: std-fill 6s ease-in-out infinite;
+}
+
+@keyframes std-fill {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* The audit crossing the corpus. */
+.std-icon .life-sweep {
+  animation: std-sweep 7s ease-in-out infinite;
+}
+
+@keyframes std-sweep {
+  0%,
+  8% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 0.55;
+  }
+  92%,
+  100% {
+    transform: translateX(44px);
+    opacity: 0;
+  }
+}
+
+/* ---- The third band: a matrix -------------------------------------------------------- */
+
+/*
+ * Three columns, one per boundary, and two rows named in a gutter at the left:
+ * what the work does not cover, and the research that covers it. An earlier pass
+ * stacked the two sentences inside one entry and distinguished them by colour
+ * alone, which is a legend nobody was handed. The gutter costs two words and
+ * removes the question.
+ *
+ * The gutter is sized to the longer of the two names rather than fixed, so the
+ * columns start where the words end.
+ */
+.std-matrix {
+  position: relative;
+  display: grid;
+  grid-template-columns: max-content repeat(3, minmax(0, 1fr));
+  column-gap: var(--s-8);
+  row-gap: var(--s-4);
+  align-items: start;
+  margin-top: var(--s-2);
+}
+
+/* The head row's gutter cell. Empty, and it has to exist for the grid to place
+   the three heads over the three columns. */
+.std-gutter {
+  display: block;
+}
+
+.std-head {
+  display: grid;
+  gap: 0;
+  align-content: start;
+  min-width: 0;
+}
+
+/*
+ * The row names.
+ *
+ * The band-label typography one step down and without the accent: they name a
+ * row inside a region rather than naming a region, and at full strength they
+ * would compete with the three column heads beside them.
+ */
+.std-side {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  line-height: 1.6;
+  padding-top: 2px;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--c-text-muted) 58%, transparent);
+}
+
+/*
+ * Where the work stops, and that it carries on.
+ *
+ * The trail takes the width of its column and sits over its head, so the three
+ * read as one row across the band before they read as three drawings.
+ */
+.std-trail {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: var(--s-3);
+  overflow: visible;
+}
+
+.std-trail-solid {
+  fill: color-mix(in srgb, var(--band-lift) 62%, transparent);
+}
+
+/*
+ * The trail keeps travelling.
+ *
+ * Each dot drifts outward and comes back on one cycle, offset along it by an
+ * inline delay, so the trail reads as a single thing moving rather than as seven
+ * things twitching. It is the smallest amount of motion that keeps the last band
+ * of the last frame from reading as the place the talk stopped.
+ */
+.std-trail-dot {
+  fill: var(--band-lift);
+  animation: std-drift 6.5s ease-in-out infinite;
+}
+
+@keyframes std-drift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+/* ---- The words ---------------------------------------------------------------------- */
+
+/*
+ * The lead, and why every entry on this frame has one.
+ *
+ * Three claims, four audiences and three boundaries is more than a committee can
+ * hold as sentences. The lead is the name the thing gets in the questions
+ * afterwards, so it is set in the band's accent and the sentence under it is
+ * not.
+ */
+.std-lead {
+  margin: 0 0 var(--s-2);
+  font-size: 0.9375rem;
+  line-height: var(--lh-snug);
+  color: color-mix(in srgb, var(--band-lift) 92%, transparent);
+}
+
+.std-note,
+.std-cell {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.6;
   color: color-mix(in srgb, var(--c-text-muted) 94%, transparent);
 }
 
 /*
- * Where the zone's drawing goes.
+ * The row that continues, held apart from the row that stops.
  *
- * Reserved from the first frame rather than left out, so the composition is
- * built against the space the figure will take instead of being rebuilt around
- * it later. A raised surface rather than C5's inset one, because on the dark an
- * inset panel is a hole and on the white it is a screen.
+ * Named in the gutter and set in the band's accent as well. The name carries the
+ * reading and the colour carries the scan, and on a band this dense both are
+ * doing work.
  */
-.std-panel {
-  margin-top: var(--s-6);
-  height: 172px;
-  border-radius: 14px;
-  background-color: color-mix(in srgb, var(--c-surface) 74%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-ai) 11%, transparent);
+.std-cell-next {
+  color: color-mix(in srgb, var(--band-lift) 76%, transparent);
 }
 
-/* ---- What the foot holds -------------------------------------------------------------- */
-
-/*
- * Four entries across, not a list.
- *
- * A limitation set as a bullet reads as a concession; set as a lead with a line
- * under it, it reads as a boundary the work knows it has. This is the row C5
- * runs under its architecture panel, at the measure of both zones above.
- */
-.std-items {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s-8);
-  margin-top: var(--s-4);
-}
-
-.std-item {
-  display: grid;
-  gap: var(--s-1);
-  align-content: start;
-}
-
-.std-item-lead {
-  margin: 0;
-  font-size: 1rem;
-  line-height: var(--lh-snug);
-  color: color-mix(in srgb, var(--c-ai) 84%, transparent);
-}
-
-.std-item-note {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: color-mix(in srgb, var(--c-text-muted) 90%, transparent);
+@media (prefers-reduced-motion: reduce) {
+  .std-icon .life-travel,
+  .std-icon .life-dash,
+  .std-icon .life-fill,
+  .std-icon .life-sweep,
+  .std-trail-dot {
+    animation: none;
+  }
 }
