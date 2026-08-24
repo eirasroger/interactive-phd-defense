@@ -5,7 +5,9 @@ import { STAGE } from '@/config/presentation';
 import type { CameraPose, Vec3 } from '@/engine/camera/types';
 import type { SceneDefinition } from '@/engine/scene/types';
 import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
+import { act1Captions } from '@/content/act1';
 import { act2Scenes } from '@/scenes/act2';
+import { ExteriorScene } from '@/scenes/act1/ExteriorScene';
 import { CORRIDOR_ASSETS, corridorZone, opened } from '@/world/corridor/CorridorZone';
 import { BackboneScene } from './BackboneScene';
 import { ConclusionsScene } from './ConclusionsScene';
@@ -177,6 +179,30 @@ const ASCENT = {
 } as const;
 
 /**
+ * The last shot of the deck, and why it settles rather than climbs.
+ *
+ * The title card that opened the talk returns over the sea, and a card is a
+ * thing to rest on. Every move in the act so far has gone somewhere: climb,
+ * drift, dive, glide, ascent. This one comes back down a little, carries on
+ * along the volume and opens the lens, which is the only shape of move that
+ * reads as arriving rather than as setting off again.
+ *
+ * Wide, and inside the field rather than above it. At the ascent's altitude
+ * there is nothing left in frame, and a title card over an empty ground is a
+ * title card on black.
+ */
+const CLOSE = {
+  seconds: 5,
+  /** Back inside the volume, at the height the dive levelled off at. */
+  eye: 34,
+  /** Level with the eye, so the field has a horizon in it rather than a floor. */
+  aim: 31,
+  from: -120,
+  to: -250,
+  fov: 50,
+} as const;
+
+/**
  * Act III opens inside Act II's world, and that is the whole point.
  *
  * The scene stays in the corridor zone: the corridor is the subject, not the
@@ -293,6 +319,31 @@ export const act3Scenes: readonly SceneDefinition[] = [
     travel: { seconds: ASCENT.seconds, ease: EASE.camera },
     assets: [...CORRIDOR_ASSETS],
     create: () => new ConclusionsScene(),
+  },
+  /**
+   * The title card again, and the last thing on the screen.
+   *
+   * The same composition the talk opened on, in `content/act1.ts`, imported
+   * rather than copied: the mark, the title, the author and the supervisors, set
+   * exactly as they were forty minutes earlier. What has changed is everything
+   * behind it, which is the only statement this beat has to make and the reason
+   * it needs no words of its own.
+   */
+  {
+    id: 'close',
+    title: 'Thank you',
+    chapter: CHAPTER,
+    zone: corridorZone.id,
+    world: 'recessed',
+    pose: {
+      position: at([0, SECTION.floor + CLOSE.eye, CLOSE.from]),
+      target: at([0, SECTION.floor + CLOSE.aim, CLOSE.to]),
+      fov: CLOSE.fov,
+    },
+    air: opened,
+    travel: { seconds: CLOSE.seconds, ease: EASE.camera },
+    assets: [...CORRIDOR_ASSETS],
+    create: () => new ExteriorScene(act1Captions.overview),
   },
 ];
 

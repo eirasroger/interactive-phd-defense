@@ -2,12 +2,17 @@ import { createCaption, type CaptionContent } from '@/components/Caption';
 import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 
 /**
- * An Act I scene is a text composition and a camera pose.
+ * A text composition and a camera pose, and nothing else.
  *
- * It builds no 3D content at all, because the exterior's argument is carried by
- * the building itself: the zone holds the geometry, world state resolves how
+ * It builds no 3D content at all, because the argument is carried by the world
+ * it is placed in: the zone holds the geometry, world state resolves how
  * specified it is, and the scene contributes the words and the place to stand.
  * That is what nine scenes looking at one building should cost.
+ *
+ * **Used at both ends of the deck.** The title card that opens Act I and the one
+ * that closes Act III are the same composition in two places, which is the whole
+ * point of the closing card, so it is the same class with a different pose
+ * rather than a second implementation of a caption.
  */
 export class ExteriorScene implements SceneInstance {
   constructor(private readonly content: CaptionContent) {}

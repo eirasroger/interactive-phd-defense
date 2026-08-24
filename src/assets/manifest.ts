@@ -1,6 +1,4 @@
 import type { AssetEntry } from '@/engine/assets/AssetLoader';
-import assemblyUrl from './models/assembly.glb?url';
-import corridorBayUrl from './models/corridor-bay.glb?url';
 import corridorShellUrl from './models/corridor-shell.glb?url';
 import corridorCeilingUrl from './models/corridor-ceiling.glb?url';
 import exteriorBuildingUrl from './models/exterior-building.glb?url';
@@ -30,8 +28,6 @@ import gravelTextureUrl from './textures/gravel.jpg?url';
  * build working on a GitHub Pages subpath and from a local directory.
  */
 export const manifest: readonly AssetEntry[] = [
-  { id: 'assembly', url: assemblyUrl, kind: 'model' },
-  { id: 'corridorBay', url: corridorBayUrl, kind: 'model' },
   { id: 'corridorShell', url: corridorShellUrl, kind: 'model' },
   // The ceiling ships separately because it is the one rigged thing in the
   // zone: its panels lift in sequence during the rise, so they cannot be part

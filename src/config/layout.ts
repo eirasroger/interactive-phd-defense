@@ -8,9 +8,10 @@ import type { Vec3 } from '@/engine/camera/types';
  * continuity with its neighbour. Continuity is the camera's job, not the
  * layout's.
  *
- * The engine-demo content keeps the span it was scaffolded into (0 to -130);
- * thesis zones are placed beyond it so the two can coexist until the demos are
- * retired.
+ * The span from 0 to -130 is empty: it held the engine demos while the thesis
+ * zones were being built, and the origins below are left where they were placed
+ * around it rather than shifted, because a zone origin is baked into every pose
+ * authored against it.
  */
 export const ZONE_ORIGIN = {
   exterior: [0, 0, 200] as Vec3,
@@ -37,5 +38,4 @@ export const ZONE_ORIGIN = {
    * passes the threshold.
    */
   corridor: [0, 0, 197.4] as Vec3,
-  demo: [0, 0, 0] as Vec3,
 } as const;
