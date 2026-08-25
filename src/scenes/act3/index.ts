@@ -12,7 +12,7 @@ import { CORRIDOR_ASSETS, corridorZone, opened } from '@/world/corridor/Corridor
 import { BackboneScene } from './BackboneScene';
 import { ConclusionsScene } from './ConclusionsScene';
 import { ConditionsScene } from './ConditionsScene';
-import { StandingScene } from './StandingScene';
+import { DiscussionScene } from './DiscussionScene';
 import { RiseScene } from './RiseScene';
 
 const CHAPTER = 'Act III — The Overlook';
@@ -257,7 +257,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
    * reading of a zone whose last state is the sea it drained into.
    */
   {
-    id: 'theme-two',
+    id: 'conditions',
     title: 'Missing data and context as structural conditions',
     chapter: CHAPTER,
     zone: corridorZone.id,
@@ -281,8 +281,8 @@ export const act3Scenes: readonly SceneDefinition[] = [
    * would say a third place rather than the same one, later.
    */
   {
-    id: 'standing',
-    title: 'Contribution, implications, and where the work stops',
+    id: 'discussion',
+    title: 'Implications, limitations, and future work',
     chapter: CHAPTER,
     zone: corridorZone.id,
     world: 'recessed',
@@ -294,7 +294,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
     air: opened,
     travel: { seconds: GLIDE.seconds, ease: EASE.camera },
     assets: [...CORRIDOR_ASSETS],
-    create: () => new StandingScene(),
+    create: () => new DiscussionScene(),
   },
   /**
    * The conclusions, and the last frame of the deck.

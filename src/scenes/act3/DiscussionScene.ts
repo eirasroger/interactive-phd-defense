@@ -25,7 +25,7 @@ import { el } from '@/utilities/dom';
  * reflows, nothing is assembled in front of the committee, and the presenter is
  * filling a shape the audience can already see the whole of.
  */
-export class StandingScene implements SceneInstance {
+export class DiscussionScene implements SceneInstance {
   readonly beats = 3;
 
   private figure: Standing | null = null;
