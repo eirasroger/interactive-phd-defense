@@ -1,3 +1,4 @@
+import { STAGE } from '@/config/presentation';
 import { qualityTier, type QualityTier } from '@/engine/env';
 
 /**
@@ -17,6 +18,20 @@ export interface QualitySettings {
   readonly environmentResolution: number;
   /** Upper bound on instanced particles per scene. */
   readonly particleBudget: number;
+  /**
+   * Ceiling on the drawing buffer, in pixels.
+   *
+   * The display is not a measure of the machine. `StageFit` scales one fixed
+   * 1920x1080 surface to whatever is plugged in, and `Renderer.measure` reads
+   * the post-transform rect, so without this the render resolution is decided
+   * by the projector: the same laptop measured 22.9 ms at 1280x800, 30.8 ms at
+   * 1080p and 76.7 ms at 4K. A defence runs once on a display nobody has seen.
+   *
+   * Capping costs less here than it would anywhere else, because every caption,
+   * figure and label is DOM in `#overlay-layer` rather than canvas. Typography
+   * stays native-sharp at any resolution and only the 3D image is resampled.
+   */
+  readonly maxRenderPixels: number;
 }
 
 const TIERS: Record<QualityTier, QualitySettings> = {
@@ -29,6 +44,7 @@ const TIERS: Record<QualityTier, QualitySettings> = {
     anisotropy: 1,
     environmentResolution: 128,
     particleBudget: 1_000,
+    maxRenderPixels: 1280 * 720,
   },
   standard: {
     maxPixelRatio: 1.5,
@@ -39,6 +55,7 @@ const TIERS: Record<QualityTier, QualitySettings> = {
     anisotropy: 8,
     environmentResolution: 256,
     particleBudget: 20_000,
+    maxRenderPixels: 1600 * 900,
   },
   high: {
     maxPixelRatio: 2,
@@ -51,6 +68,9 @@ const TIERS: Record<QualityTier, QualitySettings> = {
     anisotropy: 16,
     environmentResolution: 256,
     particleBudget: 80_000,
+    // The deck's own surface. Rendering above the resolution it is composed at
+    // resamples a 1080p composition at 2-6x the fill cost.
+    maxRenderPixels: STAGE.width * STAGE.height,
   },
 };
 

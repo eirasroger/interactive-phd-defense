@@ -1,14 +1,15 @@
 import {
   Group,
-  InstancedMesh,
   Matrix4,
   Mesh,
+  type InstancedMesh,
   type Material,
   Quaternion,
   Vector3,
   type BufferGeometry,
   type Object3D,
 } from 'three';
+import { chunkInstances, type Chunked } from './chunking';
 import {
   bankReach,
   channelHalf,
@@ -138,20 +139,28 @@ export function createBankside(source: Object3D): Bankside {
   scatterBanks(random, plant);
   scatterVerges(random, plant);
 
+  const chunks: Chunked[] = [];
+
   for (const [name, list] of placements) {
     const [key, index] = name.split(':');
     const template = templates.get(key!)?.[Number(index)];
     if (!template) continue;
 
-    const mesh = new InstancedMesh(template.geometry, template.material, list.length);
-    list.forEach((transform, i) => mesh.setMatrixAt(i, transform));
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.computeBoundingSphere();
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.name = key!;
-    object.add(mesh);
-    meshes.push(mesh);
+    // Split by position. The banks run the length of the site, so as one mesh
+    // per species the whole stream was drawn whenever any stretch of it was in
+    // shot — see `chunking.ts`.
+    const chunked = chunkInstances(
+      { geometry: template.geometry, material: template.material, matrices: list },
+      key!,
+    );
+    chunks.push(chunked);
+
+    for (const mesh of chunked.meshes) {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      object.add(mesh);
+      meshes.push(mesh);
+    }
   }
 
   const stones = boulders(random);
@@ -166,7 +175,7 @@ export function createBankside(source: Object3D): Bankside {
   return {
     object,
     dispose() {
-      for (const mesh of meshes) mesh.dispose();
+      for (const chunk of chunks) chunk.dispose();
       stones.dispose();
     },
   };

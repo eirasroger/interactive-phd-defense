@@ -30,3 +30,23 @@ export function zoneProgressByIndex(scenes: readonly SceneDefinition[]): readonl
 
   return progress;
 }
+
+/**
+ * Every zone the deck names, with the union of the assets its scenes declare.
+ *
+ * Insertion-ordered, so preparation happens in the order the talk will need
+ * them and a deck interrupted mid-preparation is still ready for its opening.
+ */
+export function assetsByZone(
+  scenes: readonly SceneDefinition[],
+): ReadonlyMap<string, ReadonlySet<string>> {
+  const zones = new Map<string, Set<string>>();
+
+  for (const scene of scenes) {
+    const assets = zones.get(scene.zone) ?? new Set<string>();
+    for (const id of scene.assets ?? []) assets.add(id);
+    zones.set(scene.zone, assets);
+  }
+
+  return zones;
+}

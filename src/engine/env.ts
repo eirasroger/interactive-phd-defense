@@ -59,9 +59,24 @@ export function detectQualityTier(): QualityTier {
 
   const cores = navigator.hardwareConcurrency ?? 4;
   const memory = (navigator as { deviceMemory?: number }).deviceMemory ?? 4;
-  const pixels = window.screen.width * window.screen.height * window.devicePixelRatio;
 
-  if (cores >= 8 && memory >= 8 && pixels <= 1920 * 1080 * 2) return 'high';
+  /*
+   * The display is deliberately not part of this any more.
+   *
+   * The test used to include the screen's pixel count, on the reasoning that a
+   * large display costs more to fill. It did, and it no longer does:
+   * `QualitySettings.maxRenderPixels` caps the drawing buffer at the surface the
+   * deck is composed on, so what gets plugged in changes how the image is
+   * scaled and not how much of it is drawn.
+   *
+   * Leaving the term in was the worse of the two failures. A 4K monitor put the
+   * pixel count at twice the bound and dropped a capable machine to `standard`,
+   * which is no post-processing, no bloom and quarter-area shadow maps — so the
+   * hall would have seen a different deck from the one that was rehearsed,
+   * decided by a cable. `isTouchPrimary` already catches the handsets this was
+   * really guarding against.
+   */
+  if (cores >= 8 && memory >= 8) return 'high';
   return 'standard';
 }
 

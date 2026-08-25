@@ -124,6 +124,7 @@ export function applyWind(meshes: readonly InstancedMesh[]): Wind {
   const direction = { value: DIRECTION };
   const bands = new Map<Material, Band>();
   const patched = new Set<Material>();
+  const shadows = new Map<Material, MeshDepthMaterial>();
   const depths: MeshDepthMaterial[] = [];
 
   // Band first, across every bucket, because a material is shared between
@@ -152,14 +153,25 @@ export function applyWind(meshes: readonly InstancedMesh[]): Wind {
     // knows nothing about the displacement above. Foliage is alpha-cut, so the
     // map and its threshold have to come across as well or every canopy casts
     // the shadow of a solid quad.
-    const depth = new MeshDepthMaterial({
-      depthPacking: RGBADepthPacking,
-      map: material.map,
-      alphaTest: material.alphaTest,
-    });
-    patch(depth, band, time, direction);
+    //
+    // **One per source material, not one per mesh.** The depth material depends
+    // only on the map, the threshold and the band, all of which come from the
+    // material — so a mesh is not the thing that distinguishes them. It became
+    // worth saying once the fields were split into cells: the planting alone
+    // went from 83 meshes to 193, and a depth material per mesh is that many
+    // uniform uploads in the shadow pass to describe two dozen distinct states.
+    let depth = shadows.get(material);
+    if (!depth) {
+      depth = new MeshDepthMaterial({
+        depthPacking: RGBADepthPacking,
+        map: material.map,
+        alphaTest: material.alphaTest,
+      });
+      patch(depth, band, time, direction);
+      shadows.set(material, depth);
+      depths.push(depth);
+    }
     mesh.customDepthMaterial = depth;
-    depths.push(depth);
   }
 
   return {

@@ -1,16 +1,26 @@
 import {
+  DoubleSide,
   Group,
   InstancedMesh,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   Quaternion,
   Vector3,
   type BufferGeometry,
   type Material,
   type MeshStandardMaterial,
   type Object3D,
+  type PerspectiveCamera,
 } from 'three';
 import type { CanopyField } from './canopy';
+import { chunkInstances, type Chunked } from './chunking';
+import {
+  drawableTree,
+  impostorCard,
+  renderImpostorsFor,
+  type ImpostorLight,
+} from './impostors';
 import {
   avenueAt,
   CROSSING,
@@ -35,7 +45,72 @@ export interface Parkland {
 export interface ParklandInputs {
   /** Every tree planted here registers, so the ground can shade under it. */
   readonly canopy: CanopyField;
+  /** Read each frame to decide which rank of trees is modelled — see `FAR`. */
+  readonly camera: PerspectiveCamera;
+  /** Photographs the templates for the far rank's cards. */
+  readonly renderer: import('three').WebGLRenderer;
 }
+
+/**
+ * Metres beyond which a tree is a card rather than a model.
+ *
+ * The park is the most expensive thing in Act I and chunking could not touch
+ * it where it hurt most: the establishing poses look at the whole site, so 98%
+ * of the field is genuinely in frame and there is nothing for a frustum to
+ * reject. What is wrong there is not how many trees are drawn but what each one
+ * costs — 43,500 triangles for something forty metres wide on a 1080p frame.
+ *
+ * Ninety metres is set from the poses rather than from a quality judgement. The
+ * closest the camera comes to a tree it is *discussing* is the avenue at
+ * `objectives` and `contributions`, where the rows framing the entrance are
+ * inside sixty metres and stay modelled. Everything past ninety is scenery in
+ * an establishing shot, seen at under fourteen degrees of depression from every
+ * Act I pose, which is well inside what a cross of quads carries.
+ */
+const FAR = 90;
+
+/**
+ * Metres across a park cell, smaller than the site's default.
+ *
+ * The park's cells do two jobs rather than one: they are what the frustum
+ * rejects, and they are the unit the card swap decides on. The second job wants
+ * them small. A cell is kept modelled whenever its *nearest* tree is inside
+ * `FAR`, so at the default 80 m — cells reaching 46 m from their middle — one
+ * tree near the camera holds eighty metres of park at full detail, and the poses
+ * that stand in the park kept all 408 trees modelled.
+ *
+ * Affordable here in a way it is not for the planting: the park is 408 instances
+ * in nine buckets, so halving the cell costs a few dozen draw calls rather than
+ * the hundreds it would cost across the planting's eighty-three.
+ */
+const LOD_CELL = 40;
+
+/**
+ * Daylight for the park's cards, which is not the belt's daylight.
+ *
+ * Set against the measurement rather than by eye: with the belt's rig the cards
+ * rendered at 49% of the luminance of the same tree modelled, so they read as
+ * silhouettes cut out of a lit park. The levels here are the exterior
+ * atmosphere's own — `skyColor`, `groundColor` and `keyColor` from
+ * `ExteriorZone` — lifted until a card and a model of one tree measure the same.
+ *
+ * Flat in the same proportion the belt is, and for the belt's reason: a card is
+ * a cross of quads at a random yaw, so the level is what must match and the
+ * modelling is what cannot.
+ */
+const CARD_LIGHT: ImpostorLight = {
+  sky: 0x9fc4ea,
+  ground: 0x6a7a4e,
+  // Far above the belt's 2.1 and 1.7, and the gap is ACES rather than taste.
+  // The photograph is tone-mapped when it is taken, so the curve is already
+  // compressing hard by the time these levels matter: doubling the belt's rig
+  // moved a card from 55% of the luminance of the same tree modelled to only
+  // 63%. Swept against that measurement across five Act I poses, these land the
+  // ratio between 0.81 and 1.23 — the flattest the pair gets.
+  ambient: 10.5,
+  key: 0xfff4e4,
+  keyIntensity: 8.1,
+};
 
 /**
  * The trees, lamps and benches that make the park a designed place.
@@ -50,7 +125,7 @@ export interface ParklandInputs {
 export function createParkland(
   planting: Object3D,
   props: Object3D,
-  { canopy }: ParklandInputs,
+  { canopy, camera, renderer }: ParklandInputs,
 ): Parkland {
   const object = new Group();
   object.name = 'parkland';
@@ -61,6 +136,17 @@ export function createParkland(
   const placements = new Map<string, Matrix4[]>();
   const parts = new Map<string, { geometry: BufferGeometry; material: Material }>();
   const heights = new Map<string, number>();
+
+  /**
+   * The far rank's plan, kept beside the near rank's rather than derived later.
+   *
+   * A card is one unit tall and the model is in the template's own units, so the
+   * two ranks cannot share an instance matrix — the model's scale is
+   * `metres / template.height` and the card's is `metres`. Everything else is
+   * shared deliberately: same position, same yaw, same seed, so a tree does not
+   * move or turn when it swaps.
+   */
+  const cards = new Map<string, { template: TreeTemplate; matrices: Matrix4[] }>();
 
   let seed = 0x3ad91f;
   const random = (): number => {
@@ -115,6 +201,13 @@ export function createParkland(
 
     canopy.add(x, z, crown);
     species.parts.forEach((part, index) => emit(`${species.name}#${index}`, part, species.height));
+
+    const card = cards.get(species.name) ?? { template: species, matrices: [] };
+    // Uniform in metres: the card carries its own width through `aspect`, so
+    // giving it the model's x/z jitter would stretch the photograph instead.
+    card.matrices.push(new Matrix4().compose(seat, spin, new Vector3(metres, metres, metres)));
+    cards.set(species.name, card);
+
     return true;
   };
 
@@ -148,25 +241,141 @@ export function createParkland(
   const meshes: InstancedMesh[] = [];
   const swaying: InstancedMesh[] = [];
 
+  const chunks: Chunked[] = [];
+  /** Near and far versions of one cell, toggled together. See `Rank`. */
+  const ranks = new Map<string, Rank>();
+
+  const rankFor = (key: string): Rank => {
+    const existing = ranks.get(key);
+    if (existing) return existing;
+    const rank: Rank = { near: [], far: [], centre: new Vector3(), radius: 0, modelled: true };
+    ranks.set(key, rank);
+    return rank;
+  };
+
   for (const [key, list] of placements) {
     const part = parts.get(key)!;
-    const mesh = new InstancedMesh(part.geometry, part.material, list.length);
-    list.forEach((transform, index) => mesh.setMatrixAt(index, transform));
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.computeBoundingSphere();
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.name = key;
-    (mesh.userData as { plantHeight: number }).plantHeight = heights.get(key)!;
+    // Split by position. As one field per species it was submitted whole to both
+    // the camera and the shadow camera from every pose — see `chunking.ts`.
+    const chunked = chunkInstances(
+      { geometry: part.geometry, material: part.material, matrices: list },
+      key,
+      { plantHeight: heights.get(key)! },
+      LOD_CELL,
+    );
+    chunks.push(chunked);
 
-    object.add(mesh);
-    meshes.push(mesh);
-    // Furniture does not move in wind, and a lamp post that did would be the
-    // most distracting object in the act.
-    if (!furniture.has(key)) swaying.push(mesh);
+    const tree = !furniture.has(key);
+
+    for (const chunk of chunked.chunks) {
+      const { mesh } = chunk;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+
+      object.add(mesh);
+      meshes.push(mesh);
+      // Furniture does not move in wind, and a lamp post that did would be the
+      // most distracting object in the act.
+      if (tree) {
+        swaying.push(mesh);
+        rankFor(chunk.key).near.push(mesh);
+      }
+    }
   }
 
   const wind: Wind = applyWind(swaying);
+
+  // The far rank. Built after the near one because it is photographed from the
+  // same templates and has to agree with them exactly.
+  const impostors = buildCards(renderer, cards);
+  const time = { value: 0 };
+
+  for (const { key, mesh } of impostors.chunks) {
+    mesh.castShadow = false;
+    // A card has no normal worth lighting, and at ninety metres the shadow it
+    // would cast is outside the shadow frustum in any case.
+    mesh.receiveShadow = false;
+    mesh.visible = false;
+    object.add(mesh);
+    rankFor(key).far.push(mesh);
+  }
+
+  sway(impostors.materials, time);
+
+  // Where each cell is and how far it reaches, so the swap is one test per cell
+  // per frame rather than one per tree. Taken off the chunk's own bounding
+  // sphere, which `chunkInstances` has already computed from the instances that
+  // landed in it.
+  for (const rank of ranks.values()) {
+    const source = rank.near[0] ?? rank.far[0];
+    if (!source?.boundingSphere) continue;
+    rank.centre.copy(source.boundingSphere.center);
+    for (const mesh of [...rank.near, ...rank.far]) {
+      if (mesh.boundingSphere) rank.radius = Math.max(rank.radius, mesh.boundingSphere.radius);
+    }
+  }
+
+  const eye = new Vector3();
+
+  /**
+   * Which rank each cell draws, decided **only from where the camera is now**.
+   *
+   * Stateless on purpose. The obvious refinements — a hysteresis band, or
+   * holding a downgrade until the cell leaves the frame — both make the rank a
+   * function of the route taken to get here, and a defence is not walked in a
+   * straight line. A presenter who jumps back to `park` to answer a question
+   * would get a different picture from the one they rehearsed, which is the
+   * same failure `setProgress` exists to prevent: world state is derived from
+   * where the deck is, never from how it arrived. Holding the downgrade also
+   * simply does not work here — the park is in frame in every establishing
+   * shot, so the condition never comes true and the cells stay modelled for the
+   * whole act.
+   *
+   * Nothing flickers, because a parked camera gives a constant distance. A cell
+   * can change rank while a transition is flying past it, and that is the
+   * accepted cost of the two properties above.
+   */
+  const swap = (): void => {
+    /*
+     * **In the park's own space, not the world's.**
+     *
+     * A chunk's bounding sphere is in the mesh's local space and the camera's
+     * position is in the world's, and the exterior zone stands at
+     * `ZONE_ORIGIN.exterior` — 200 m down +Z. Comparing the two directly made
+     * every distance wrong by up to that much, which carded the avenue rows the
+     * camera walks straight down while it was standing among them. Bringing the
+     * camera into the park's space is one transform a frame and cannot drift the
+     * way a remembered offset would.
+     */
+    object.updateWorldMatrix(true, false);
+    eye.copy(camera.position);
+    object.worldToLocal(eye);
+
+    for (const rank of ranks.values()) {
+      if (rank.far.length === 0) continue;
+
+      /*
+       * The **near edge** of the cell, never its centre.
+       *
+       * A cell is `LOD_CELL` metres across and holds trees well out toward its
+       * corners, so measuring to the centre says a cell is far away while part
+       * of it is standing next to the camera — which is exactly how the avenue
+       * rows ended up as cards at the two poses that walk down them. Taking the
+       * radius off asks the question that actually matters: is *all* of this
+       * beyond the distance a card holds up at. It errs toward drawing the
+       * model, which is the side to err on, because a card too close is the one
+       * failure the audience can see.
+       */
+      const modelled = rank.centre.distanceTo(eye) - rank.radius < FAR;
+      if (modelled === rank.modelled) continue;
+
+      rank.modelled = modelled;
+      for (const mesh of rank.near) mesh.visible = modelled;
+      for (const mesh of rank.far) mesh.visible = !modelled;
+    }
+  };
+
+  swap();
 
   // Reported rather than assumed. A refusal rate is the one number that says
   // whether the clearance rules are doing their job or quietly emptying the
@@ -179,17 +388,141 @@ export function createParkland(
       `(~${((planted * average) / 1e6).toFixed(1)}M tris).`,
   );
 
+  const far = [...ranks.values()].filter((rank) => rank.far.length > 0).length;
+  console.info(
+    `[parkland] ${ranks.size} tree cells, ${far} with a card rank, ` +
+      `swapping beyond ${FAR} m.`,
+  );
+
   return {
     object,
     update(dt: number) {
       wind.update(dt);
+      time.value += dt;
+      swap();
     },
     dispose() {
       wind.dispose();
-      for (const mesh of meshes) mesh.dispose();
+      for (const chunk of chunks) chunk.dispose();
+      impostors.dispose();
       for (const part of parts.values()) part.geometry.dispose();
     },
   };
+}
+
+/**
+ * One cell of park, in both of the ways it can be drawn.
+ *
+ * The unit of the swap is the cell rather than the tree, and that is what keeps
+ * it free: a distance test per cell per frame instead of per trunk, and no
+ * instance buffer is ever rewritten. The cost is that a cell changes rank all at
+ * once, which is why `FAR` is set well beyond anything the act looks at closely.
+ */
+interface Rank {
+  readonly near: InstancedMesh[];
+  readonly far: InstancedMesh[];
+  readonly centre: Vector3;
+  /** How far the cell reaches, so the test can ask about its nearest tree. */
+  radius: number;
+  modelled: boolean;
+}
+
+interface Cards {
+  readonly chunks: readonly { key: string; mesh: InstancedMesh }[];
+  readonly materials: readonly MeshBasicMaterial[];
+  dispose(): void;
+}
+
+/**
+ * The far rank: one photograph per species, instanced onto the same plan.
+ *
+ * Cut rather than blended, exactly as the belt is. Hundreds of overlapping
+ * transparent cards would need sorting every frame and would still be wrong; a
+ * hard cut needs neither and writes depth, so the park occludes itself.
+ */
+function buildCards(
+  renderer: import('three').WebGLRenderer,
+  plan: Map<string, { template: TreeTemplate; matrices: Matrix4[] }>,
+): Cards {
+  const entries = [...plan.values()];
+  const impostors = renderImpostorsFor(
+    renderer,
+    entries.map((entry) => drawableTree(entry.template)),
+    {
+      // One tree, not the belt's clump: this card stands where a single
+      // modelled tree stood a frame earlier, and a clump would triple it.
+      clumped: false,
+      light: CARD_LIGHT,
+    },
+  );
+
+  const chunks: { key: string; mesh: InstancedMesh }[] = [];
+  const materials: MeshBasicMaterial[] = [];
+  const geometries: BufferGeometry[] = [];
+  const built: Chunked[] = [];
+
+  impostors.forEach((impostor, index) => {
+    const entry = entries[index];
+    if (!entry) return;
+
+    const geometry = impostorCard(impostor);
+    const material = new MeshBasicMaterial({
+      map: impostor.texture,
+      transparent: false,
+      alphaTest: 0.45,
+      side: DoubleSide,
+      fog: true,
+    });
+
+    const chunked = chunkInstances(
+      { geometry, material, matrices: entry.matrices },
+      `${entry.template.name}:card`,
+      {},
+      LOD_CELL,
+    );
+    built.push(chunked);
+    chunks.push(...chunked.chunks);
+    materials.push(material);
+    geometries.push(geometry);
+  });
+
+  return {
+    chunks,
+    materials,
+    dispose() {
+      for (const chunk of built) chunk.dispose();
+      for (const material of materials) material.dispose();
+      for (const geometry of geometries) geometry.dispose();
+      for (const impostor of impostors) impostor.dispose();
+    },
+  };
+}
+
+/**
+ * The same slow lean the belt has, for the same reason.
+ *
+ * A card that stands still beside a modelled tree that is swaying is the swap
+ * announcing itself. Amplitude is deliberately under the modelled wind's: at
+ * ninety metres the sway that reads is the top of the canopy drifting, and
+ * matching the near rank's throw would make the far rank the livelier one.
+ */
+function sway(materials: readonly MeshBasicMaterial[], time: { value: number }): void {
+  for (const material of materials) {
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = time;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', `#include <common>
+         uniform float uTime;`)
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+           float lean = position.y * position.y;
+           float phase = uTime * 0.42 + instanceMatrix[3][0] * 0.06 + instanceMatrix[3][2] * 0.04;
+           transformed.x += sin(phase) * lean * 0.030;
+           transformed.z += cos(phase * 0.83) * lean * 0.022;`,
+        );
+    };
+  }
 }
 
 type Plant = (species: TreeTemplate, x: number, z: number, metres: number) => boolean;

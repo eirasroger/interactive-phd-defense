@@ -105,19 +105,44 @@ export class Renderer {
   }
 
   /**
-   * Scales pixel ratio down when frames are being missed. Resolution is the
-   * cheapest large lever available and degrades far more gracefully than
-   * dropping frames does.
+   * Scales resolution down when frames are being missed.
+   *
+   * **This is a real resize now, and it was not before.** `RenderPipeline`
+   * hands `EffectComposer` its own render target so the composer can carry
+   * MSAA, and three.js responds by setting the composer's internal pixel ratio
+   * to 1. Every step down therefore changed the size of the final blit to the
+   * canvas and left the buffer the scene is actually drawn into untouched:
+   * measured, halving the pixel ratio moved the frame from 26.1 ms to 25.5 ms.
+   * The one safety net a talk on unseen hardware has was softening the image
+   * and buying nothing. The pipeline now sizes itself from the drawing buffer,
+   * so this notifies rather than silently adjusting a number nobody reads.
    */
   setPixelRatioScale(scale: number): void {
-    const next = Math.max(ADAPTIVE.minPixelRatio / this.quality.maxPixelRatio, Math.min(scale, 1));
+    const next = Math.max(ADAPTIVE.minPixelRatio, Math.min(scale, 1));
     if (Math.abs(next - this.pixelRatioScale) < 0.01) return;
     this.pixelRatioScale = next;
     this.applyPixelRatio();
+    this.events.onResize?.(this.width, this.height);
   }
 
+  /**
+   * How many device pixels are drawn per CSS pixel, after the budget.
+   *
+   * Three bounds, and the third is the one that makes the deck safe on a
+   * display nobody has measured. `devicePixelRatio` is what the panel asks for
+   * and `maxPixelRatio` is what the tier allows, but neither of them knows how
+   * large the stage has been scaled to: `StageFit` stretches one 1920x1080
+   * surface to fill the window, so on a 4K screen the container rect is
+   * 3840x2160 and the drawing buffer followed it to four times the pixels and
+   * six times the frame cost. The budget expresses the ceiling in the unit that
+   * actually governs fill cost, which is pixels rather than a ratio.
+   */
   get effectivePixelRatio(): number {
-    return Math.min(window.devicePixelRatio, this.quality.maxPixelRatio) * this.pixelRatioScale;
+    const requested = Math.min(window.devicePixelRatio, this.quality.maxPixelRatio);
+    const budgeted = Math.sqrt(
+      this.quality.maxRenderPixels / Math.max(this.width * this.height, 1),
+    );
+    return Math.min(requested, budgeted) * this.pixelRatioScale;
   }
 
   dispose(): void {

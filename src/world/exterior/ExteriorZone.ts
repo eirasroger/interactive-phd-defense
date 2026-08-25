@@ -196,7 +196,14 @@ class Exterior implements ZoneInstance {
     const flora = assets.model(PLANTING_ASSET).scene;
     this.woodland = createWoodland(context.renderer, flora, { canopy });
     this.bankside = createBankside(flora);
-    this.parkland = createParkland(flora, assets.model(PARK_ASSET).scene, { canopy });
+    this.parkland = createParkland(flora, assets.model(PARK_ASSET).scene, {
+      canopy,
+      // The park swaps modelled trees for cards by distance, so it needs both
+      // the camera it is measured from and the renderer that takes the
+      // photographs — see `parkland.ts` `FAR`.
+      camera: context.camera,
+      renderer: context.renderer,
+    });
     this.planting = createPlanting(assets.model(PLANTING_ASSET), { canopy });
 
     this.terrain = createTerrain({

@@ -1,18 +1,18 @@
 import {
   BufferGeometry,
   DoubleSide,
-  Float32BufferAttribute,
   Group,
-  InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
   Quaternion,
   Vector3,
+  type InstancedMesh,
   type Object3D,
   type WebGLRenderer,
 } from 'three';
 import type { CanopyField } from './canopy';
-import { renderImpostors, type Impostor } from './impostors';
+import { chunkInstances, type Chunked } from './chunking';
+import { impostorCard, renderImpostors } from './impostors';
 import {
   HILL_PLOTS,
   hillShare,
@@ -38,9 +38,6 @@ export interface WoodlandInputs {
   /** The belt registers here so the ground under it reads as woodland floor. */
   readonly canopy: CanopyField;
 }
-
-/** Quads per card. Three at sixty degrees reads as a volume from any bearing. */
-const BLADES = 3;
 
 /** Crown radius as a fraction of height, for a conifer. Only the ground reads it. */
 const CROWN = 0.26;
@@ -89,12 +86,13 @@ export function createWoodland(
   const meshes: InstancedMesh[] = [];
   const materials: MeshBasicMaterial[] = [];
   const geometries: BufferGeometry[] = [];
+  const chunks: Chunked[] = [];
 
   impostors.forEach((impostor, species) => {
     const mine = placements.filter((_, index) => index % impostors.length === species);
     if (mine.length === 0) return;
 
-    const geometry = card(impostor);
+    const geometry = impostorCard(impostor);
     const material = new MeshBasicMaterial({
       map: impostor.texture,
       transparent: false,
@@ -108,29 +106,35 @@ export function createWoodland(
 
     sway(material, time);
 
-    const mesh = new InstancedMesh(geometry, material, mine.length);
-    const matrix = new Matrix4();
     const quaternion = new Quaternion();
     const axis = new Vector3(0, 1, 0);
     const scale = new Vector3();
     const position = new Vector3();
 
-    mine.forEach((placement, index) => {
+    const matrices = mine.map((placement) => {
       quaternion.setFromAxisAngle(axis, placement.yaw);
       scale.setScalar(placement.height);
       position.set(placement.x, placement.y, placement.z);
-      mesh.setMatrixAt(index, matrix.compose(position, quaternion, scale));
+      return new Matrix4().compose(position, quaternion, scale);
     });
 
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.computeBoundingSphere();
-    // A belt this far out neither receives a shadow worth the map space nor
-    // casts one that lands anywhere the camera looks.
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
+    // Split by position, and here it buys fill rather than vertices. The belt
+    // is six triangles a tree and 3.5 ms of frame, because a ring of
+    // alpha-tested cards closing the horizon is overdraw: the cost is the
+    // fragments, so rejecting the two thirds of the ring that is behind the
+    // camera is the whole saving.
+    const chunked = chunkInstances({ geometry, material, matrices }, 'woodland');
+    chunks.push(chunked);
 
-    object.add(mesh);
-    meshes.push(mesh);
+    for (const mesh of chunked.meshes) {
+      // A belt this far out neither receives a shadow worth the map space nor
+      // casts one that lands anywhere the camera looks.
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      object.add(mesh);
+      meshes.push(mesh);
+    }
+
     materials.push(material);
     geometries.push(geometry);
   });
@@ -145,7 +149,7 @@ export function createWoodland(
       time.value += dt;
     },
     dispose() {
-      for (const mesh of meshes) mesh.dispose();
+      for (const chunk of chunks) chunk.dispose();
       for (const material of materials) material.dispose();
       for (const geometry of geometries) geometry.dispose();
       for (const impostor of impostors) impostor.dispose();
@@ -312,31 +316,6 @@ function plantable(x: number, z: number): boolean {
 /**
  * A unit-height cross of quads, origin at the base so height is a scale factor.
  */
-function card(impostor: Impostor): BufferGeometry {
-  const geometry = new BufferGeometry();
-  const half = impostor.aspect / 2;
-
-  const positions: number[] = [];
-  const uvs: number[] = [];
-  const indices: number[] = [];
-
-  for (let blade = 0; blade < BLADES; blade += 1) {
-    const angle = (blade / BLADES) * Math.PI;
-    const dx = Math.cos(angle) * half;
-    const dz = Math.sin(angle) * half;
-    const base = blade * 4;
-
-    positions.push(-dx, 0, -dz, dx, 0, dz, dx, 1, dz, -dx, 1, -dz);
-    uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
-    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
-  }
-
-  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  return geometry;
-}
 
 /**
  * A slow lean, so the belt is not the one dead thing in a moving landscape.

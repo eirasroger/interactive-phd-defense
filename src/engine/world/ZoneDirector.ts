@@ -2,6 +2,8 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
+  Object3D,
+  WebGLRenderTarget,
   type Texture,
   type WebGLRenderer,
 } from 'three';
@@ -154,25 +156,119 @@ export class ZoneDirector {
     this.built.clear();
   }
 
+  /** Whether a zone has already been built, uploaded and compiled. */
+  isPrepared(id: string): boolean {
+    return this.built.has(id);
+  }
+
+  /** Whether this zone is already standing behind the current one. */
+  isWarmed(id: string): boolean {
+    return this.warmed?.definition.id === id;
+  }
+
   /**
-   * Stand the next zone up a beat early, and pay its GPU cost while it is.
+   * Pay a zone's entire standing-up cost once, before the talk starts.
    *
-   * Building the zone early was never the whole story. Adding a group to the
-   * scene graph does no GPU work; the work happens on the **first frame that
-   * draws it**, and all of it lands in one frame — every material compiles its
-   * program against the new light count, and every texture uploads. That is a
-   * few hundred milliseconds of blocked main thread whichever beat it falls on,
-   * and it fell on the click that plays the contributions morph.
+   * `warm` was written to move this work off the beat that plays the
+   * contributions morph, and it moved it exactly one beat: onto the beat
+   * before, which is the last thing said before the deck walks through the
+   * door. Measured on the corridor, that beat cost 127 ms of blocked main
+   * thread and a **1.7 second** `compileAsync` — the GPU building 42 shader
+   * programs while it is also drawing, which is a stutter through the whole
+   * approach even though the main thread is mostly free.
    *
-   * `compileAsync` does exactly that work, off the critical path, and resolves
-   * when the zone is ready to draw for free. There is a whole beat of speaking
-   * time to do it in.
+   * There is no beat of a defence where that is acceptable, because every beat
+   * has someone speaking over it. The only moment the deck may block is the one
+   * the audience is not watching: the load. So the work moves there in full,
+   * and `warm` goes back to being what its name says — putting an already
+   * finished world into the scene graph, which is a pointer assignment.
    *
-   * It compiles the **whole scene**, not just the new group, and that is the
-   * part that matters: a material's program is built against the scene's light
-   * count, so the corridor's lamps arriving invalidate every material the
-   * exterior is still drawing with. Compiling the group alone would leave the
-   * larger half of the recompile to land on the same frame as before.
+   * The group has to be **visible** while this runs: `WebGLRenderer.compile`
+   * walks the scene with `traverseVisible`, so a hidden group compiles nothing
+   * and the whole cost simply arrives later. It is parked again immediately
+   * afterwards, and the loading screen is over the canvas throughout.
+   */
+  async prepare(definition: ZoneDefinition): Promise<void> {
+    if (this.built.has(definition.id)) return;
+
+    const zone = this.build(definition);
+    this.world.zones.add(zone.group);
+    this.upload(zone.group);
+
+    await this.renderer
+      .compileAsync(this.world.scene, this.camera.camera)
+      .catch(() => {
+        // A failed precompile costs a hitch later, not a broken deck.
+      });
+
+    this.paint(zone.group);
+    this.park(zone);
+  }
+
+  /**
+   * Draw the zone once, into a single pixel, so its geometry reaches the GPU.
+   *
+   * `compileAsync` builds programs and `upload` pushes textures, and between
+   * them they still leave the largest buffers on the CPU: **vertex and index
+   * data uploads on the first draw call that uses it**, and nothing before that
+   * frame asks for it. So the corridor still arrived with tens of megabytes of
+   * `bufferData` on the beat it was warmed — small enough to stop reading as a
+   * freeze once the shaders had moved, and still a visible catch.
+   *
+   * Drawing it is the only thing that forces the upload, so it is drawn. Into a
+   * 1x1 target, with everything else in the scene hidden, so every draw call
+   * issues and every buffer is bound while almost no fragment is shaded. Frustum
+   * culling is switched off for the pass because the camera is standing in
+   * another zone entirely and would otherwise reject the very geometry this is
+   * here to upload.
+   *
+   * Shadows are left on: a foliage or lightmapped material's depth variant is a
+   * separate program with its own buffers, and skipping the shadow pass here
+   * would leave exactly half the work to arrive later.
+   */
+  private paint(group: Group): void {
+    const target = new WebGLRenderTarget(1, 1);
+    const previous = this.renderer.getRenderTarget();
+    const restored: Object3D[] = [];
+    const culled: Mesh[] = [];
+
+    for (const child of this.world.zones.children) {
+      if (child === group || !child.visible) continue;
+      child.visible = false;
+      restored.push(child);
+    }
+    if (this.world.stage.visible) {
+      this.world.stage.visible = false;
+      restored.push(this.world.stage);
+    }
+
+    group.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh || !mesh.frustumCulled) return;
+      mesh.frustumCulled = false;
+      culled.push(mesh);
+    });
+
+    this.renderer.setRenderTarget(target);
+    this.renderer.render(this.world.scene, this.camera.camera);
+    this.renderer.setRenderTarget(previous);
+
+    for (const mesh of culled) mesh.frustumCulled = true;
+    for (const object of restored) object.visible = true;
+    target.dispose();
+  }
+
+  /**
+   * Stand the next zone up a beat early.
+   *
+   * Cheap now: `prepare` has already built the instance, uploaded its textures
+   * and compiled its programs, so this is the scene-graph half of what this
+   * method used to do and nothing else.
+   *
+   * It still falls back to building on demand. `prepare` runs at load for every
+   * zone the deck names, so that path is only reached if one was added without
+   * being registered — in which case a stutter here is the right failure, and a
+   * far better one than a missing world.
    */
   warm(definition: ZoneDefinition): void {
     if (this.active?.definition.id === definition.id) return;
@@ -184,15 +280,6 @@ export class ZoneDirector {
     this.warmed = zone;
     this.world.zones.add(zone.group);
     this.active?.instance?.setBeyond?.(true);
-
-    this.upload(zone.group);
-
-    void this.renderer
-      .compileAsync(this.world.scene, this.camera.camera)
-      .catch(() => {
-        // A failed precompile costs a hitch, not a frame: the renderer will
-        // compile on demand exactly as it did before.
-      });
   }
 
   /**
@@ -274,6 +361,7 @@ export class ZoneDirector {
         stage: group,
         world: this.world,
         renderer: this.renderer,
+        camera: this.camera.camera,
         quality: this.quality,
         assets: this.assets,
       }) ?? null;

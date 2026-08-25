@@ -1,14 +1,15 @@
 import {
   Box3,
   Group,
-  InstancedMesh,
   Matrix4,
   Mesh,
   Vector3,
   type BufferGeometry,
+  type InstancedMesh,
   type Material,
   type Object3D,
 } from 'three';
+import { chunkInstances, type Chunked } from './chunking';
 
 export interface Instanced {
   readonly object: Group;
@@ -121,18 +122,24 @@ export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
   object.name = `${root.name || 'asset'}_instanced`;
   const meshes: InstancedMesh[] = [];
 
+  const chunks: Chunked[] = [];
+
   for (const bucket of buckets.values()) {
-    const instanced = new InstancedMesh(bucket.geometry, bucket.material, bucket.matrices.length);
-    bucket.matrices.forEach((matrix, index) => instanced.setMatrixAt(index, matrix));
-    instanced.instanceMatrix.needsUpdate = true;
-    // Instance transforms are written once and never touched, so the field is
-    // culled as one volume. Without this the bounding sphere stays the source
-    // mesh's — a single plant at the origin — and the whole field pops out of
-    // existence the moment the camera looks away from that point.
-    instanced.computeBoundingSphere();
-    (instanced.userData as { plantHeight: number }).plantHeight = bucket.plantHeight;
-    object.add(instanced);
-    meshes.push(instanced);
+    // Split by position rather than drawn as one field. A bucket's instances
+    // are scattered over the whole site, so as a single mesh it is culled by a
+    // volume the size of the site and never rejected by either frustum — see
+    // `chunking.ts`.
+    const chunked = chunkInstances(
+      { geometry: bucket.geometry, material: bucket.material, matrices: bucket.matrices },
+      root.name || 'planting',
+      { plantHeight: bucket.plantHeight },
+    );
+    chunks.push(chunked);
+
+    for (const instanced of chunked.meshes) {
+      object.add(instanced);
+      meshes.push(instanced);
+    }
   }
 
   // The refusal count is reported rather than assumed. A clearance rule that is
@@ -140,7 +147,8 @@ export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
   // camera, and this is the only number that separates them.
   console.info(
     `[exterior] planting: ${nodes - refused} of ${nodes} nodes kept ` +
-      `(${refused} on built ground) in ${meshes.length} instanced draws.`,
+      `(${refused} on built ground) in ${meshes.length} instanced draws ` +
+      `across ${buckets.size} buckets.`,
   );
 
   return {
@@ -150,7 +158,7 @@ export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
       // Geometry and materials belong to the asset cache and are handed out
       // again on the next visit to the zone. Only the instance buffers added
       // here are this object's to release.
-      for (const mesh of meshes) mesh.dispose();
+      for (const chunk of chunks) chunk.dispose();
     },
   };
 }

@@ -1,4 +1,4 @@
-import type { Group, WebGLRenderer } from 'three';
+import type { Group, PerspectiveCamera, WebGLRenderer } from 'three';
 import type { Vec3 } from '@/engine/camera/types';
 import type { QualitySettings } from '@/config/quality';
 import type { AssetLoader } from '@/engine/assets/AssetLoader';
@@ -10,6 +10,16 @@ export interface ZoneContext {
   readonly stage: Group;
   readonly world: World;
   readonly renderer: WebGLRenderer;
+  /**
+   * The camera the zone is looked at with.
+   *
+   * Held rather than passed to `update`, because what needs it is level of
+   * detail — the park swaps modelled trees for cards by distance — and that is
+   * a property of the zone's own content rather than of a frame. One reference
+   * taken once cannot go stale: `CameraRig` owns exactly one camera for the
+   * length of the deck.
+   */
+  readonly camera: PerspectiveCamera;
   readonly quality: QualitySettings;
   /**
    * Assets are already resolved: scenes declare what their zone needs, and the
