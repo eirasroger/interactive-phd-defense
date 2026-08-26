@@ -96,6 +96,11 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  /* Transitioned so a beat can take the veil down and put it back as part of a
+     move rather than as a cut. A gradient cannot be interpolated; its opacity
+     can. */
+  opacity: 1;
+  transition: opacity var(--d-cinematic) var(--e-enter);
   background: linear-gradient(
     100deg,
     color-mix(in srgb, var(--c-base) 92%, transparent) 0%,
@@ -172,6 +177,34 @@
 
 .scene-layer[data-align='slide'] .caption-eyebrow::before {
   background: currentcolor;
+}
+
+/*
+ * Act I's exterior compositions: a claim across the top, evidence under it.
+ *
+ * **The row is stretched rather than centred.** Every other mode sizes its one
+ * child to its contents and centres it in the frame, which is right for a
+ * caption and was the reason Act I's slides carried nothing in the top and
+ * bottom thirds of a 1080 surface. A brief owns the whole safe area and
+ * distributes it itself, so the row has to be definite for the `height: 100%`
+ * in `brief.css` to resolve against anything.
+ *
+ * The scrim is `wide`'s, deliberately: these beats sit over a lit site and the
+ * cards carry their own ground, so the veil only has to keep the heading off
+ * the sky.
+ */
+.scene-layer[data-align='brief'] {
+  align-content: stretch;
+  justify-items: stretch;
+}
+
+.scene-layer[data-align='brief']::before {
+  background: linear-gradient(
+    175deg,
+    color-mix(in srgb, var(--c-base) 90%, transparent) 0%,
+    color-mix(in srgb, var(--c-base) 72%, transparent) 45%,
+    color-mix(in srgb, var(--c-base) 86%, transparent) 100%
+  );
 }
 
 /*
@@ -268,6 +301,21 @@
     color-mix(in srgb, var(--c-void) 42%, transparent) 76%,
     color-mix(in srgb, var(--c-void) 18%, transparent) 100%
   );
+}
+
+/*
+ * A beat whose subject is the world itself takes no scrim.
+ *
+ * The veil exists to hold text off an unpredictable background. Where the beat
+ * is four objects standing in front of the audience with nothing laid over
+ * them, it is dimming the thing being looked at.
+ *
+ * **Last of the scrim rules on purpose.** Every `[data-align]` variant sets the
+ * same property at the same specificity, so this only wins by coming after all
+ * of them — `learnings.md` §62.
+ */
+.scene-layer[data-veil='off']::before {
+  opacity: 0;
 }
 
 .scene-layer > * {

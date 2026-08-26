@@ -1,0 +1,503 @@
+/*
+ * Act I's composition: a claim across the top, evidence across the width.
+ *
+ * **Title band, then evidence.** Act II states its claim across the top of the
+ * wall and gives the whole surface underneath to the figure; Act III does the
+ * same over the sea. Act I was the one act reading claim-left / figure-right,
+ * with both halves vertically centred inside a layer that also centres them —
+ * so the top and bottom thirds of a fixed 1080 surface carried nothing, the
+ * heading ran to six lines at `--t-title`, and the figure floated on the world
+ * with no ground under it. Three complaints, one cause.
+ *
+ * The heading is held at 3rem here for the same reason it is there: it competes
+ * with nothing above it and with a full-width figure below it, so it can be
+ * large without being the slide.
+ *
+ * **The frame is composed whole before the first beat.** Both columns are
+ * reserved from the moment the camera settles and nothing is sized by a tween,
+ * so no beat reflows the composition and no card can stall in one dimension
+ * while another is still moving. What advances is the light. This is Act III's
+ * doctrine and `conditions.css` records what the alternative cost.
+ *
+ * **Top-anchored, and every row is sized by its contents.** The claim, then the
+ * evidence directly under it, then whatever the figure has to say about where it
+ * came from. Height left over falls below the composition, over the world,
+ * which is the one place in the frame it costs nothing: the site is what this
+ * act walks through and a translucent card standing on it is the whole point.
+ * Giving the evidence row `1fr` instead put five hundred pixels of slack inside
+ * the cards, and centring the pair opened a gap under the heading wide enough to
+ * read as two unrelated compositions.
+ */
+.brief {
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: var(--s-8);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* The attribution strip only exists on slides that have one. */
+.brief[data-foot] {
+  grid-template-rows: auto auto auto;
+}
+
+/* ---- The claim ---------------------------------------------------------- */
+
+.brief-head {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.brief-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.brief-eyebrow::before {
+  content: '';
+  width: var(--s-8);
+  height: 1px;
+  background-color: currentColor;
+  opacity: 0.5;
+}
+
+.brief[data-accent='circular'] .brief-eyebrow {
+  color: var(--c-circular);
+}
+.brief[data-accent='ai'] .brief-eyebrow {
+  color: var(--c-ai);
+}
+.brief[data-accent='emphasis'] .brief-eyebrow {
+  color: var(--c-emphasis);
+}
+
+/*
+ * Title size rather than display, and held to two lines.
+ *
+ * `--t-title` is 4rem and was wrapping these headings to five and six lines in
+ * a five-column slot. The same strings set at 3rem across the full 1664 resolve
+ * in one or two, which is what a title is.
+ */
+.brief-heading {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: var(--display-weight);
+  line-height: var(--display-line);
+  letter-spacing: var(--display-tracking);
+  max-width: 96rem;
+  text-wrap: balance;
+}
+
+/* ---- The evidence ------------------------------------------------------- */
+
+/*
+ * **Both cards are as tall as the taller of them, and no taller.**
+ *
+ * `stretch` is what keeps the pair reading as one composition rather than two
+ * objects that happen to be adjacent, and it costs nothing here because the row
+ * itself is content-sized: the card that needs the most height sets it, and the
+ * other matches. Stretching inside a `1fr` row is what produced a 560px card
+ * around a 245px drawing. Every figure in this act is between 2.1:1 and 3.3:1,
+ * so none of them can fill a box that is nearly square however it is scaled.
+ */
+.brief-stage {
+  display: grid;
+  gap: var(--s-6);
+  min-height: 0;
+  align-items: stretch;
+}
+
+/*
+ * Two columns, and the narrow one is fixed.
+ *
+ * Every figure in this act is a wide drawing between 2.1:1 and 3.3:1. Given the
+ * full 1664 each would stand well over 600px tall and crowd the heading off the
+ * top, so the width it does not need becomes the column the claims are read in,
+ * which is where the left-hand prose column went. 30rem sets those claims at
+ * about sixty characters a line.
+ */
+.brief-stage[data-split='claims'] {
+  grid-template-columns: minmax(0, 1fr) 30rem;
+}
+
+/* Two figures argued against each other, so neither may be the smaller one. */
+.brief-stage[data-split='even'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ---- A card ------------------------------------------------------------- */
+
+/*
+ * The dark translation of Act II's white surface, and the same object Act III
+ * puts on the sea. Translucent rather than opaque, like `gap-card`: a recessed
+ * beat recedes the world, it does not replace it, and the site is what this act
+ * walks through.
+ *
+ * **Four things make it a surface rather than a rectangle**, and the first pass
+ * had only the second and the fourth, which is exactly why it read as flat:
+ *
+ * 1. A vertical ground. Lit from above and settling into the void, so the card
+ *    has a top and a bottom rather than one value everywhere.
+ * 2. An inset hairline in the slide's own accent, which is what ties the card to
+ *    the argument being made on it.
+ * 3. A one-pixel highlight along the top edge. This is the whole difference
+ *    between a panel and a plane: it says the surface has a thickness and is
+ *    catching light.
+ * 4. A long soft shadow, so it is standing off the world rather than printed on
+ *    it.
+ *
+ * The accent wash in `::before` is `gap-card`'s, unchanged, because it does the
+ * same job here: the card is lit from its own corner rather than outlined.
+ */
+.brief-card {
+  --accent: var(--c-circular);
+
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--s-6);
+  align-content: start;
+  min-width: 0;
+  min-height: 0;
+  isolation: isolate;
+
+  padding: var(--s-8);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      177deg,
+      color-mix(in srgb, var(--c-surface) 78%, transparent) 0%,
+      color-mix(in srgb, var(--c-void) 88%, transparent) 44%,
+      color-mix(in srgb, var(--c-void) 93%, transparent) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 9%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 17%, transparent),
+    0 32px 72px color-mix(in srgb, #000000 58%, transparent);
+}
+
+.brief-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    112% 88% at 0% 0%,
+    color-mix(in srgb, var(--accent) 11%, transparent) 0%,
+    transparent 58%
+  );
+}
+
+/*
+ * Sections inside one card, divided rather than separated.
+ *
+ * Two arguments that share a subject belong on one surface: the sector's weight
+ * and the response to it are read against each other, and a second card with its
+ * own shadow would say they are two subjects. The rule is on the incoming
+ * section so it arrives with it.
+ */
+.brief-stack {
+  display: grid;
+  /* Declared, so a figure cannot size the track from its own intrinsic width.
+     An SVG's view box gives it one, and the loop was pushing the column thirty
+     pixels wider than the card it stands in. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-8);
+  width: 100%;
+  min-width: 0;
+}
+
+/*
+ * A section of a card, and its light.
+ *
+ * `pending` is drawn and legible as structure without being readable as a
+ * measurement, so the frame is composed whole and the click advances the light
+ * rather than assembling the slide in front of the committee. Same treatment as
+ * `brief-claim`, and the same reason.
+ */
+.brief-section {
+  display: grid;
+  gap: var(--s-6);
+  min-width: 0;
+  transition: opacity var(--d-slow) var(--e-enter);
+}
+
+.brief-section[data-state='pending'] {
+  opacity: 0.3;
+}
+
+.brief-section-label {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.brief-stack > * + * {
+  padding-block-start: var(--s-8);
+  border-block-start: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.brief-card[data-accent='ai'] {
+  --accent: var(--c-ai);
+}
+.brief-card[data-accent='emphasis'] {
+  --accent: var(--c-emphasis);
+}
+.brief-card[data-accent='neutral'] {
+  --accent: var(--c-border-strong);
+}
+
+/* A card with nothing named above its contents gives the row back. */
+.brief-card[data-bare] {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.brief-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-6);
+}
+
+.brief-card-label {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.brief-card-note {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+  text-align: end;
+}
+
+/*
+ * The figure's own row, and why it is declared.
+ *
+ * An SVG asked for a percentage height inside an `auto` row falls back to its
+ * view box aspect ratio and sizes the row from itself — `learnings.md` §74. The
+ * row is stated here so the drawing is clamped by the card rather than the card
+ * by the drawing, and `max-height` letterboxes it sideways in the one case
+ * where a figure is taller than the space left for it.
+ */
+.brief-figure {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  /*
+   * `align-items`, not `align-content`. The row already fills the card, so
+   * `align-content` has nothing left to distribute; what needs centring is the
+   * drawing inside that row. Every figure in this act is wider than the space
+   * it is given is tall, so it is width-constrained and the height it does not
+   * use has to fall equally above and below it. Packed to the top it read as a
+   * card with a hole in the bottom third.
+   */
+  align-items: center;
+  min-height: 0;
+}
+
+.brief-figure > * {
+  width: 100%;
+  min-height: 0;
+}
+
+.brief-figure svg {
+  max-height: 100%;
+}
+
+/* ---- The claims --------------------------------------------------------- */
+
+/*
+ * Ruled and numbered, never bulleted, and never a paragraph.
+ *
+ * This column replaces the two and three sentence blocks that used to stand
+ * beside these figures. A dash in front of a sentence is a handout; a tabular
+ * index set in the accent with hairlines between is what Act III already gives
+ * an ordered set, and it separates by geometry rather than by a mark —
+ * `learnings.md` §31f.
+ */
+.brief-claims {
+  display: grid;
+  /*
+   * Centred, and only because every claim is on the card from the first frame.
+   *
+   * Packed to the top, three claims used half a 30rem column and the rest read
+   * as floor. Distributed edge to edge with `space-between` they stopped being
+   * a run: a hundred pixels between two hairlines is three notes, not one
+   * argument in three steps. Centred, the run stays tight and the slack falls
+   * equally above and below it, which is the same answer `brief-figure` gives
+   * for the drawing next to it.
+   *
+   * Stable across every beat precisely because nothing is ever added or
+   * removed, only lit. A run that revealed itself could not be centred without
+   * moving every line already on screen.
+   */
+  align-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 0;
+}
+
+/*
+ * Read across, under a figure that wants the whole width.
+ *
+ * The dividers turn from horizontal to vertical with the reading direction, so
+ * the run is still separated by geometry rather than by a mark. Equal columns,
+ * because these are three steps of one argument and a wider one would be read
+ * as the important one.
+ */
+.brief-claims[data-flow='row'] {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-content: start;
+  column-gap: var(--s-12);
+}
+
+/*
+ * The index sits over the text, not beside it.
+ *
+ * A 1.75rem gutter is right down a 30rem column, where it keeps three numbers
+ * on one vertical line the eye can run. Across a 500px column it is a hole in
+ * the top-left corner and it costs the sentence a quarter of its measure. Above
+ * the line, the number and its accent rule read as the head of the column.
+ */
+.brief-claims[data-flow='row'] .brief-claim {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--s-3);
+  padding-block: 0;
+  padding-inline-start: var(--s-6);
+  border-block-start: 0;
+  border-inline-start: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+  align-content: start;
+}
+
+.brief-claims[data-flow='row'] .brief-claim:first-child {
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}
+
+.brief-claim {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  column-gap: var(--s-4);
+  align-items: baseline;
+  padding-block: var(--s-6);
+  border-top: 1px solid color-mix(in srgb, var(--accent) 12%, transparent);
+  transition: opacity var(--d-slow) var(--e-enter);
+}
+
+.brief-claim:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.brief-claim-index {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--accent) 85%, transparent);
+}
+
+/* 1rem, and it is a projection distance rather than a taste. These sentences
+   are read from the back of a hall over a lit site; 15px was set for a column
+   nobody had measured against that. */
+.brief-claim-text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.62;
+  color: var(--c-text-muted);
+}
+
+/*
+ * Three states, and every claim is on the card from the first frame.
+ *
+ * Revealing them one at a time left a 30rem column carrying one paragraph and
+ * four hundred pixels of floor, which reads as a card with a hole in it. Held
+ * as a standing run the column has a shape from the moment the camera settles,
+ * the audience can see how much argument is left, and the click advances the
+ * light rather than assembling the composition in front of the committee.
+ *
+ * `pending` is a ghost: the index and the measure are legible as structure and
+ * the sentence is not readable at the back of a hall, so it says "there is
+ * more" without being read ahead of the presenter. `made` stays legible,
+ * because a claim that faded out on the way past would be a claim being
+ * unmade, which is not what the next click means.
+ */
+.brief-claim[data-state='pending'] {
+  opacity: 0.24;
+}
+
+.brief-claim[data-state='made'] {
+  opacity: 0.66;
+}
+
+.brief-claim[data-state='live'] .brief-claim-text {
+  color: var(--c-text);
+}
+
+/*
+ * The live claim is marked on the rule as well as in the ink, so which one is
+ * being spoken about survives being read from the back.
+ *
+ * Drawn for every claim and only coloured for the live one. Adding it to the
+ * live claim alone made that claim two pixels taller than its neighbours, which
+ * across a row of three put the three indices on one line and their sentences
+ * on three.
+ */
+.brief-claim-index::after {
+  content: '';
+  display: block;
+  width: 1.25rem;
+  height: 2px;
+  margin-block-start: var(--s-2);
+  border-radius: 999px;
+  background-color: transparent;
+  transition: background-color var(--d-slow) var(--e-enter);
+}
+
+.brief-claim[data-state='live'] .brief-claim-index::after {
+  background-color: var(--accent);
+}
+
+/* ---- The attribution strip ---------------------------------------------- */
+
+.brief-foot {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-8);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--c-border);
+
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  letter-spacing: 0.02em;
+  color: var(--c-text-faint);
+}
+
+/* Pushed to the far edge only when there is a source for it to sit opposite.
+   Alone, it belongs where every other line on the slide begins. */
+.brief-foot-note:not(:first-child) {
+  margin-inline-start: auto;
+  text-align: end;
+}

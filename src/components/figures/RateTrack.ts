@@ -17,12 +17,27 @@ export interface RateTrackSpec {
   readonly target: RateMark;
   /** Headline centred over the shortfall. */
   readonly delta?: string;
-  readonly title: string;
+  /**
+   * Optional, because the composition around it may already name the measure.
+   * A figure printing its own title under the label that names it is the sort
+   * of duplication a committee reads instead of listening.
+   */
+  readonly title?: string;
   readonly source?: string;
 }
 
 export interface RateTrack {
   readonly element: HTMLElement;
+  /**
+   * The scale, empty.
+   *
+   * The frame a beat arrives into should already be the one the audience is
+   * looking at, so the rail is drawn and the marks it carries are not. Without
+   * this the composition has to reserve the height and leave it blank, which is
+   * a hole in a card rather than a figure waiting to be filled.
+   */
+  prime(settle?: boolean): gsap.core.Timeline;
+  /** The measurement, against the target it has to reach. */
   play(settle?: boolean): gsap.core.Timeline;
 }
 
@@ -69,6 +84,21 @@ export function createRateTrack(spec: RateTrackSpec): RateTrack {
   const currentReadout = readout(current, 'current');
   const targetReadout = readout(target, 'target');
 
+  /*
+   * The scale's own furniture, apart from the measurement it carries.
+   *
+   * A caption naming which end of the axis is which is part of the scale; the
+   * number standing over it is the reading. `prime` shows the first and holds
+   * the second, so the empty figure is a labelled axis rather than a bare line
+   * with a hundred pixels of nothing above it.
+   */
+  const captions = [currentReadout, targetReadout].map(
+    (node) => node.querySelector<HTMLElement>('.rate-readout-caption')!,
+  );
+  const values = [currentReadout, targetReadout].map(
+    (node) => node.querySelector<HTMLElement>('.rate-readout-value')!,
+  );
+
   const delta = spec.delta
     ? el('p', {
         className: 'rate-delta',
@@ -93,38 +123,87 @@ export function createRateTrack(spec: RateTrackSpec): RateTrack {
   });
 
   const plot = el('div', { className: 'rate-plot', children: [track] });
-  const title = el('p', { className: 'rate-title', text: spec.title });
+  const title = spec.title ? el('p', { className: 'rate-title', text: spec.title }) : null;
   const source = spec.source ? el('p', { className: 'rate-source', text: spec.source }) : null;
 
   const element = el('div', {
     className: 'rate',
-    children: [title, plot, ...(source ? [source] : [])],
+    children: [...(title ? [title] : []), plot, ...(source ? [source] : [])],
   });
 
-  // `fill` is excluded: its width is the measurement, so settling writes that
-  // width back rather than clearing what the tween left.
-  const arriving = [shortfall, tick, currentReadout, targetReadout, delta].filter(
-    (node): node is HTMLElement => node !== null,
-  );
+  /*
+   * What arrives on the measurement, and what was already on the axis.
+   *
+   * `fill` is in neither: its width is the measurement, so settling writes that
+   * width back rather than clearing what the tween left. And the two groups are
+   * separated because they take different properties — the shortfall opens by
+   * `scaleX`, everything else rises by `y`, and priming them together left the
+   * readouts at `scaleX: 0` and invisible.
+   */
+  const marks = [tick, ...values, delta].filter((node): node is HTMLElement => node !== null);
 
   return {
     element,
-    play(settle = false) {
+
+    prime(settle = false) {
       const timeline = gsap.timeline();
 
+      gsap.set(element, { opacity: 1, y: 0 });
+      gsap.set(fill, { width: 0 });
+      gsap.set(marks, { opacity: 0, y: 10 });
+      gsap.set(shortfall, { opacity: 0, scaleX: 0 });
+      gsap.set([currentReadout, targetReadout], { opacity: 1, y: 0 });
+
       if (settle) {
-        gsap.set(element, { opacity: 1, y: 0 });
         gsap.set(rail, { scaleX: 1 });
-        gsap.set(fill, { width: percent(current.value, max) });
-        gsap.set(arriving, { opacity: 1, y: 0, scaleX: 1 });
+        gsap.set(captions, { opacity: 1, y: 0 });
         return timeline;
       }
 
-      // In the order the claim is made: the scale exists, this is where we
-      // are, this is where we must be, that space between is the problem.
+      return timeline
+        .fromTo(
+          rail,
+          { scaleX: 0 },
+          {
+            scaleX: 1,
+            duration: seconds(DURATION.cinematic * 0.6),
+            ease: EASE.enter,
+            transformOrigin: 'left center',
+          },
+        )
+        .fromTo(
+          captions,
+          { opacity: 0, y: 8 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: seconds(DURATION.normal),
+            ease: EASE.enter,
+            stagger: 0.08,
+          },
+          0.3,
+        );
+    },
+
+    play(settle = false) {
+      const timeline = gsap.timeline();
+
+      gsap.set(rail, { scaleX: 1 });
+      gsap.set([currentReadout, targetReadout], { opacity: 1, y: 0 });
+      gsap.set(captions, { opacity: 1, y: 0 });
+
+      if (settle) {
+        gsap.set(element, { opacity: 1, y: 0 });
+        gsap.set(fill, { width: percent(current.value, max) });
+        gsap.set(marks, { opacity: 1, y: 0 });
+        gsap.set(shortfall, { opacity: 1, scaleX: 1 });
+        return timeline;
+      }
+
+      // In the order the claim is made: this is where we are, this is where we
+      // must be, that space between is the problem. The scale itself is already
+      // on screen — `prime` drew it when the card arrived.
       timeline
-        .from(element, { opacity: 0, y: 32, duration: seconds(DURATION.slow), ease: EASE.enter })
-        .from(rail, { scaleX: 0, duration: seconds(DURATION.cinematic * 0.6), ease: EASE.enter }, 0)
         .fromTo(
           fill,
           { width: 0 },
@@ -133,28 +212,30 @@ export function createRateTrack(spec: RateTrackSpec): RateTrack {
             duration: seconds(DURATION.cinematic * 0.7),
             ease: 'power2.out',
           },
-          seconds(DURATION.quick),
+          0,
         )
-        .from(
-          currentReadout,
-          { opacity: 0, y: 10, duration: seconds(DURATION.normal), ease: EASE.enter },
-          '<0.35',
+        .to(
+          values[0]!,
+          { opacity: 1, y: 0, duration: seconds(DURATION.normal), ease: EASE.enter },
+          '<0.42',
         )
-        .from(
-          [tick, targetReadout],
+        .to(
+          [tick, values[1]!],
           {
-            opacity: 0,
-            y: 10,
+            opacity: 1,
+            y: 0,
             duration: seconds(DURATION.normal),
             ease: EASE.enter,
             stagger: 0.06,
           },
           '>-0.1',
         )
-        .from(
+        .to(
           shortfall,
           {
-            scaleX: 0,
+            opacity: 1,
+            y: 0,
+            scaleX: 1,
             duration: seconds(DURATION.slow),
             ease: EASE.enter,
             transformOrigin: 'left center',
@@ -163,9 +244,9 @@ export function createRateTrack(spec: RateTrackSpec): RateTrack {
         );
 
       if (delta) {
-        timeline.from(
+        timeline.to(
           delta,
-          { opacity: 0, duration: seconds(DURATION.normal), ease: EASE.enter },
+          { opacity: 1, y: 0, duration: seconds(DURATION.normal), ease: EASE.enter },
           '>-0.2',
         );
       }

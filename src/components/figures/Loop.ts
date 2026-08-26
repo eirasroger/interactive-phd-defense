@@ -49,26 +49,37 @@ export interface Loop {
  * bottom.
  *
  * Routed orthogonally rather than as nested curves, which is not a stylistic
- * choice. Every return carries a label over it, and a curve gives text no
- * reliable clearance — the label of a shallow arc sits on the arc, because
- * moving away from the apex is moving into the line. A straight run at a fixed
- * depth gives each return its own horizontal band instead, laid out against
- * itself and never against a neighbour.
+ * choice. Every return carries a label, and a curve gives text no reliable
+ * clearance: the label of a shallow arc sits on the arc, because moving away
+ * from the apex is moving into the line. A straight run at a fixed depth gives
+ * each return its own horizontal band instead, laid out against itself and
+ * never against a neighbour. Nested arcs were tried here and reverted.
  *
  * The band above the chain is empty until the second beat, when the marks land
  * in it. They go above rather than below because everything below is spoken
  * for, and because a mark over a stage reads as a caption on it.
  */
-const VIEW_W = 820;
+/*
+ * 1180 x 334, and the width is the deliberate half.
+ *
+ * This figure is given the whole 1600 the card leaves, with the claims reading
+ * across underneath it rather than down a column beside it. At 820 x 334 that
+ * width made it 652px tall and it crowded everything else off the frame. Spread
+ * to 1180 the same drawing lands at 453, the chain has room to be read as a
+ * chain, and the three returns get bands wide enough to carry their names
+ * without touching the runs above them.
+ */
+const VIEW_W = 1180;
 const VIEW_H = 334;
 
-const NODE_W = 156;
+const NODE_W = 200;
 const NODE_H = 60;
 const NODE_Y = 78;
 const NODE_TOP = NODE_Y - NODE_H / 2;
 const NODE_BOTTOM = NODE_Y + NODE_H / 2;
 
-const CENTERS = [90, 303, 516, 729] as const;
+/* Four nodes across the width, clear of the value axis in the left margin. */
+const CENTERS = [170, 467, 763, 1060] as const;
 
 /**
  * Where each return leaves the last node, and how deep it runs.
@@ -77,14 +88,23 @@ const CENTERS = [90, 303, 516, 729] as const;
  * tightest return drops nearest the node's left edge and runs highest, which
  * is the only arrangement in which no return crosses another.
  */
-const EXITS = [690, 729, 768] as const;
+const EXITS = [1010, 1060, 1110] as const;
 const RUN_Y = [180, 246, 312] as const;
 
 const CORNER = 18;
 /** Arrival, just below the node: the head occupies the gap above it. */
 const ARRIVE_Y = NODE_BOTTOM + 13;
 
-const NAME_OFFSET = 17;
+/*
+ * A return is named where it arrives, not over the middle of its run.
+ *
+ * Centred on the run, `Recycle` sat at the midpoint of a line eight hundred
+ * units long, which is a place nothing happens. Set just past the riser it
+ * climbs, each name reads into the stage it returns to, and the three fall
+ * into a staircase that says the same thing the depths do.
+ */
+const NAME_INSET = 20;
+const NAME_LIFT = 15;
 /** Baseline of a mark's first line, in the clear band over the chain. */
 const MARK_Y = 14;
 const MARK_LEADING = 18;
@@ -116,6 +136,7 @@ interface Arc {
   lengthFrom: number;
   lengthInto: number;
 }
+
 
 interface Mark {
   readonly group: SVGGElement;
@@ -149,8 +170,8 @@ export function createLoop(spec: LoopSpec): Loop {
       const exit = EXITS[depth]!;
       const target = CENTERS[ret.to]!;
       const runY = RUN_Y[depth]!;
-      // The halves meet at the middle of the run, which is what the name is
-      // centred on and where the draw-on hands over.
+      // The halves meet at the middle of the run, which is where the draw-on
+      // hands over from one to the other.
       const midX = (exit + target) / 2;
 
       return `
@@ -158,7 +179,7 @@ export function createLoop(spec: LoopSpec): Loop {
           <path class="loop-return-line" d="${routeFrom(exit, runY, midX)}" />
           <path class="loop-return-line" d="${routeInto(midX, runY, target)}" />
           <path class="loop-return-head" d="${headUp(target)}" />
-          <text class="loop-return-name" x="${midX}" y="${runY - NAME_OFFSET}" text-anchor="middle">${ret.label}</text>
+          <text class="loop-return-name" x="${target + NAME_INSET}" y="${runY - NAME_LIFT}">${ret.label}</text>
         </g>`;
     })
     .join('');
@@ -250,7 +271,7 @@ export function createLoop(spec: LoopSpec): Loop {
         for (const arc of arcs) {
           gsap.set(arc.group, { opacity: 1 });
           gsap.set([arc.from, arc.into], { strokeDashoffset: 0 });
-          gsap.set([arc.head, arc.name], { opacity: 1, y: 0 });
+          gsap.set([arc.head, arc.name], { opacity: 1, x: 0 });
         }
         for (const mark of annotations) {
           gsap.set(mark.group, { opacity: 0 });
@@ -305,7 +326,7 @@ export function createLoop(spec: LoopSpec): Loop {
           )
           .from(
             arc.name,
-            { opacity: 0, y: 6, duration: seconds(DURATION.normal), ease: EASE.enter },
+            { opacity: 0, x: -8, duration: seconds(DURATION.normal), ease: EASE.enter },
             outward + back * 0.45,
           );
 

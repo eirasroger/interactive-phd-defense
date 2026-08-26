@@ -11,8 +11,14 @@ export interface LeverageSpec {
   readonly ability: string;
   readonly cost: string;
   readonly window: string;
-  /** Attribution. The curve is published work and is presented as such. */
-  readonly source: string;
+  /**
+   * Attribution, where the figure carries its own.
+   *
+   * Optional because the composition around it now has an attribution strip of
+   * its own, and a source printed twice in one frame is a proofreading error
+   * the committee gets to find.
+   */
+  readonly source?: string;
 }
 
 export const MACLEAMY = {
@@ -21,6 +27,16 @@ export const MACLEAMY = {
   ability: 0,
   /** The cost of design changes rising against it. */
   cost: 1,
+  /**
+   * The span the thesis works in, bracketed under the first two phases.
+   *
+   * Its own state rather than a rider on `cost`, because it is the only mark on
+   * the figure that is a claim about this work rather than about the published
+   * curve. Landing it with the second curve made it one more thing arriving in
+   * a busy frame; on its own click it is the conclusion the drawing was built
+   * to deliver.
+   */
+  window: 2,
 } as const;
 
 export type MacLeamyState = (typeof MACLEAMY)[keyof typeof MACLEAMY];
@@ -48,38 +64,55 @@ export interface Leverage {
  * early, the price arrives late, and construction products are specified inside
  * the window at the front where both are still in the project's favour.
  */
+/*
+ * 880 x 480, and the height is the deliberate half.
+ *
+ * The card this stands in is 1096 wide on a fixed surface, so the drawing's
+ * aspect ratio is what decides how tall the card is. At 880 x 380 it rendered
+ * 473px high and the composition finished halfway down a 952px frame, with the
+ * whole bottom band — baseline, two rows of phase names, bracket, bracket label
+ * — packed into ninety of those units. Everything below the axis was legible
+ * and nothing in it had any air. Taller costs nothing and buys both.
+ */
 const VIEW_W = 880;
-const VIEW_H = 380;
+const VIEW_H = 480;
 
 const PLOT_L = 16;
 const PLOT_R = 864;
-const PLOT_T = 82;
+const PLOT_T = 78;
 /** The baseline both areas stand on. */
-const PLOT_B = 286;
+const PLOT_B = 356;
 /** Where each curve meets its low end, held clear of the baseline itself. */
-const PLOT_FLOOR = 278;
+const PLOT_FLOOR = 348;
 
 /* Both names sit on one line above the plot, at the end where their own curve
    is highest — the ability peaks on the left, its cost on the right. Labelling
    either at its low end puts the text on the line. */
-const NAME_Y = 50;
+const NAME_Y = 46;
 /* Phase names are the industry's own and several are long enough that
    neighbours touch on one line. They alternate between two rows instead of
    being abbreviated or set smaller: only every second name shares a row, and
    the gap between those is twice the phase step. */
-const PHASE_Y = 312;
-const PHASE_DROP = 16;
-const BRACKET_Y = 350;
-const BRACKET_TICK = 6;
-const WINDOW_LABEL_Y = 372;
+const PHASE_Y = 386;
+const PHASE_DROP = 20;
+/*
+ * The bracket sits in its own band, below both rows of phase names.
+ *
+ * It used to clear the lower row by fourteen units, which is not an overlap and
+ * still reads as one: a rule running a few pixels under a line of type is
+ * underlining it. Twenty-six units and its ticks rise into empty space.
+ */
+const BRACKET_Y = 444;
+const BRACKET_TICK = 8;
+const WINDOW_LABEL_Y = 470;
 
 /*
  * The ability holds briefly, falls hard through the middle phases, then runs
  * out along a long tail. Cost is the other hand: near flat while nothing is
  * committed, then steep once everything is.
  */
-const ABILITY_CURVE = `C180,86 430,272 ${PLOT_R},${PLOT_FLOOR}`;
-const COST_CURVE = `C520,276 760,150 ${PLOT_R},84`;
+const ABILITY_CURVE = `C180,83 430,337 ${PLOT_R},${PLOT_FLOOR}`;
+const COST_CURVE = `C520,342 760,171 ${PLOT_R},81`;
 
 /* The edge is the curve alone and takes the stroke; the fill drops it to the
    baseline. Two paths, so neither area is outlined down its straight sides. */
@@ -132,7 +165,9 @@ export function createLeverage(spec: LeverageSpec): Leverage {
 
   const element = el('div', { className: 'leverage' });
   element.appendChild(svg);
-  element.appendChild(el('p', { className: 'leverage-source', text: spec.source }));
+  if (spec.source) {
+    element.appendChild(el('p', { className: 'leverage-source', text: spec.source }));
+  }
 
   const series = (name: string) => ({
     fill: svg.querySelector<SVGPathElement>(`[data-series="${name}"].leverage-fill`)!,
@@ -164,6 +199,7 @@ export function createLeverage(spec: LeverageSpec): Leverage {
   const plan = (state: MacLeamyState): Step[] => {
     const open = state >= MACLEAMY.ability;
     const priced = state >= MACLEAMY.cost;
+    const bracketed = state >= MACLEAMY.window;
 
     return [
       { node: axis, vars: { opacity: open ? 1 : 0 } },
@@ -186,7 +222,7 @@ export function createLeverage(spec: LeverageSpec): Leverage {
       { node: cost.name, vars: { opacity: priced ? 1 : 0 }, at: 0.55 },
       // Last, and it is the point of the figure: the window sits where the
       // ability is still high and the price still low, and it closes first.
-      { node: windowGroup, vars: { opacity: priced ? 1 : 0 }, at: 0.85 },
+      { node: windowGroup, vars: { opacity: bracketed ? 1 : 0 }, at: 0.15 },
     ];
   };
 

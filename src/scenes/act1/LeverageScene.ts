@@ -1,88 +1,107 @@
 import gsap from 'gsap';
+import { createBrief, type Card, type Claims } from '@/components/Brief';
 import { createLeverage, MACLEAMY, type Leverage } from '@/components/figures/Leverage';
-import { createSlide, type Slide, type Statement } from '@/components/Slide';
 import { LEVERAGE } from '@/content/leverage';
 import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 
-const BEAT = { ability: 0, cost: 1 } as const;
+/**
+ * The figure state each beat rests on, and the claim that is live on it.
+ *
+ * **The price and the window land together.** They were separate clicks, on the
+ * reasoning that the window is a claim about this work rather than about the
+ * published curve and deserved its own beat. In front of the drawing that reads
+ * as a pause: the bracket sits under the two phases where the rising curve has
+ * only just left the floor, so it is legible as part of the same statement the
+ * cost curve makes and a click spent arriving at it is a click the audience
+ * watches nothing happen in.
+ */
+const STATES = [MACLEAMY.ability, MACLEAMY.window] as const;
+const CLAIM = [[0], [1, 2]] as const;
 
 /**
  * Scene 3 — why the early design stage.
  *
- * The ability arrives with the scene; the click raises its price against it and
- * brackets the window over the first two phases. Two beats, because the claim
- * has two halves and the beat this act cannot spare is a third one spent
- * agreeing with itself.
+ * **The curve is the slide, and it now has the width it was drawn for.** It
+ * used to stand in a seven-column slot beside a six-line heading and a
+ * forty-five word paragraph, at roughly half the size, over open park. It is
+ * the one published figure in the act and the only thing on this beat the
+ * audience has to read, so it takes the frame and the claims take a column.
+ *
+ * Two beats, one per half of the argument: what a decision can still shape, and
+ * what it costs to revise once it cannot. The specification window arrives with
+ * the second, because it is where the two curves cross in the project's favour
+ * and it says nothing on its own.
  */
 export class LeverageScene implements SceneInstance {
-  readonly beats = 2;
+  readonly beats = STATES.length;
 
-  private slide: Slide | null = null;
-  private ability: Statement | null = null;
-  private cost: Statement | null = null;
   private band: Leverage | null = null;
-  private bandSlot = -1;
+  private claims: Claims | null = null;
+  private figureCard: Card | null = null;
+  private head: HTMLElement[] = [];
 
   private motion: gsap.core.Timeline | null = null;
 
   enter(context: SceneContext): void {
-    context.root.dataset['align'] = 'wide';
+    context.root.dataset['align'] = 'brief';
 
-    const slide = createSlide({
+    const brief = createBrief({
       eyebrow: LEVERAGE.eyebrow,
       heading: LEVERAGE.heading,
       accent: 'emphasis',
+      split: 'claims',
+      source: LEVERAGE.source,
     });
+    this.head = [...brief.head];
 
-    // Each rule takes the colour of the curve its statement introduces, so the
-    // claim on the left and the shape on the right are read as one thing.
-    this.ability = slide.addStatement(LEVERAGE.ability, 'circular');
-    this.cost = slide.addStatement(LEVERAGE.cost, 'ai');
-
+    // No head. The axis is labelled along the bottom, both curves are named at
+    // the end where each one is highest, and the bracket names itself; a strip
+    // above the drawing repeating any of that is the slide reading itself out.
+    const card = brief.addCard({ accent: 'neutral' });
     const band = createLeverage(LEVERAGE.band);
-    this.bandSlot = slide.evidence.add(band.element);
+    card.body.appendChild(band.element);
     this.band = band;
-    this.slide = slide;
+    this.figureCard = card;
 
-    context.root.appendChild(slide.element);
+    this.claims = brief.addClaims([...LEVERAGE.claims], { accent: 'emphasis' });
+
+    context.root.appendChild(brief.element);
     band.show(MACLEAMY.void, true);
 
     const entry = gsap.timeline({ delay: context.entryDelay + 0.15 });
     entry
-      .add(slide.revealHead(), 0)
-      .add(slide.evidence.show(this.bandSlot), 0.35)
-      .add(this.ability.play(), 0.5)
-      .add(band.show(MACLEAMY.ability), 0.5);
+      .add(brief.revealHead(), 0)
+      .add(card.reveal(), 0.3)
+      .add(band.show(MACLEAMY.ability), 0.55)
+      .add(this.claims.show(CLAIM[0]), 0.45);
     this.motion = entry;
   }
 
   beat(index: number, settle: boolean): void {
-    const slide = this.slide;
     const band = this.band;
-    if (!slide || !band || !this.ability || !this.cost) return;
+    const claims = this.claims;
+    const card = this.figureCard;
+    if (!band || !claims || !card) return;
 
+    // Every tween in this scene targets an absolute value, so the outgoing
+    // timeline is killed rather than completed and nothing is left stranded.
+    this.motion?.kill();
+    gsap.set(this.head, { opacity: 1, y: 0 });
+    card.reveal(true);
+
+    const step = Math.min(index, STATES.length - 1);
+
+    this.motion = gsap
+      .timeline()
+      .add(band.show(STATES[step] ?? MACLEAMY.ability, settle), 0)
+      .add(claims.show(CLAIM[step] ?? CLAIM[0], settle), 0);
+  }
+
+  exit(): void {
     this.motion?.kill();
     this.motion = null;
-
-    slide.revealHead(true);
-    slide.evidence.show(this.bandSlot, true);
-    this.ability.play(true);
-
-    switch (index) {
-      case BEAT.ability:
-        this.cost.hide();
-        this.motion = band.show(MACLEAMY.ability, settle);
-        break;
-
-      case BEAT.cost: {
-        const timeline = gsap.timeline();
-        timeline.add(this.cost.play(settle), 0).add(band.show(MACLEAMY.cost, settle), 0);
-        this.motion = timeline;
-        break;
-      }
-
-      default:
-        break;
-    }
+    this.band = null;
+    this.claims = null;
+    this.figureCard = null;
   }
 }

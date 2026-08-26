@@ -1,0 +1,151 @@
+/*
+ * Three shares of a hundred, each drawn as a hundred cells.
+ *
+ * **20 by 5, not 10 by 10.** A square field of a hundred is 480px tall in this
+ * card and there is a second section under it; laid out five deep it is 116px
+ * and every row is a clean twenty, which is also the easier grid to count
+ * against. The shape follows the space it has to live in and loses nothing.
+ */
+.mg {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--s-12);
+  width: 100%;
+}
+
+.mg-group {
+  display: grid;
+  gap: var(--s-6);
+  align-content: start;
+}
+
+.mg-group-head {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.mg-group-label {
+  font-family: var(--font-label);
+  font-size: var(--t-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+}
+
+/* The grouping is the claim, so it is ruled rather than merely spaced. */
+.mg-group-rule {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--c-border-strong) 0%,
+    color-mix(in srgb, var(--c-border) 60%, transparent) 100%
+  );
+}
+
+.mg-divide {
+  flex: 0 0 1px;
+  align-self: stretch;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--c-border-strong) 22%,
+    var(--c-border-strong) 78%,
+    transparent 100%
+  );
+}
+
+.mg-fields {
+  display: flex;
+  gap: var(--s-12);
+}
+
+/*
+ * 480, and the field is sized rather than fluid.
+ *
+ * One field, a divider and two fields at this width fill the 1600 the card
+ * leaves almost exactly, and a fixed width is what keeps the cell grid on whole
+ * pixels. On a stage pinned to 1920x1080 that is as deterministic as the
+ * surface it is drawn on.
+ */
+.mg-field {
+  --bar: var(--c-text-faint);
+
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+  width: 480px;
+  margin: 0;
+}
+
+.mg-field[data-accent='ai'] {
+  --bar: var(--c-ai);
+}
+.mg-field[data-accent='emphasis'] {
+  --bar: var(--c-emphasis);
+}
+.mg-field[data-accent='circular'] {
+  --bar: var(--c-circular);
+}
+
+.mg-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 0.04em;
+
+  font-family: var(--font-figure);
+  font-size: var(--t-figure);
+  font-weight: var(--fw-light);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-display);
+  color: var(--bar);
+
+  /* Without tabular figures the count-up jitters sideways as digits change
+     width, and this one counts from 0 to 50. */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.mg-unit {
+  font-size: 0.36em;
+  font-weight: var(--fw-regular);
+  letter-spacing: 0;
+  color: var(--c-text-muted);
+}
+
+.mg-grid {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 5px;
+  width: 100%;
+}
+
+/*
+ * A cell is one unit of the whole, drawn whether or not it is part of the
+ * quantity. The unfilled ones are what make nine percent read as nine out of a
+ * hundred rather than as a short bar, so they are dim and never absent.
+ */
+.mg-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--bar) 13%, transparent);
+  transition:
+    background-color var(--d-quick) var(--e-standard),
+    box-shadow var(--d-normal) var(--e-standard);
+}
+
+/* Lit rather than merely coloured: the filled region carries a soft bloom of
+   its own accent, so the quantity reads as a mass at the back of a hall. */
+.mg-cell[data-on] {
+  background-color: var(--bar);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--bar) 45%, transparent);
+}
+
+.mg-label {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 1rem;
+  line-height: var(--lh-snug);
+  color: var(--c-text-muted);
+}

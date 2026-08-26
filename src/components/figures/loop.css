@@ -38,22 +38,33 @@
 }
 
 /* ---- The returns ----------------------------------------------------- */
-/* One custom property per depth carries colour and weight together, so a
-   return cannot end up bright and thin, or dim and thick. */
+/*
+ * **One hue, three steps, and every step is that hue against the ground.**
+ *
+ * The three returns used to be three different colours: the accent, then a
+ * mix of the accent with grey text, then the dim accent token. The middle one
+ * came out muddy and none of the three was on the same ramp as the others, so
+ * a figure whose entire grammar is depth was carrying three unrelated greens.
+ * Mixing toward `--c-void` instead keeps the hue exactly and only changes how
+ * far away the return reads, which is the one thing the ramp is for.
+ *
+ * Weight travels with colour in the same declaration, so a return cannot end
+ * up bright and thin, or dim and thick.
+ */
 
 .loop-return {
   --arc: var(--c-circular);
-  --arc-weight: 3.2;
+  --arc-weight: 3;
 }
 
 .loop-return[data-depth='1'] {
-  --arc: color-mix(in srgb, var(--c-circular) 55%, var(--c-text-faint));
+  --arc: color-mix(in srgb, var(--c-circular) 62%, var(--c-void));
   --arc-weight: 2.4;
 }
 
 .loop-return[data-depth='2'] {
-  --arc: var(--c-circular-dim);
-  --arc-weight: 1.8;
+  --arc: color-mix(in srgb, var(--c-circular) 38%, var(--c-void));
+  --arc-weight: 1.9;
 }
 
 .loop-return-line {
@@ -67,11 +78,12 @@
   fill: var(--arc);
 }
 
+/* Set where the return arrives, reading into the stage it lands on. */
 .loop-return-name {
   fill: var(--arc);
   font-family: var(--font-label);
   font-size: 12px;
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
