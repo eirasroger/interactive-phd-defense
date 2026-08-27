@@ -448,7 +448,7 @@ const drawEvidence = (): Drawing => {
 
     clear() {
       gsap.set([...known, ...absent], { opacity: 0 });
-      gsap.set(inferred, { opacity: 0, scale: 0.6 });
+      gsap.set(inferred, { opacity: 0, scale: 0.88 });
       bars.forEach((bar) => gsap.set(bar, { attr: { height: 0, y: base } }));
     },
 
@@ -479,17 +479,25 @@ const drawEvidence = (): Drawing => {
 
       // The recovered values arrive last and arrive differently, which is the
       // only place in the drawing where the order of events is an argument.
+      //
+      // Short, and the scale barely travels. `back.out` reaches full strength in
+      // the first sixth of its duration, so over `DURATION.slow` from 0.6 the
+      // cell was solid at roughly seven tenths of its size and then crept to
+      // full for another three quarters of a second: it read as a mark that had
+      // landed in the wrong place and was correcting itself. Landing takes
+      // `DURATION.quick` from 0.88, where the overshoot still gives the arrival
+      // its snap and there is no travel left to watch.
       timeline.fromTo(
         inferred as gsap.TweenTarget,
-        { opacity: motion ? 0 : 1, scale: motion ? 0.6 : 1 },
+        { opacity: motion ? 0 : 1, scale: motion ? 0.88 : 1 },
         {
           opacity: 1,
           scale: 1,
-          duration: seconds(DURATION.slow) * motion,
-          ease: 'back.out(2)',
-          stagger: seconds(STAGGER * 1.4) * motion,
+          duration: seconds(DURATION.quick) * motion,
+          ease: 'back.out(2.6)',
+          stagger: seconds(STAGGER) * motion,
         },
-        at + seconds(0.95) * motion,
+        at + seconds(1.28) * motion,
       );
 
       // Grown from the baseline by writing the geometry rather than scaling:

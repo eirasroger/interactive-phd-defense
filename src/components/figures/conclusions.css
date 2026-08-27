@@ -364,16 +364,27 @@
   fill: color-mix(in srgb, var(--infer) 40%, transparent);
   stroke: color-mix(in srgb, var(--infer) 78%, transparent);
   stroke-width: 1.2;
-  animation: cc-pulse 6s ease-in-out infinite;
+  animation: cc-pulse 7s ease-in-out infinite;
 }
 
+/*
+ * The breath is on the paint, never on `opacity`.
+ *
+ * `opacity` on these three cells belongs to the beat's timeline, which fades
+ * them in last and pops them to full size. A CSS animation outranks an inline
+ * style, so anything this keyframe writes to a property GSAP also writes wins
+ * permanently. `fill-opacity` and `stroke-opacity` are the drawing's own and
+ * nothing else touches them.
+ */
 @keyframes cc-pulse {
   0%,
   100% {
-    opacity: 0.7;
+    fill-opacity: 0.78;
+    stroke-opacity: 0.72;
   }
   50% {
-    opacity: 1;
+    fill-opacity: 1;
+    stroke-opacity: 1;
   }
 }
 
