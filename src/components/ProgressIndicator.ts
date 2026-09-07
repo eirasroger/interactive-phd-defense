@@ -8,8 +8,9 @@ export interface ProgressIndicator {
 }
 
 /**
- * Minimal orientation cue: which chapter, how far through. Deliberately quiet
- * so it never competes with the content.
+ * Orientation cue: which section of the thesis, how far through. It names the
+ * argument rather than the staging, so `chapter` carries the section the
+ * audience is being walked through and never the act it is staged in.
  */
 export function createProgressIndicator(): ProgressIndicator {
   const chapter = el('span', { className: 'progress-chapter' });

@@ -13,7 +13,7 @@ import { ARCHITECTURE_CLAIM, LEARNED_CLAIM, VALIDATION_CLAIM } from '@/content/c
  * Headings are the claim column. They are the argument and they are settled.
  */
 const slide = (station: string, title: string, heading: string): CaptionContent => ({
-  eyebrow: `Act II · ${station} · ${title}`,
+  eyebrow: `${station} · ${title}`,
   heading,
 });
 

@@ -17,7 +17,19 @@ import { MotivationScene } from './MotivationScene';
 import { ObjectivesScene } from './ObjectivesScene';
 import { PracticeScene } from './PracticeScene';
 
-const CHAPTER = 'Act I — Exterior';
+/**
+ * What the progress bar names. The thesis sections the audience is being walked
+ * through, so the orientation cue reads as the argument rather than as the
+ * staging that carries it.
+ */
+const CHAPTER = {
+  opening: 'Introduction',
+  motivation: 'Motivation · Research context',
+  state: 'State of the art',
+  gaps: 'Research gaps',
+  objectives: 'Objectives',
+  contributions: 'Contributions',
+} as const;
 
 /** Poses are authored in site coordinates and lifted into the world here. */
 const at = ([x, y, z]: Vec3): Vec3 => [
@@ -36,13 +48,14 @@ const pose = (position: Vec3, target: Vec3, fov: number, arc = 0): CameraPose =>
 const scene = (
   id: string,
   title: string,
+  chapter: string,
   world: 'foreground' | 'recessed',
   cameraPose: CameraPose,
   caption: (typeof act1Captions)[keyof typeof act1Captions],
 ): SceneDefinition => ({
   id,
   title,
-  chapter: CHAPTER,
+  chapter,
   zone: exteriorZone.id,
   world,
   pose: cameraPose,
@@ -130,6 +143,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   scene(
     'overview',
     'The site',
+    CHAPTER.opening,
     'foreground',
     pose([150, 44, 134], [18, 6, 54], 46),
     act1Captions.overview,
@@ -146,7 +160,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'lake',
     title: 'Motivation and research context',
-    chapter: CHAPTER,
+    chapter: CHAPTER.motivation,
     zone: exteriorZone.id,
     world: 'recessed',
     pose: pose([138, 6, 98], [26, 5, 66], 48, 6),
@@ -170,7 +184,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'leverage',
     title: 'Why the early stage',
-    chapter: CHAPTER,
+    chapter: CHAPTER.motivation,
     zone: exteriorZone.id,
     world: 'recessed',
     pose: pose([92, 5.5, 96], [13, 2, 88], 49, 5),
@@ -195,7 +209,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'river',
     title: 'Circular economy',
-    chapter: CHAPTER,
+    chapter: CHAPTER.state,
     zone: exteriorZone.id,
     world: 'recessed',
     pose: pose([46, 5, 95], [0, -1.6, 89], 50, 5),
@@ -216,7 +230,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'park',
     title: 'Sustainability assessment',
-    chapter: CHAPTER,
+    chapter: CHAPTER.state,
     zone: exteriorZone.id,
     world: 'foreground',
     pose: pose([40, 5, 78], [-16, 4, 40], 46, 2),
@@ -235,7 +249,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'construction',
     title: 'Environmental product declarations',
-    chapter: CHAPTER,
+    chapter: CHAPTER.state,
     zone: exteriorZone.id,
     world: 'foreground',
     pose: pose([46, 9, 52], [-10, 8, 18], 44, 2.5),
@@ -255,6 +269,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   scene(
     'scaffold',
     'The decision',
+    CHAPTER.state,
     'foreground',
     pose([22, 7, 40], [5, 9, 12], 40, 1),
     act1Captions.decision,
@@ -278,7 +293,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'alternatives',
     title: 'What decides in practice',
-    chapter: CHAPTER,
+    chapter: CHAPTER.state,
     zone: exteriorZone.id,
     // `recessed`, and it is the one beat in the act where information has to
     // dominate: a four-by-four matrix laid at full contrast over four lit
@@ -325,7 +340,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'gaps',
     title: 'Research gaps and open challenges',
-    chapter: CHAPTER,
+    chapter: CHAPTER.gaps,
     zone: exteriorZone.id,
     world: 'recessed',
     pose: pose([34, 4.8, 50], [-26, 2, 70], 48, 2),
@@ -342,7 +357,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'objectives',
     title: 'Four objectives',
-    chapter: CHAPTER,
+    chapter: CHAPTER.objectives,
     zone: exteriorZone.id,
     world: 'foreground',
     pose: pose([CROSSING.x, 2.3, CROSSING.z], [0, 5, ENTRANCE_FACE], 52),
@@ -364,7 +379,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
   {
     id: 'contributions',
     title: 'Contributions',
-    chapter: CHAPTER,
+    chapter: CHAPTER.contributions,
     zone: exteriorZone.id,
     world: 'recessed',
     pose: pose([0, 2.2, alongAvenue(0.46)], [0, 5, ENTRANCE_FACE], 50, 1),

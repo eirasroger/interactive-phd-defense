@@ -15,7 +15,13 @@ import { ConditionsScene } from './ConditionsScene';
 import { DiscussionScene } from './DiscussionScene';
 import { RiseScene } from './RiseScene';
 
-const CHAPTER = 'Act III — The Overlook';
+/** The thesis sections the closing act walks, as the progress bar names them. */
+const CHAPTER = {
+  pipeline: 'Integrated pipeline',
+  crossCutting: 'Cross-cutting themes',
+  discussion: 'Discussion',
+  conclusions: 'Conclusions',
+} as const;
 
 /**
  * The climb, and why it is this long.
@@ -214,7 +220,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
   {
     id: 'whole',
     title: 'The pipeline, whole',
-    chapter: CHAPTER,
+    chapter: CHAPTER.pipeline,
     zone: corridorZone.id,
     world: 'foreground',
     pose: overlook(),
@@ -239,7 +245,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
   {
     id: 'ai',
     title: 'AI as the methodological backbone',
-    chapter: CHAPTER,
+    chapter: CHAPTER.crossCutting,
     zone: corridorZone.id,
     world: 'recessed',
     pose: overlook(DRIFT.pull, 0),
@@ -259,7 +265,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
   {
     id: 'conditions',
     title: 'Missing data and context as structural conditions',
-    chapter: CHAPTER,
+    chapter: CHAPTER.crossCutting,
     zone: corridorZone.id,
     world: 'recessed',
     pose: {
@@ -283,7 +289,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
   {
     id: 'discussion',
     title: 'Implications, limitations, and future work',
-    chapter: CHAPTER,
+    chapter: CHAPTER.discussion,
     zone: corridorZone.id,
     world: 'recessed',
     pose: {
@@ -307,7 +313,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
   {
     id: 'conclusions',
     title: 'Conclusions',
-    chapter: CHAPTER,
+    chapter: CHAPTER.conclusions,
     zone: corridorZone.id,
     world: 'recessed',
     pose: {
@@ -332,7 +338,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
   {
     id: 'close',
     title: 'Thank you',
-    chapter: CHAPTER,
+    chapter: CHAPTER.conclusions,
     zone: corridorZone.id,
     world: 'recessed',
     pose: {

@@ -10,7 +10,7 @@ import type { CaptionContent } from '@/components/Caption';
  */
 export const act3Captions = {
   whole: {
-    eyebrow: 'Act III · The Overlook',
+    eyebrow: 'Integrated pipeline',
     heading:
       'Extraction quality, compliance outcomes and inferred attributes propagate coherently to the recommendation.',
   },
@@ -90,7 +90,7 @@ export const BACKBONE_NODES: readonly BackboneNode[] = [
  * pipeline and it is a different bone at every joint.
  */
 export const BACKBONE = {
-  eyebrow: 'Act III · Cross-cutting',
+  eyebrow: 'Cross-cutting themes',
   heading: 'Artificial intelligence as the methodological backbone',
   line: 'A different method at each stage, decided by what the stage needs.',
 } as const;
@@ -107,7 +107,7 @@ export const BACKBONE = {
  * about how it was designed.
  */
 export const CONDITIONS = {
-  eyebrow: 'Act III · Cross-cutting',
+  eyebrow: 'Cross-cutting themes',
   heading: 'Missing data and context as structural conditions',
   line: 'Both run the length of the pipeline, and both are answered at every stage.',
 } as const;
@@ -158,7 +158,7 @@ export const CARDS = {
  * the presenter is filling a composition rather than assembling one.
  */
 export const STANDING = {
-  eyebrow: 'Act III · Closing',
+  eyebrow: 'Discussion',
   heading: 'Implications, limitations, and future work',
 } as const;
 
@@ -311,7 +311,7 @@ export const STANDING_LIMITS = {
  * finding, so it is set once under the heading and never illustrated.
  */
 export const CONCLUSIONS = {
-  eyebrow: 'Act III · Conclusions',
+  eyebrow: 'Conclusions',
   heading: 'Conclusions',
   line: 'The five contributions function as one traceable architecture.',
 } as const;

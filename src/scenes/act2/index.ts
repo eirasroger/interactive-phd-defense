@@ -10,8 +10,6 @@ import { THRESHOLD_Z } from '@/world/exterior/site';
 import { panelsFor } from './panels';
 import { StationScene } from './StationScene';
 
-const CHAPTER = 'Act II — The Corridor';
-
 const ENTRY_SECONDS = 9.0;
 
 const HALF = ROOM.length / 2;
@@ -40,7 +38,7 @@ const slide = (
 ): SceneDefinition => ({
   id,
   title,
-  chapter: CHAPTER,
+  chapter: `Contributions · ${id.toUpperCase()}`,
   zone: corridorZone.id,
   world: 'foreground',
   pose: station(index),
