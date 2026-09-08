@@ -184,15 +184,25 @@ export function createLeverage(spec: LeverageSpec): Leverage {
   // Path length is only knowable once laid out, and the figure is built before
   // it is appended. A dash as long as the path turns offset into "how much is
   // still to draw".
+  //
+  // **The gap is longer than the dash, and the retracted offset overshoots.** A
+  // single-value dasharray makes the gap equal the dash, which puts the start of
+  // the *next* dash exactly on the path's end point: the undrawn curve leaks a
+  // sub-pixel sliver there, and `stroke-linecap: round` serves it as a dot in
+  // full series colour hanging over the plot. Padding both sides moves every
+  // dash boundary clear of the path by more than any rounding the tween writes.
+  const DASH_GAP = 10;
+  const DASH_CLEAR = 4;
+
   let measured = false;
-  const lengths = new Map<SVGPathElement, number>();
+  const retracted = new Map<SVGPathElement, number>();
   const measure = (): void => {
     if (measured) return;
     measured = true;
     for (const path of [ability.edge, cost.edge]) {
       const length = path.getTotalLength();
-      lengths.set(path, length);
-      gsap.set(path, { strokeDasharray: length });
+      retracted.set(path, length + DASH_CLEAR);
+      gsap.set(path, { strokeDasharray: `${length} ${length + DASH_GAP}` });
     }
   };
 
@@ -208,14 +218,14 @@ export function createLeverage(spec: LeverageSpec): Leverage {
       // it, so the shape is watched arriving rather than switched on.
       {
         node: ability.edge,
-        vars: { strokeDashoffset: open ? 0 : lengths.get(ability.edge)! },
+        vars: { strokeDashoffset: open ? 0 : retracted.get(ability.edge)! },
         at: 0.15,
       },
       { node: ability.fill, vars: { opacity: open ? 1 : 0 }, at: 0.45 },
       { node: ability.name, vars: { opacity: open ? 1 : 0 }, at: 0.6 },
       {
         node: cost.edge,
-        vars: { strokeDashoffset: priced ? 0 : lengths.get(cost.edge)! },
+        vars: { strokeDashoffset: priced ? 0 : retracted.get(cost.edge)! },
         at: 0.1,
       },
       { node: cost.fill, vars: { opacity: priced ? 1 : 0 }, at: 0.4 },
