@@ -298,12 +298,7 @@ export function createSort(): Sort {
       if (!verdict) continue;
       if (verdict.pass) considered += 1;
 
-      const failed = verdict.checks.find((check) => check.status !== 'pass');
-      card.node.dataset['status'] = verdict.pass
-        ? 'pass'
-        : failed?.status === 'missing'
-          ? 'missing'
-          : 'fail';
+      card.node.dataset['status'] = verdict.pass ? 'pass' : 'fail';
       card.node.style.gridColumn = String((verdict.pass ? CONSIDERED : DISCARDED) + 1);
       card.reason.textContent = verdict.pass ? '' : reasonFor(verdict);
 

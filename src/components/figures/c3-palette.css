@@ -7,9 +7,11 @@
  * rule that separation is geometry first and colour second.
  *
  * Verdicts get their own semantic pair, reused nowhere else in the deck: pass
- * and fail read at a glance across a field of product cards, and missing gets
- * a third, deliberately duller tone so an unresolved check never reads as a
- * clean fail.
+ * and fail read at a glance across a field of product cards. A product carries
+ * its verdict and nothing else, so a discard reads as a discard whatever caused
+ * it; missing is a per-check tone, for the decision log where the cause is the
+ * subject, and its duller weight keeps an unresolved check off the same footing
+ * as a measured one.
  */
 .c3 {
   --c3-accent: #33366e;
