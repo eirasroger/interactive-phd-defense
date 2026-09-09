@@ -31,17 +31,6 @@
   align-content: start;
 }
 
-/* Named once, above the column of triplets it describes. */
-.at-ledger-key {
-  justify-self: end;
-  font-family: var(--font-label);
-  font-size: 0.625rem;
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-ghost);
-}
-
 /*
  * Two columns, because eighteen rows in one is a column of type and not a
  * ledger. Families are kept whole: a family split across the fold reads as two
@@ -184,17 +173,6 @@
   align-items: baseline;
   padding-top: var(--s-3);
   border-top: 1px solid var(--rule);
-}
-
-.at-sum-terms {
-  font-family: var(--font-figure);
-  font-variant-numeric: tabular-nums;
-  font-size: 1rem;
-  color: var(--ink-faint);
-}
-
-.at-sum-terms::after {
-  content: ' =';
 }
 
 .at-sum-figure {

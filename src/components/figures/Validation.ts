@@ -5,7 +5,6 @@ import {
   APPLICATIONS,
   BEHAVIOUR_STUDIES,
   BEHAVIOUR_TAKEAWAY,
-  CROSSING,
   INDICATORS,
   MODEL_UNCERTAINTY,
   PANEL,
@@ -242,7 +241,6 @@ const bestOf = (scores: Readonly<Record<ProductId, number>>): ProductId =>
 /** Fig. 8 as it is published: twenty cells, every value printed, tinted by value. */
 const applicationGrid = (): { readonly element: HTMLElement; readonly cells: HTMLElement[] } => {
   const cells: HTMLElement[] = [];
-  const [first, second] = CROSSING.pair;
 
   const header = [
     el('span', { className: 'vl-grid-corner' }),
@@ -253,7 +251,6 @@ const applicationGrid = (): { readonly element: HTMLElement; readonly cells: HTM
 
   const rows = APPLICATIONS.flatMap((application) => {
     const leader = bestOf(application.scores);
-    const crossing = application.key === CROSSING.from || application.key === CROSSING.to;
 
     return [
       el('span', { className: 'vl-grid-row-name', text: application.label }),
@@ -263,7 +260,6 @@ const applicationGrid = (): { readonly element: HTMLElement; readonly cells: HTM
           className: 'vl-grid-cell',
           attrs: {
             'data-lead': String(id === leader),
-            'data-crossing': String(crossing && (id === first || id === second)),
             'data-dark': String(value >= 0.7),
             style: `--weight: ${value.toFixed(3)}`,
           },

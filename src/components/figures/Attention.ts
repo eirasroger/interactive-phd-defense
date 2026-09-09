@@ -213,10 +213,6 @@ export function createAttention(): Attention {
   const sum = el('div', {
     className: 'at-sum',
     children: [
-      el('p', {
-        className: 'at-sum-terms',
-        text: `${FEATURES.attributes} × ${FEATURES.perAttribute} + ${FEATURES.stakeholder} + ${FEATURES.application}`,
-      }),
       el('span', { className: 'c5-figure at-sum-figure', text: String(FEATURES.total) }),
       el('p', { className: 'at-sum-label', text: 'features per alternative' }),
     ],
@@ -228,13 +224,7 @@ export function createAttention(): Attention {
       el('p', { className: 'c5-index', text: CASE_STUDY.label }),
       el('div', {
         className: 'at-ledger',
-        children: [
-          el('p', {
-            className: 'at-ledger-key',
-            text: FEATURES.triplet.join(' · '),
-          }),
-          el('div', { className: 'at-families', children: families }),
-        ],
+        children: [el('div', { className: 'at-families', children: families })],
       }),
       contextRow,
       sum,
