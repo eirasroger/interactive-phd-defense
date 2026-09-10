@@ -1,5 +1,6 @@
 import { CanvasTexture, EquirectangularReflectionMapping, SRGBColorSpace, type Texture } from 'three';
 import type { Vec3 } from '@/engine/camera/types';
+import { HEIGHT, WIDTH, dither, fbm, paintGradient, panoramaCanvas, smoothstep } from './panorama';
 
 /**
  * Daylight, as an equirectangular panorama built at load.
@@ -52,10 +53,6 @@ const STOPS: ReadonlyArray<readonly [number, string]> = [
   [0.63, '#8d9a76'],
   [1.0, '#55603f'],
 ];
-
-/** Panorama size. Wide enough that a cloud edge is not a staircase at 44° fov. */
-const WIDTH = 1024;
-const HEIGHT = 512;
 
 /**
  * The cloud deck, as a plane at unit height above the eye.
@@ -124,24 +121,15 @@ const GLOW = { inner: 0.06, outer: 0.62, strength: 0.85 } as const;
  *   than written down twice.
  */
 export function createSkyTexture(sun: Vec3): Texture {
-  const canvas = document.createElement('canvas');
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
-
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('A 2D context is required to build the sky.');
-
-  const gradient = context.createLinearGradient(0, 0, 0, HEIGHT);
-  for (const [offset, color] of STOPS) gradient.addColorStop(offset, color);
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, WIDTH, HEIGHT);
+  const { canvas, context } = panoramaCanvas();
+  paintGradient(context, STOPS);
 
   const length = Math.hypot(sun[0], sun[1], sun[2]) || 1;
   const towards: Vec3 = [sun[0] / length, sun[1] / length, sun[2] / length];
 
   context.drawImage(clouds(towards), 0, 0, WIDTH, HEIGHT);
   glow(context, towards);
-  dither(context);
+  dither(context, WIDTH, HEIGHT);
 
   const texture = new CanvasTexture(canvas);
   texture.mapping = EquirectangularReflectionMapping;
@@ -160,12 +148,7 @@ function clouds(sun: Vec3): HTMLCanvasElement {
   const width = WIDTH / 2;
   const height = HEIGHT / 2;
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('A 2D context is required to build the cloud deck.');
+  const { canvas, context } = panoramaCanvas(width, height);
 
   const image = context.createImageData(width, height);
   const { data } = image;
@@ -237,83 +220,4 @@ function glow(context: CanvasRenderingContext2D, sun: Vec3): void {
   }
 
   context.restore();
-}
-
-/**
- * A quarter-level of noise over the whole panorama.
- *
- * The zenith-to-horizon ramp crosses about forty 8-bit steps over four hundred
- * pixels, and a step that wide is a visible contour once the tone curve has
- * stretched it across a projector. One LSB of ordered noise costs nothing and
- * removes every band; it is the same trick a print driver uses and for exactly
- * the same reason.
- */
-function dither(context: CanvasRenderingContext2D): void {
-  const image = context.getImageData(0, 0, WIDTH, HEIGHT);
-  const { data } = image;
-
-  for (let index = 0; index < data.length; index += 4) {
-    const pixel = index >> 2;
-    const step = (((pixel & 1) ^ ((pixel / WIDTH) & 1)) << 1) - 1;
-    data[index] = clampByte(data[index]! + step);
-    data[index + 1] = clampByte(data[index + 1]! - step);
-    data[index + 2] = clampByte(data[index + 2]! + step);
-  }
-
-  context.putImageData(image, 0, 0);
-}
-
-const clampByte = (value: number): number => (value < 0 ? 0 : value > 255 ? 255 : value);
-
-/** Five octaves, which is one more than the eye needs and two fewer than it sees. */
-function fbm(x: number, z: number): number {
-  let sum = 0;
-  let amplitude = 0.5;
-  let total = 0;
-  let frequency = 1;
-
-  for (let octave = 0; octave < 5; octave += 1) {
-    sum += noise(x * frequency, z * frequency) * amplitude;
-    total += amplitude;
-    amplitude *= 0.5;
-    frequency *= 2.07;
-  }
-
-  return sum / total;
-}
-
-function noise(x: number, z: number): number {
-  const xi = Math.floor(x);
-  const zi = Math.floor(z);
-  const xf = x - xi;
-  const zf = z - zi;
-
-  const u = xf * xf * (3 - 2 * xf);
-  const v = zf * zf * (3 - 2 * zf);
-
-  const a = hash(xi, zi);
-  const b = hash(xi + 1, zi);
-  const c = hash(xi, zi + 1);
-  const d = hash(xi + 1, zi + 1);
-
-  return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v;
-}
-
-/**
- * Integer hash, not `sin(dot(...))`.
- *
- * `paths.ts` hashes with a sine because it is called a few hundred thousand
- * times at load and legibility wins. This one runs five octaves over a hundred
- * and thirty thousand pixels — two and a half million lookups — and a
- * transcendental in that loop is the difference between a frame and a stutter.
- */
-function hash(x: number, z: number): number {
-  let value = Math.imul(x, 374761393) ^ Math.imul(z, 668265263);
-  value = Math.imul(value ^ (value >>> 13), 1274126177);
-  return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
-}
-
-function smoothstep(edge0: number, edge1: number, value: number): number {
-  const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
-  return t * t * (3 - 2 * t);
 }

@@ -554,12 +554,27 @@ export const REVIEW = {
    * Written as the fraction the deck computes rather than as a decimal: zone
    * progress is `index / (count - 1)`, and the assertion compares it exactly.
    * The denominator tracks the act's length — 12 at thirteen scenes, 11 after
-   * `ai` was cut, 10 now that the act ends on `contributions` and the arrival at
-   * the door is a transition rather than a scene.
+   * `ai` was cut, and 10 once the act ended on `contributions` and the arrival
+   * at the door became a transition. Unchanged by the cloud: `opening` was
+   * added at the head and the establishing shot it replaced was removed, so the
+   * run is the same length and every index after the first is where it was.
    */
   from: 6 / 10,
   to: 9 / 10,
 } as const;
+
+/**
+ * How far into the act the cloud the defence opens inside has let go.
+ *
+ * Zone state like the scaffold and the review row, derived from position in the
+ * deck rather than owned by the scene that happens to be inside it, so a jump
+ * back to the title card during questions closes the cloud again without the
+ * opening scene knowing that it happened.
+ *
+ * `opening` is the only beat in the cloud and it sits at zone progress 0, so
+ * this is the boundary below the first step of the run rather than a span.
+ */
+export const CLOUD = { clears: 0 } as const;
 
 /**
  * When the scaffold and its hoarding come down.

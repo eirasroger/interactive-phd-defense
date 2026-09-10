@@ -2,7 +2,7 @@ import gsap from 'gsap';
 import { PMREMGenerator, type Object3D, type Texture } from 'three';
 import { ZONE_ORIGIN } from '@/config/layout';
 import { TRANSITION } from '@/config/presentation';
-import type { Atmosphere } from '@/engine/render/atmosphere';
+import { clouded, type Atmosphere } from '@/engine/render/atmosphere';
 import type { ZoneContext, ZoneDefinition, ZoneInstance } from '@/engine/world/types';
 import {
   createBakedPart,
@@ -25,7 +25,8 @@ import { createPlayground, type Playground } from './playground';
 import { createRiver, type River } from './river';
 import { DOORS_AT } from '@/animations/entry';
 import { seconds as scaled } from '@/animations/timing';
-import { BUILDING_HEIGHT, CONSTRUCTION, REVIEW } from './site';
+import { BUILDING_HEIGHT, CLOUD, CONSTRUCTION, REVIEW } from './site';
+import { CloudShell } from './CloudShell';
 import { createSkyTexture } from './sky';
 import { createOutcrop, type StoneField } from './stones';
 import { createTerrain, type Terrain } from './terrain';
@@ -152,6 +153,11 @@ class Exterior implements ZoneInstance {
   // casting the shadows cannot disagree.
   private readonly sky: Texture = createSkyTexture(EXTERIOR_ATMOSPHERE.keyOffset);
   private readonly environment: Texture;
+  /**
+   * Built from the air it is seen through, so the light inside the cloud agrees
+   * with the sun and its gain is referenced to the exposure it was tuned at.
+   */
+  private readonly cloud: CloudShell;
   private presence = -1;
   private scaffolded = true;
   private strike: gsap.core.Tween | null = null;
@@ -264,6 +270,9 @@ class Exterior implements ZoneInstance {
 
     context.world.setBackground(this.sky);
     context.world.setEnvironment(this.environment);
+
+    this.cloud = new CloudShell(clouded(EXTERIOR_ATMOSPHERE), context.quality);
+    stage.add(this.cloud.mesh);
   }
 
   /**
@@ -386,6 +395,11 @@ class Exterior implements ZoneInstance {
   }
 
   setProgress(progress: number, animate: boolean): void {
+    // Derived from position in the deck rather than owned by the opening scene,
+    // which is what lets a presenter jump back to the title card during
+    // questions and find the cloud closed again without the scene knowing.
+    this.cloud.setCover(progress <= CLOUD.clears ? 1 : 0, animate);
+
     const onStage = progress >= REVIEW.from && progress <= REVIEW.to;
     this.setReview(onStage ? 1 : 0, animate);
     this.setScaffold(progress < CONSTRUCTION.struck, animate);
@@ -435,6 +449,7 @@ class Exterior implements ZoneInstance {
   }
 
   update(dt: number): void {
+    this.cloud.update(dt, this.context.camera, this.context.world.exposure);
     this.planting.update(dt);
     this.parkland.update(dt);
     this.woodland.update(dt);
@@ -469,6 +484,7 @@ class Exterior implements ZoneInstance {
     this.parkland.dispose();
     this.outcrop.dispose();
     for (const part of this.parts) part.dispose();
+    this.cloud.dispose();
     this.environment.dispose();
     this.sky.dispose();
   }

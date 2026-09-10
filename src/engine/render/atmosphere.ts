@@ -44,3 +44,40 @@ export const recessed = (base: Atmosphere): Atmosphere => ({
   backgroundIntensity: base.backgroundIntensity * 0.5,
   exposure: base.exposure * 0.7,
 });
+
+/**
+ * The `clouded` variant: the air the deck opens inside.
+ *
+ * A sibling of `recessed` and built the same way, as a transform of the zone's
+ * own atmosphere rather than a rig of its own. What it does is close the air to
+ * nothing and open the exposure, which between them mean no part of the world
+ * survives to be drawn and the frame is `CloudShell`'s panorama alone.
+ *
+ * **The exposure barely moves, and that is deliberate.** An earlier version
+ * opened it by better than half a stop to place the panorama through ACES, and
+ * then spent the descent closing back down: the cloud went grey while it was
+ * still the whole frame. `CloudShell` is outside the tone curve now, so the
+ * white is fixed and the only thing exposure has to carry is the little
+ * geometry close enough to survive the fog.
+ *
+ * `fogColor` is the panorama's eye-level value. Anything close enough to the
+ * camera to survive `fogFar` fades to that colour and has to arrive at the one
+ * the shell is painting, or there is a seam across the middle of the frame.
+ */
+export const clouded = (base: Atmosphere): Atmosphere => ({
+  ...base,
+  fogColor: 0xdbe6f2,
+  // **Open, now that the deck is what hides the world.** This used to close to
+  // twenty-six metres because the cloud was an opaque shell and the fog was the
+  // only thing keeping the site off screen. A deck occludes by being thick, so
+  // what is wanted underneath it is not a blindfold but distance: the ground
+  // seen through gaps in the cloud reads as far below, and the descent arrives
+  // through haze rather than out of a dissolve.
+  fogNear: 55,
+  fogFar: 620,
+  ambientIntensity: base.ambientIntensity * 1.35,
+  keyIntensity: base.keyIntensity * 0.25,
+  environmentIntensity: base.environmentIntensity * 1.2,
+  backgroundIntensity: base.backgroundIntensity,
+  exposure: base.exposure * 1.08,
+});

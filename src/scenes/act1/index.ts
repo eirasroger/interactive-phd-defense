@@ -1,6 +1,8 @@
+import { EASE } from '@/animations/timing';
 import { ZONE_ORIGIN } from '@/config/layout';
 import { act1Captions } from '@/content/act1';
 import type { CameraPose, Vec3 } from '@/engine/camera/types';
+import { clouded } from '@/engine/render/atmosphere';
 import type { SceneDefinition } from '@/engine/scene/types';
 import { zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { EXTERIOR_ASSETS, exteriorZone } from '@/world/exterior/ExteriorZone';
@@ -12,6 +14,7 @@ import { ContributionsScene } from './ContributionsScene';
 import { EpdScene } from './EpdScene';
 import { ExteriorScene } from './ExteriorScene';
 import { GapsScene } from './GapsScene';
+import { OpeningScene } from './OpeningScene';
 import { LeverageScene } from './LeverageScene';
 import { MotivationScene } from './MotivationScene';
 import { ObjectivesScene } from './ObjectivesScene';
@@ -86,11 +89,14 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * facing opposite ways do not read as a move, they read as a cut, and the whole
  * point of a continuous world is that there are none.
  *
- * The route is a descent and a walk inland:
+ * The route is a descent and a walk inland, and the descent now starts above
+ * the weather:
  *
- * 1. **overview** — high over the lake, looking back at the whole site.
- * 2. **lake** — straight down onto the water on the same bearing, facing the
- *    shore. The site is read from the water, as if off a boat.
+ * 1. **opening** — inside cloud, a hundred and eighteen metres up. The title
+ *    card, and nothing else in the frame.
+ * 2. **lake** — the fall out of it, onto the water facing the shore. The site
+ *    is read off the water, as if off a boat, and it is the first time the
+ *    audience sees any of it.
  * 3. **leverage** — on down the same bearing, still over water. Its own
  *    composition: the room to change the building against what changing it
  *    costs.
@@ -106,7 +112,12 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * 10. **objectives** — the bridge, and the entrance centred down the avenue.
  * 11. **contributions** — halfway down that avenue, same aim. The act ends here.
  *
- * **There is no arrival-at-the-door beat.** One stood here, carrying the words
+ * **There is no establishing shot and no arrival-at-the-door beat.** The first
+ * was a second title card over a site the audience was about to be flown into
+ * anyway, which spent the reveal on a caption they had just read; the descent
+ * out of the cloud now lands directly on the motivation.
+ *
+ * **There was an arrival-at-the-door beat.** One stood here, carrying the words
  * *Five papers. One pipeline.* — which is the previous scene's last frame said
  * out loud, at the exact moment the audience has just watched it drawn. The act
  * now ends on the pipeline, and the way in is the doors opening, which is a
@@ -134,25 +145,59 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * has not been established yet.
  */
 export const act1Scenes: readonly SceneDefinition[] = [
-  // Forty-four metres up and out over the lake, looking back west-south-west at
-  // the whole site: water in the foreground, the shore, the park, the river and
-  // the building. **Over the water on purpose** — this is the only quarter of
-  // the site with nothing standing in it, so it is the only place a camera can
-  // be high without being inside the woodland belt, and the descent from here
-  // to the next pose is a straight line along one bearing.
-  scene(
-    'overview',
-    'The site',
-    CHAPTER.opening,
-    'foreground',
-    pose([150, 44, 134], [18, 6, 54], 46),
-    act1Captions.overview,
-  ),
+  // The talk opens inside weather, with nothing on screen but the title and the
+  // light coming through it.
+  //
+  // **A hundred and twenty-four metres up and, for a moment, blind.** `clouded`
+  // closes the air to twenty-six metres, so for as long as the card is up no
+  // part of the site survives to be drawn and the frame is `CloudShell`'s
+  // panorama alone. What the numbers decide is where the fall begins.
+  //
+  // **Aimed steeply down, and that is arithmetic rather than taste.** The
+  // ground plane is 900 m across, so from any real altitude the band between
+  // the site's own horizon and the panorama's is empty grey — `sky.ts` says as
+  // much about its below-horizon stops. At 124 m the plane's edge sits about
+  // 15° below the horizon, and a 46° frame aimed 43° down has its top edge at
+  // 20°, which puts the whole band off the top of the screen. Aimed level, as
+  // an earlier cut was, it was the top third of the frame for four seconds.
+  //
+  // The fall from here to `lake` passes through very nearly the framing the act
+  // used to open on: the two poses share a bearing, so the site is read whole
+  // from altitude on the way down without spending a beat on it.
+  //
+  // Three things this beat is buying, in order of how much they matter:
+  //
+  // 1. **The title reads.** Dark ink on a light ground is the highest contrast
+  //    the deck can produce, and the opening card is the one frame where a
+  //    scrim over the world was costing the establishing shot most.
+  // 2. **The site arrives as an event.** The act used to open on the site
+  //    already in frame, so the descent it is built around started from a state
+  //    the audience had been looking at for half a minute. It is now a reveal.
+  // 3. **The load is invisible.** This is the heaviest moment in the deck —
+  //    assets streaming, shaders compiling, the first frame of a world that has
+  //    never been drawn. Nothing can hitch in an empty white volume.
+  {
+    id: 'opening',
+    title: 'Doctoral thesis defence',
+    chapter: CHAPTER.opening,
+    zone: exteriorZone.id,
+    world: 'foreground',
+    pose: pose([118, 330, 142], [12, 232, 6], 46),
+    air: clouded,
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new OpeningScene(act1Captions.overview),
+  },
 
-  // The same bearing, twenty-five metres forward and thirty-eight down: the
-  // camera settles onto the water and reads the site off it. Nothing is built
-  // in the near half of this frame, which is the point — this beat is the
-  // reason the work exists, not yet the work.
+  // **The arrival, and the bottom of the descent out of the cloud.** The camera
+  // comes down a hundred and twelve metres onto the water and reads the site off
+  // it. Nothing is built in the near half of this frame, which is the point —
+  // this beat is the reason the work exists, not yet the work.
+  //
+  // `travel` rather than the paced default, because this is not a hop between
+  // two things the camera is looking at: it is the one continuous fall the deck
+  // opens with, with the air opening and the cloud thinning around it, and
+  // `TRANSITION.camera` would cap it at four and a half seconds. The rest of Act
+  // I is paced normally — only the first move is a set piece.
   //
   // `recessed`, and the only scene in the act with its own composition rather
   // than a caption: the argument is four numbers, so the world steps back and
@@ -164,6 +209,7 @@ export const act1Scenes: readonly SceneDefinition[] = [
     zone: exteriorZone.id,
     world: 'recessed',
     pose: pose([138, 6, 98], [26, 5, 66], 48, 6),
+    travel: { seconds: 5.2, ease: EASE.camera },
     assets: [...EXTERIOR_ASSETS],
     create: () => new MotivationScene(),
   },

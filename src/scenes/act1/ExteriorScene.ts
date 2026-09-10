@@ -9,15 +9,22 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
  * specified it is, and the scene contributes the words and the place to stand.
  * That is what nine scenes looking at one building should cost.
  *
- * **Used at both ends of the deck.** The title card that opens Act I and the one
- * that closes Act III are the same composition in two places, which is the whole
- * point of the closing card, so it is the same class with a different pose
- * rather than a second implementation of a caption.
+ * **Used with a caption and without one.** The card that closes Act III is a
+ * composition; the establishing shot that opens Act I is the world alone, and a
+ * scene that contributes only a pose is exactly what this class already was.
  */
 export class ExteriorScene implements SceneInstance {
-  constructor(private readonly content: CaptionContent) {}
+  constructor(private readonly content: CaptionContent | null = null) {}
 
   enter(context: SceneContext): void {
+    // A beat with nothing laid over it: the world is the whole composition, so
+    // the veil that exists to hold text off an unpredictable background is
+    // dimming the only thing being looked at.
+    if (!this.content) {
+      context.root.dataset['veil'] = 'off';
+      return;
+    }
+
     // Drives the legibility scrim: a centred composition needs a radial scrim,
     // not the side gradient a left-aligned column is anchored against.
     context.root.dataset['align'] = this.content.align ?? 'start';

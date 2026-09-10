@@ -366,6 +366,66 @@
 }
 
 /*
+ * The opening card, on the light ground of the cloud interior.
+ *
+ * Its own register rather than a variant of `center`, because everything that
+ * differs follows from the ground being light: the ink inverts, the scrim has
+ * nothing to do, and the halo that lifts white type off a dusk site would be a
+ * smudge under dark type on white. `[data-align='slide']` sets the same register
+ * for Act II's projected wall and for the same reason.
+ *
+ * The mark goes back to brand blue here. Its mono-negative exists for dark
+ * photographic grounds, and this is the one beat in the deck that is neither.
+ */
+.scene-layer[data-align='opening'] {
+  justify-items: center;
+}
+
+/*
+ * Light, not a panel.
+ *
+ * The cloud behind the card is weather and it is allowed to be: masses drift
+ * across the measure and the value under any given line is not knowable when
+ * the panorama is built. What guarantees the read is a soft lift in the middle
+ * of the frame, which on a light ground is the one move that adds contrast
+ * without adding an edge — the inverse of the seat the dark beats use, and for
+ * the same reason. It reads as the sun being over there.
+ *
+ * **Weak, and it has to stay weak.** At three quarters it bleached the centre
+ * of the frame flat and took the cloud's structure with it, which put the type
+ * back on the featureless white this beat exists to get away from. The ink is
+ * near-black on a near-white ground and already has all the contrast it needs;
+ * the lift is only insurance against a dark mass drifting under a line.
+ */
+.scene-layer[data-align='opening']::before {
+  background: radial-gradient(
+    ellipse 62% 46% at 50% 46%,
+    rgb(255 255 255 / 0.1) 0%,
+    rgb(255 255 255 / 0.07) 34%,
+    rgb(255 255 255 / 0.03) 68%,
+    rgb(255 255 255 / 0) 100%
+  );
+}
+
+.scene-layer[data-align='opening'] .caption-heading {
+  color: var(--c-base);
+}
+
+.scene-layer[data-align='opening'] .caption-body {
+  color: #46505e;
+}
+
+/* `[data-accent]` is here for weight, not for matching: `caption.css` loads
+   after this file and colours the eyebrow at equal specificity. */
+.scene-layer[data-align='opening'] .caption[data-accent] .caption-eyebrow {
+  color: #5a6472;
+}
+
+.scene-layer[data-align='opening'] .caption-logo {
+  filter: none;
+}
+
+/*
  * A beat whose subject is the world itself takes no scrim.
  *
  * The veil exists to hold text off an unpredictable background. Where the beat

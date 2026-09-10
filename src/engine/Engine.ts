@@ -187,6 +187,7 @@ export class Engine {
       state.direction !== 'jump',
       crossing,
       state.definition.air ?? null,
+      state.direction === 'forward' ? state.definition.travel?.seconds : undefined,
     );
 
     this.warmNextZone(state);

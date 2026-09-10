@@ -79,6 +79,16 @@ export class ZoneDirector {
     animate: boolean,
     crossing: ZoneCrossing | null = null,
     air: ((base: Atmosphere) => Atmosphere) | null = null,
+    /**
+     * The camera move this happens inside, when the scene designed one.
+     *
+     * Air paced independently of the move it belongs to finishes early and the
+     * last seconds of a descent play in weather that has already settled — or
+     * worse, opens the world while a dissolve is still half up, which reads as
+     * a veil over a sharp picture rather than as cloud. Defaults to the rate
+     * limit every ordinary hop is paced by.
+     */
+    travelSeconds: number = TRANSITION.camera.maxSeconds,
   ): void {
     const changed = this.active?.definition.id !== definition.id;
 
@@ -117,7 +127,7 @@ export class ZoneDirector {
       this.atmosphere.crossTo(this.leaving.atmosphere, target, crossing.seconds, CROSSING_LIGHT);
       this.leaving = null;
     } else if (animate && !changed) {
-      this.atmosphere.moveTo(target, TRANSITION.camera.maxSeconds);
+      this.atmosphere.moveTo(target, travelSeconds);
     } else {
       this.atmosphere.snapTo(target);
     }

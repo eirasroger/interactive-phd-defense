@@ -72,8 +72,21 @@ export class World {
     pmrem.dispose();
   }
 
+  /**
+   * The tone curve's exposure, as the world is currently being graded.
+   *
+   * Held because surfaces that have to look the same whatever the light is
+   * doing cannot opt out of the curve — `RenderPipeline` ends in an
+   * `OutputPass`, so ACES runs over the whole framebuffer and `toneMapped` is
+   * inert (learnings §59). Their only route is to cancel the exposure in their
+   * own colour, which means reading it.
+   */
+  exposure = 1;
+
   /** Called every frame with the director's interpolated state. */
   applyAtmosphere(state: AtmosphereState): void {
+    this.exposure = state.exposure;
+
     this.fog.color.copy(state.fogColor);
     this.fog.near = state.fogNear;
     this.fog.far = state.fogFar;
