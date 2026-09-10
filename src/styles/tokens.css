@@ -113,6 +113,20 @@
 
   --shadow-soft: 0 2px 8px rgb(0 0 0 / 0.3);
   --shadow-lifted: 0 18px 48px rgb(0 0 0 / 0.45);
+
+  /* Contrast for type set directly on the lit world, where no scrim guarantees
+     it. Three layers doing three jobs: a tight one for the glyph edge, a mid
+     one for the body of the letterform, and a wide one that seats the whole
+     block. Cheaper to the picture than any veil strong enough to match it. */
+  --ink-halo:
+    0 1px 2px color-mix(in srgb, var(--c-void) 55%, transparent),
+    0 2px 22px color-mix(in srgb, var(--c-void) 78%, transparent),
+    0 6px 60px color-mix(in srgb, var(--c-void) 62%, transparent);
+
+  /* The same halo for artwork, which `text-shadow` does not reach. */
+  --ink-halo-art:
+    drop-shadow(0 2px 18px color-mix(in srgb, var(--c-void) 78%, transparent))
+    drop-shadow(0 6px 48px color-mix(in srgb, var(--c-void) 55%, transparent));
 }
 
 /*

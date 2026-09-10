@@ -291,16 +291,78 @@
   );
 }
 
-/* The dark stop is held across the middle before falling away: a radial
-   gradient fading from 0% reaches its stated opacity at one point only. */
+/*
+ * The title cards, which are the only beats that set type on the world at full
+ * value. Contrast comes from the glyphs rather than from the veil behind them.
+ *
+ * **The scrim only seats the block; the halo does the reading.** A centred
+ * composition needs its darkest point in the middle of the frame, which is the
+ * one place a veil cannot be spent freely: the opening card is the audience's
+ * only look at the whole site before the camera descends into it. A veil heavy
+ * enough to carry a display line on its own takes that frame to a tenth of its
+ * brightness, so the job moves onto the type and the veil drops to a seat.
+ *
+ * Four rules keep the seat from reading as an object rather than as shade. It
+ * falls from its peak immediately, so there is no plateau with a fast edge
+ * around it. It is flattened to the text band, so the sky above and the water
+ * below keep their value and the darkening lands where the words are. Its
+ * horizontal terminus is off-frame, so the visible part is all ramp and no arc
+ * ever crosses the picture. And it mixes `--c-base` like every other variant
+ * rather than the letterbox colour, which is what made the old one read as a
+ * hole cut in the frame.
+ */
 .scene-layer[data-align='center']::before {
   background: radial-gradient(
-    ellipse 95% 85% at 50% 48%,
-    color-mix(in srgb, var(--c-void) 88%, transparent) 0%,
-    color-mix(in srgb, var(--c-void) 80%, transparent) 42%,
-    color-mix(in srgb, var(--c-void) 42%, transparent) 76%,
-    color-mix(in srgb, var(--c-void) 18%, transparent) 100%
+    ellipse 82% 52% at 50% 47%,
+    color-mix(in srgb, var(--c-base) 62%, transparent) 0%,
+    color-mix(in srgb, var(--c-base) 52%, transparent) 30%,
+    color-mix(in srgb, var(--c-base) 30%, transparent) 62%,
+    color-mix(in srgb, var(--c-base) 10%, transparent) 85%,
+    transparent 100%
   );
+}
+
+.scene-layer[data-align='center'] .caption-heading,
+.scene-layer[data-align='center'] .caption-body,
+.scene-layer[data-align='center'] .caption-eyebrow {
+  text-shadow: var(--ink-halo);
+}
+
+/* The supporting line is the least legible thing on the card: small, muted and
+   sitting on the treeline. On this beat it takes the full text colour and lets
+   its weight carry the hierarchy instead. */
+.scene-layer[data-align='center'] .caption-body {
+  color: var(--c-text);
+}
+
+/*
+ * The mark, as its mono-negative.
+ *
+ * The supplied artwork is brand blue on transparent, and brand blue over a dark
+ * treeline is low contrast whatever is put behind it: a halo can only add dark,
+ * which is the direction the problem already runs in. `brightness(0)` collapses
+ * the artwork to black and `invert(1)` lifts it to white, preserving the alpha
+ * and so the letterforms, which is the mono version the identity provides for
+ * exactly this case. It also puts the whole card in one ink.
+ */
+.scene-layer[data-align='center'] .caption-logo {
+  filter: brightness(0) invert(1) var(--ink-halo-art);
+  opacity: 0.92;
+}
+
+/*
+ * One ink for the card, so the accent is not spent here.
+ *
+ * The eyebrow's colour is normally the argument's theme, and the title card
+ * makes no argument: it states what the document is. A lone accent line under a
+ * white mark and over a white display line reads as a stray, and the accent is
+ * worth more when its first appearance is the beat that means it.
+ */
+/* `[data-accent]` is here for weight, not for matching: `caption.css` loads
+   after this file and colours the eyebrow at equal specificity. */
+.scene-layer[data-align='center'] .caption[data-accent] .caption-eyebrow {
+  color: var(--c-text);
+  opacity: 0.86;
 }
 
 /*
