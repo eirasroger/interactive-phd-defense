@@ -1,4 +1,6 @@
 # interactive-phd-defense
+**[Live presentation →](https://eirasroger.github.io/interactive-phd-defense/#/opening)**
+
 
 Interactive PhD defense presentation for _"Artificial Intelligence for Circular
 and Sustainable Product Decision-Support in Construction"_.
