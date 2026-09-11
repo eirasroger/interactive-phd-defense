@@ -1,9 +1,12 @@
 # interactive-phd-defense
-**[Live presentation →](https://eirasroger.github.io/interactive-phd-defense/#/opening)**
+
 
 
 Interactive PhD defense presentation for _"Artificial Intelligence for Circular
 and Sustainable Product Decision-Support in Construction"_.
+
+See the live presentation [here](https://eirasroger.github.io/interactive-phd-defense/#/opening).
+
 
 A browser-based presentation engine built around a single continuous 3D world.
 Scenes replace slides, camera travel replaces page transitions, and the figures
