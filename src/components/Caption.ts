@@ -1,5 +1,6 @@
 import gsap from 'gsap';
 import { DURATION, EASE, STAGGER, seconds } from '@/animations/timing';
+import type { Accent } from '@/components/accent';
 import { el } from '@/utilities/dom';
 import './caption.css';
 
@@ -7,8 +8,8 @@ export interface CaptionContent {
   readonly eyebrow?: string;
   readonly heading: string;
   readonly body?: readonly string[];
-  /** Semantic accent for the eyebrow rule. */
-  readonly accent?: 'circular' | 'ai' | 'emphasis';
+  /** Semantic accent for the eyebrow rule. `neutral` is the absence of a claim. */
+  readonly accent?: Accent;
   readonly align?: 'start' | 'center';
   /** Institutional mark above the composition. Title card only; `src` must be an import. */
   readonly logo?: { readonly src: string; readonly alt: string };

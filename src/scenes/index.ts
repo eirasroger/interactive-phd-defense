@@ -1,3 +1,4 @@
+import { CONTENTS } from '@/content/contents';
 import type { SceneDefinition } from '@/engine/scene/types';
 import { act1Scenes } from './act1';
 import { act2Scenes } from './act2';
@@ -30,3 +31,36 @@ export const scenes: readonly SceneDefinition[] = [
   // and the ceiling opens on the last of it.
   ...act3Scenes,
 ];
+
+/**
+ * The index slide names six parts of the talk and the scene each one opens on,
+ * and this is what keeps it honest.
+ *
+ * An agenda is the one composition in the deck that makes a claim about every
+ * other composition, so it is also the one that goes stale silently: reorder the
+ * acts, rename a scene, drop a section, and the index keeps reading perfectly
+ * while describing a talk that no longer exists. Asserted here rather than in
+ * the scene, because this module is where the whole deck is known and the scene
+ * importing it would close a cycle.
+ */
+const sceneOrder = new Map(scenes.map((scene, index) => [scene.id, index]));
+
+let previous = -1;
+for (const part of CONTENTS.parts) {
+  const index = sceneOrder.get(part.from);
+
+  if (index === undefined) {
+    throw new Error(
+      `Contents: part '${part.title}' opens on scene '${part.from}', which the deck does not have.`,
+    );
+  }
+
+  if (index <= previous) {
+    throw new Error(
+      `Contents: part '${part.title}' opens on '${part.from}' at position ${index}, ` +
+        `which is not after the part before it. The index must run in the deck's own order.`,
+    );
+  }
+
+  previous = index;
+}

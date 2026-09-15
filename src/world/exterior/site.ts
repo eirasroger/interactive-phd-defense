@@ -546,21 +546,20 @@ export const REVIEW = {
   stagger: 9,
   /**
    * The span of zone progress over which the row stands on site: `scaffold`
-   * (6/10) to `objectives` (9/10), bracketing `alternatives` at 7/10 and `gaps`
-   * at 8/10. The travel happens on beats that face away from the row, so the
+   * (7/11) to `objectives` (10/11), bracketing `alternatives` at 8/11 and `gaps`
+   * at 9/11. The travel happens on beats that face away from the row, so the
    * panels are only ever seen standing. `act1/index.ts` asserts the deck still
    * agrees with these.
    *
    * Written as the fraction the deck computes rather than as a decimal: zone
    * progress is `index / (count - 1)`, and the assertion compares it exactly.
    * The denominator tracks the act's length — 12 at thirteen scenes, 11 after
-   * `ai` was cut, and 10 once the act ended on `contributions` and the arrival
-   * at the door became a transition. Unchanged by the cloud: `opening` was
-   * added at the head and the establishing shot it replaced was removed, so the
-   * run is the same length and every index after the first is where it was.
+   * `ai` was cut, 10 once the act ended on `contributions` and the arrival at
+   * the door became a transition, and 11 again now `contents` stands between
+   * the title card and the motivation.
    */
-  from: 6 / 10,
-  to: 9 / 10,
+  from: 7 / 11,
+  to: 10 / 11,
 } as const;
 
 /**
@@ -572,7 +571,9 @@ export const REVIEW = {
  * opening scene knowing that it happened.
  *
  * `opening` is the only beat in the cloud and it sits at zone progress 0, so
- * this is the boundary below the first step of the run rather than a span.
+ * this is the boundary below the first step of the run rather than a span. The
+ * deck clears on the way to `contents`, which is the fall through the deck and
+ * the reason that pose stands under its base.
  */
 export const CLOUD = { clears: 0 } as const;
 
@@ -580,7 +581,7 @@ export const CLOUD = { clears: 0 } as const;
  * When the scaffold and its hoarding come down.
  *
  * The strike is the one state change Act I makes to the building itself, and it
- * has to happen where the building cannot be seen — `gaps` (8/10) is the only
+ * has to happen where the building cannot be seen — `gaps` (9/11) is the only
  * beat in the act that turns its back on it, which is why the number is that one
  * and not a matter of taste. `act1/index.ts` asserts the deck still agrees.
  *
@@ -589,4 +590,4 @@ export const CLOUD = { clears: 0 } as const;
  * stays open until Act IV answers it. Two reveals on one elevation would spend
  * the second one for nothing.
  */
-export const CONSTRUCTION = { struck: 8 / 10 } as const;
+export const CONSTRUCTION = { struck: 9 / 11 } as const;

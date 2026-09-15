@@ -10,6 +10,7 @@ import { CROSSING } from '@/world/exterior/paths';
 import { AVENUE, CONSTRUCTION, ENTRANCE, REVIEW } from '@/world/exterior/site';
 import { AssessmentScene } from './AssessmentScene';
 import { CircularEconomyScene } from './CircularEconomyScene';
+import { ContentsScene } from './ContentsScene';
 import { ContributionsScene } from './ContributionsScene';
 import { EpdScene } from './EpdScene';
 import { ExteriorScene } from './ExteriorScene';
@@ -80,10 +81,10 @@ const alongAvenue = (fraction: number): number =>
 const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
 
 /**
- * Act I, walked as a route through the site rather than as eleven framings of
+ * Act I, walked as a route through the site rather than as twelve framings of
  * one elevation.
  *
- * **The eleven poses are one route, not eleven viewpoints.** Every move is
+ * **The twelve poses are one route, not twelve viewpoints.** Every move is
  * short and continues the last one's heading, because the transition between
  * scenes is a camera tween through open air: two poses a hundred metres apart
  * facing opposite ways do not read as a move, they read as a cut, and the whole
@@ -92,30 +93,33 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * The route is a descent and a walk inland, and the descent now starts above
  * the weather:
  *
- * 1. **opening** — inside cloud, a hundred and eighteen metres up. The title
+ * 1. **opening** — inside cloud, three hundred and thirty metres up. The title
  *    card, and nothing else in the frame.
- * 2. **lake** — the fall out of it, onto the water facing the shore. The site
- *    is read off the water, as if off a boat, and it is the first time the
- *    audience sees any of it.
- * 3. **leverage** — on down the same bearing, still over water. Its own
+ * 2. **contents** — the fall out of it, levelling off at seventy metres and
+ *    aimed down at the whole site. The index of the talk, read off an aerial.
+ * 3. **lake** — on down the same descent, onto the water facing the shore. The
+ *    site is read off the water, as if off a boat.
+ * 4. **leverage** — on down the same bearing, still over water. Its own
  *    composition: the room to change the building against what changing it
  *    costs.
- * 4. **river** — west along the outlet, over the channel, following it. Its
+ * 5. **river** — west along the outlet, over the channel, following it. Its
  *    own composition, not a caption: circular economy, as the value-retention
  *    hierarchy.
- * 5. **park** — off the water and turned inland: the riverside walk leading to
+ * 6. **park** — off the water and turned inland: the riverside walk leading to
  *    the building.
- * 6. **construction** — in to the massing, scaffolded, from the east.
- * 7. **scaffold** — closer, on the scaffold itself, at the unassigned bay.
- * 8. **alternatives** — the four options, on the promenade thirty metres east.
- * 9. **gaps** — north-west into the park, facing away from everything.
- * 10. **objectives** — the bridge, and the entrance centred down the avenue.
- * 11. **contributions** — halfway down that avenue, same aim. The act ends here.
+ * 7. **construction** — in to the massing, scaffolded, from the east.
+ * 8. **scaffold** — closer, on the scaffold itself, at the unassigned bay.
+ * 9. **alternatives** — the four options, on the promenade thirty metres east.
+ * 10. **gaps** — north-west into the park, facing away from everything.
+ * 11. **objectives** — the bridge, and the entrance centred down the avenue.
+ * 12. **contributions** — halfway down that avenue, same aim. The act ends here.
  *
  * **There is no establishing shot and no arrival-at-the-door beat.** The first
  * was a second title card over a site the audience was about to be flown into
- * anyway, which spent the reveal on a caption they had just read; the descent
- * out of the cloud now lands directly on the motivation.
+ * anyway, which spent the reveal on a caption they had just read. `contents` is
+ * not that beat returning: it is the index of the talk, and the aerial it is
+ * read against is the frame the fall out of the cloud was going to produce
+ * whether anything was written on it or not.
  *
  * **There was an arrival-at-the-door beat.** One stood here, carrying the words
  * *Five papers. One pipeline.* — which is the previous scene's last frame said
@@ -188,18 +192,63 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new OpeningScene(act1Captions.overview),
   },
 
-  // **The arrival, and the bottom of the descent out of the cloud.** The camera
-  // comes down a hundred and twelve metres onto the water and reads the site off
-  // it. Nothing is built in the near half of this frame, which is the point —
-  // this beat is the reason the work exists, not yet the work.
+  // **The fall out of the cloud, and the only time the whole site is in one
+  // frame.** Two hundred and sixty metres down onto a pose that levels off at
+  // seventy and looks back down at everything the next eight minutes are spent
+  // walking through. The index is read against it, which is the one beat in the
+  // deck where a diagram of the talk and a picture of the world are the same
+  // statement.
+  //
+  // **Seventy metres, aimed thirty-seven degrees down, and both numbers are
+  // arithmetic.** The camera's far plane is 400 m (`CAMERA_DEFAULTS`), so ground
+  // past that is simply not drawn and an aerial aimed anywhere near level ends
+  // on a clipped arc with grey beyond it. A 48° frame aimed 37° down has its top
+  // edge 13° under the horizon, which at this height reaches 306 m of ground and
+  // lands inside the woodland belt: trees close the top of frame, no horizon is
+  // in it, and nothing visible is within ninety metres of the clip. Lower and
+  // the frame stops being an overview; higher and the top edge reaches past the
+  // world.
+  //
+  // The building sits right of centre and small, which is correct for a beat
+  // whose subject is the site rather than the object in it. Water is in the
+  // near frame, the river and the riverside walk cross the middle, and the
+  // knoll closes the right.
   //
   // `travel` rather than the paced default, because this is not a hop between
   // two things the camera is looking at: it is the one continuous fall the deck
   // opens with, with the air opening and the cloud thinning around it, and
   // `TRANSITION.camera` would cap it at four and a half seconds. The rest of Act
-  // I is paced normally — only the first move is a set piece.
+  // I is paced normally — only the first move is a set piece. It is also spent
+  // on an empty frame, because the composition brackets the move
+  // (`decisions.md` §34): the aerial is seen undimmed for five seconds before
+  // anything is laid over it.
   //
-  // `recessed`, and the only scene in the act with its own composition rather
+  // `foreground`, and the composition is a column on the left rather than a
+  // full-width one, so the aerial keeps its value in the half of the frame
+  // nothing is read in. That is also what the act's default scrim is anchored
+  // for.
+  {
+    id: 'contents',
+    title: 'Contents',
+    chapter: CHAPTER.opening,
+    zone: exteriorZone.id,
+    world: 'foreground',
+    pose: pose([126, 70, 158], [54, 0, 97], 48),
+    travel: { seconds: 5.2, ease: EASE.camera },
+    assets: [...EXTERIOR_ASSETS],
+    create: () => new ContentsScene(),
+  },
+
+  // **The arrival, and the bottom of the descent out of the cloud.** The camera
+  // comes down the last seventy metres onto the water and reads the site off
+  // it. Nothing is built in the near half of this frame, which is the point —
+  // this beat is the reason the work exists, not yet the work.
+  //
+  // Paced rather than timed: the set piece is the leg above it, and this is a
+  // ninety-metre descent onto a pose the audience has just been shown the whole
+  // of from above.
+  //
+  // `recessed`, and the first scene in the act with its own composition rather
   // than a caption: the argument is four numbers, so the world steps back and
   // becomes the surface they are read against.
   {
@@ -209,7 +258,6 @@ export const act1Scenes: readonly SceneDefinition[] = [
     zone: exteriorZone.id,
     world: 'recessed',
     pose: pose([138, 6, 98], [26, 5, 66], 48, 6),
-    travel: { seconds: 5.2, ease: EASE.camera },
     assets: [...EXTERIOR_ASSETS],
     create: () => new MotivationScene(),
   },
