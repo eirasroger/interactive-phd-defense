@@ -17,6 +17,13 @@ import type { ObjectiveMapSpec } from '@/components/figures/ObjectiveMap';
  * three words each, because a chip carrying the full gap title is the previous
  * scene printed twice. The full wording was on screen one beat ago and is what
  * the audience is being reminded of, not told.
+ *
+ * Gap 01's chip compresses its description rather than its title, because the
+ * description is where the claim moved: the dimensions are never weighed
+ * together. O1's own statement stays verbatim and carries none of that weight,
+ * which is what the `indicators` mark is for. Its five axes are the five
+ * dimensions, and a radar says *read against each other, not summed* in a way no
+ * clause appended to a 120-character objective could.
  */
 
 export const OBJECTIVES = {
@@ -25,7 +32,7 @@ export const OBJECTIVES = {
 
   map: {
     gaps: [
-      { key: 'Gap 01', label: 'Multi-criteria prioritisation' },
+      { key: 'Gap 01', label: 'Criteria weighed together' },
       { key: 'Gap 02', label: 'Circularity integration' },
       { key: 'Gap 03', label: 'Heterogeneous, missing data' },
       { key: 'Gap 04', label: 'Compliance prefiltering' },

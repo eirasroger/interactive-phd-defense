@@ -9,7 +9,15 @@ import type { GapCardsSpec } from '@/components/figures/GapCards';
  * coming.
  *
  * **The text is the thesis's own wording and is not to be paraphrased here.**
- * Titles and descriptions are verbatim.
+ * Titles are verbatim, and so is every description but the first.
+ *
+ * Gap 01's description is the one deliberate departure. The thesis phrases it as
+ * comparison under incomplete and uncertain information, which is true and is
+ * also what gaps 03 and 05 are each about, so on a slide the three read as one
+ * gap stated three times. What is missing at 01 is that the dimensions are never
+ * brought together in a single comparison, so the description names them. The
+ * uncertainty half of the thesis wording is carried by 03 and 05, where it is
+ * the subject rather than a qualifier.
  *
  * **No gap carries an accent of its own.** An earlier pass tinted circularity
  * green, the ML gap blue and integration amber, on the reasoning that each
@@ -28,7 +36,7 @@ export const GAPS = {
       {
         key: '01',
         title: 'Product-level multi-criteria prioritisation',
-        body: 'Early-stage product comparison under incomplete and uncertain information.',
+        body: 'Cost, environmental impact, circularity, performance and fit to context are not weighed together.',
       },
       {
         key: '02',

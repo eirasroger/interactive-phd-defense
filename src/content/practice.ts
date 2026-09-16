@@ -83,7 +83,7 @@ export const PRACTICE = {
     candidates: [...CANDIDATES],
     gate: {
       label: 'Regulatory compliance',
-      value: 'Met',
+      value: 'Pass',
       note: 'All four are admissible',
     },
     criteria: [
@@ -94,6 +94,6 @@ export const PRACTICE = {
       { label: 'Performance beyond compliance' },
       { label: 'Fit to context and use' },
     ],
-    withheld: 'Not integrated by any decision-support mechanism in current practice',
+    withheld: 'Not systematically integrated into product selection in current practice',
   } satisfies CandidateSetSpec,
 } as const;
