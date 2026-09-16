@@ -11,13 +11,26 @@ export interface MethodBand {
   readonly rank: 'primary' | 'secondary';
 }
 
+export interface MethodInput {
+  readonly label: string;
+  /**
+   * Available at early design, so this row survives the second beat.
+   *
+   * The choice under consideration and the quantity it comes in are both
+   * known at concept; everything downstream of them is what is still open.
+   * Draining all five said the specifier knows nothing, which overstates the
+   * problem and understates what the pipeline is given to work with.
+   */
+  readonly known?: boolean;
+}
+
 export interface ImpactMethodSpec {
   /** What the inventory has to supply before any of it can run. */
-  readonly inputs: readonly string[];
+  readonly inputs: readonly MethodInput[];
   readonly bands: readonly MethodBand[];
   /** What the three add up to. */
   readonly sum: string;
-  /** Named under the inputs once they have emptied. */
+  /** Named under the inputs once the undecided ones have emptied. */
   readonly missing: string;
 }
 
@@ -99,7 +112,7 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
   const bandY = (index: number): number => bandTop + index * (BAND_H + BAND_GAP);
 
   const inputs = spec.inputs
-    .map((label, index) => {
+    .map(({ label }, index) => {
       const y = inputY(index);
       return `
         <g class="method-input">
@@ -112,10 +125,20 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
 
   // Every input converges on one point and one arrow enters the method: the
   // inventory is a single thing the method either has or does not.
+  //
+  // Two paths on the same curve. The first is the route and the second is what
+  // travels it, so the beat can dim a feed by its group and the flow goes with
+  // the line it belongs to. The stagger is a delay rather than a phase, which
+  // keeps the five arrivals from landing on the arrowhead together.
   const feeds = spec.inputs
     .map((_, index) => {
       const y = inputY(index) + INPUT_H / 2;
-      return `<path class="method-feed" d="M${FEED_X},${y} C${JOIN_X - 60},${y} ${JOIN_X - 60},${MID_Y} ${JOIN_X},${MID_Y}" />`;
+      const d = `M${FEED_X},${y} C${JOIN_X - 60},${y} ${JOIN_X - 60},${MID_Y} ${JOIN_X},${MID_Y}`;
+      return `
+        <g class="method-feed" style="--feed:${index}">
+          <path class="method-feed-line" d="${d}" />
+          <path class="method-feed-flow" d="${d}" />
+        </g>`;
     })
     .join('');
 
@@ -158,7 +181,7 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
       label: group.querySelector<SVGTextElement>('.method-input-label')!,
     }),
   );
-  const feedNodes = Array.from(svg.querySelectorAll<SVGPathElement>('.method-feed'));
+  const feedNodes = Array.from(svg.querySelectorAll<SVGGElement>('.method-feed'));
   const arrow = svg.querySelector<SVGPathElement>('.method-arrow')!;
   const bandNodes = Array.from(svg.querySelectorAll<SVGGElement>('.method-band'));
   const sum = svg.querySelector<SVGGElement>('.method-sum')!;
@@ -195,6 +218,9 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
     ];
 
     inputNodes.forEach((node, index) => {
+      // A known row holds. The beat is about what the inventory is missing, and
+      // a row that empties when it has not emptied is the wrong claim.
+      const drains = missing && !spec.inputs[index]?.known;
       // Down the stack, so the emptying reads as one movement rather than five.
       const cue = 0.08 + index * 0.075;
 
@@ -205,7 +231,7 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
       });
       steps.push({
         node: node.fill,
-        vars: { attr: { width: missing ? 0 : INPUT_W } },
+        vars: { attr: { width: drains ? 0 : INPUT_W } },
         at: cue,
         duration: DURATION.slow * 0.7,
         ease: 'power2.inOut',
@@ -213,21 +239,23 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
       steps.push({
         node: node.frame,
         vars: {
-          stroke: missing ? colours.emphasis : colours.frame,
-          strokeDasharray: missing ? STROKE_DASHED : STROKE_SOLID,
+          stroke: drains ? colours.emphasis : colours.frame,
+          strokeDasharray: drains ? STROKE_DASHED : STROKE_SOLID,
         },
         at: cue,
       });
       steps.push({
         node: node.label,
-        vars: { fill: missing ? colours.labelMissing : colours.label },
+        vars: { fill: drains ? colours.labelMissing : colours.label },
         at: cue + 0.1,
         duration: DURATION.normal,
       });
+      // A surviving feed stays lit against a receded method, which is the
+      // point: the evidence arrives, and it is not enough on its own.
       steps.push({
         node: feedNodes[index]!,
-        vars: { opacity: alive ? (missing ? 0.16 : 1) : 0 },
-        at: alive && !missing ? 0.1 + index * 0.04 : cue,
+        vars: { opacity: alive ? (drains ? 0.16 : 1) : 0 },
+        at: alive && !drains ? 0.1 + index * 0.04 : cue,
       });
     });
 

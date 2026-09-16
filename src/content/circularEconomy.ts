@@ -8,11 +8,14 @@ import type { LoopSpec } from '@/components/figures/Loop';
  * on the turn, not on assembling the picture.
  *
  * The turn is **not** that the loops fail physically — that is a different
- * literature and a different slide. It is that circularity is not assessed in
- * a form a designer can decide with: the documentation defines it for whole
- * buildings, or through indicators nothing can supply at early design, so it
- * survives as a certification line rather than as an input to a choice. What
- * *does* decide instead is scene 8's argument, and stays there.
+ * literature and a different slide. Nor is it that teams are unable to assess
+ * circularity: they are able, and an earlier draft saying otherwise drew the
+ * correction that produced this wording. The turn is that assessing it by hand
+ * across a candidate set is exhaustive work, so with no tooling to carry it the
+ * criterion is dropped, and the documentation that does exist describes whole
+ * buildings after the products are chosen. The gap is systematisation, which is
+ * what gap 02 claims verbatim. What *does* decide instead is scene 8's
+ * argument, and stays there.
  */
 export const CIRCULAR_ECONOMY = {
   eyebrow: 'State of the art · 01',
@@ -27,8 +30,8 @@ export const CIRCULAR_ECONOMY = {
    */
   claims: [
     'It replaces take, make, waste. The tighter the return, the more value survives.',
-    'In practice it is rarely assessed, and rarely used to decide.',
-    'It is usually defined for a whole building, or through indicators early design cannot yet quantify, so it tends to appear only where a certification asks for it.',
+    'The barrier is effort. Assessing every candidate product by hand is exhaustive work, and without tooling for it the criterion drops out of the decision.',
+    'It is defined for the whole building and measured after the products are chosen, through indicators early design can only estimate.',
   ],
 
   loop: {

@@ -20,16 +20,25 @@ export const ASSESSMENT = {
   claims: [
     'Environmental impact is evaluated with LCA, joined by LCC and S-LCA as LCSA where the economic and social dimensions are counted too.',
     'All of it runs on an inventory: what the product is, how much of it, how long it lasts.',
-    'At early design none of that is decided yet, so the assessment either waits or runs on generic assumptions.',
+    'At early design the candidate product and its quantity can be known. Transport, service life and end of life are still open, so the assessment either waits or runs on generic assumptions.',
   ],
 
+  /**
+   * The first two rows hold on the second beat and the last three empty.
+   *
+   * An earlier pass drained all five, which read as though the specifier knew
+   * nothing at concept. The product under consideration is the thing being
+   * chosen and its quantity comes off the model, so both are available. What is
+   * open is everything downstream of the choice, and that is the honest gap:
+   * partial evidence the method cannot run on, which is what C3 and C5 are for.
+   */
   method_figure: {
     inputs: [
-      'Which product, and its composition',
-      'Quantities',
-      'Transport and installation',
-      'Service life and maintenance',
-      'End-of-life route',
+      { label: 'Which product, and its composition', known: true },
+      { label: 'Quantities', known: true },
+      { label: 'Transport and installation' },
+      { label: 'Service life and maintenance' },
+      { label: 'End-of-life route' },
     ],
     bands: [
       { code: 'LCA', name: 'Environmental', rank: 'primary' },

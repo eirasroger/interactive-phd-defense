@@ -28,6 +28,25 @@
   stroke-width: 1.25;
   /* Gap zero is a solid line, and the start of a tween to a dashed one. */
   stroke-dasharray: 40 0;
+  /*
+   * An absence that is still open, which is what `standing.css` uses the same
+   * travelling pattern for. It needs no knowledge of the beat: while the frame
+   * is solid a dash offset moves nothing, so the shimmer appears by itself the
+   * moment GSAP dissolves the stroke into `6 5`, and only on the rows that
+   * dissolve. Far slower than the feeds, so the two read as separate events
+   * rather than as one texture.
+   */
+  animation: method-open 11s linear infinite;
+}
+
+/* One period of the dashed state. Invisible against a solid stroke. */
+@keyframes method-open {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 11;
+  }
 }
 
 .method-input-label {
@@ -51,10 +70,45 @@
   text-transform: uppercase;
 }
 
-.method-feed {
+/*
+ * The route, and what travels it.
+ *
+ * Two paths on one curve. Drawing the flow as a travelling dash pattern rather
+ * than as a moving object keeps it independent of path length: the five feeds
+ * are different lengths and a single offset cycle of one dash period loops
+ * seamlessly on all of them. Keyframes rather than a timeline, for the reason
+ * `backbone.css` gives — the presenter stands on this slide for half a minute
+ * and there is no beat that owns the motion.
+ *
+ * The second beat dims a dead feed by its group, so the flow stops with the
+ * line it belongs to and the two surviving streams are the only ones still
+ * arriving at the method.
+ */
+.method-feed-line {
   fill: none;
   stroke: color-mix(in srgb, var(--c-text-faint) 60%, transparent);
   stroke-width: 1.25;
+}
+
+.method-feed-flow {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c-circular) 85%, transparent);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  /* Period 34: one short carry and a long clear run behind it. */
+  stroke-dasharray: 5 29;
+  animation: method-carry 5.1s linear infinite;
+  animation-delay: calc(var(--feed, 0) * -0.86s);
+}
+
+/* One period, so the loop has no seam. Toward the method, against the path. */
+@keyframes method-carry {
+  from {
+    stroke-dashoffset: 34;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .method-arrow {
@@ -104,4 +158,21 @@
   font-size: 13px;
   font-weight: var(--fw-medium);
   letter-spacing: 0.04em;
+}
+
+/*
+ * Reduced motion keeps the drawing and drops the loops.
+ *
+ * The flow is held at a phase where every feed shows its carry, so the figure
+ * still reads as five streams into a method rather than as five bare curves.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .method-feed-flow {
+    animation: none;
+    stroke-dashoffset: 17;
+  }
+
+  .method-input-frame {
+    animation: none;
+  }
 }
