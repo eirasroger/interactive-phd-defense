@@ -15,9 +15,8 @@
 }
 
 /*
- * The two states are independent layers. Sharing a grid cell coupled them: the
- * type growing in one step resized the row and moved the other layer out from
- * under the geometry the transition had already measured.
+ * Both steps are absolutely positioned layers so resizing one cannot move the
+ * other during the transition.
  */
 .fw-stages,
 .fw-families {
@@ -29,8 +28,8 @@
 /* ---- The card, shared by both steps ------------------------------------ */
 
 /*
- * The surface is a child rather than the card's own background, so the card can
- * shed its panel while the rows inside it stay put and travel onward.
+ * The surface is a separate child so it can fade out while the card's rows
+ * stay visible and animate on.
  */
 .fw-card {
   position: relative;
@@ -74,7 +73,7 @@
   background-color: color-mix(in srgb, var(--family) 6%, #ffffff 70%);
 }
 
-/* The card header and the key row are the same shape, so one can land on the other. */
+/* Same layout as `.fw-key` so a key row can animate onto the header. */
 .fw-card-head {
   display: flex;
   align-items: center;

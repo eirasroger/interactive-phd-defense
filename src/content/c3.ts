@@ -1,24 +1,11 @@
 /**
- * C3 — screening agent. Data of record.
+ * C3 screening agent data, plus the paper's rule engine run over Table 1's six EPDs.
+ * `reconcile` and `evaluate` implement §2.4. `assertPublished` checks the results
+ * against Tables 2-5 at load time.
  *
- * The engine below is not a description of the paper's rule engine. It is the
- * rule engine: `reconcile` implements §2.4's strictest-bound rule and
- * `evaluate` implements its pass/fail comparison, run over Table 1's six EPDs.
- * `assertPublished` checks the output against Table 2, Table 3, Table 4 and the
- * case-2 column of Table 5 at load time.
- *
- * Every regulation-only baseline here (EN 206 §XC1: 0.65 / 260 / 20, EN 206
- * §XC2: 280 / 25, AS 3600 §A2: 320 / 25) is read off a scenario where the paper
- * states the user supplied nothing for that indicator, so the published
- * "screening constraint" for it is the regulation's own value with nothing to
- * reconcile against.
- *
- * One value comes from the standard rather than the paper. EN 206 caps the
- * water-to-cement ratio at 0.60 for exposure class XC2, and scenario 1's
- * operator proposes 0.53. The paper prints only the resolved constraint, so
- * without the standard's own ceiling the reconciliation has a contest in one
- * direction and a walkover in the other. It is marked `EN206_XC2` and it
- * changes no published outcome: 0.53 governs either way.
+ * Regulation-only baselines come from scenarios where the user gave no value for
+ * that indicator. The XC2 0.60 w/c ceiling comes from EN 206 itself; it changes
+ * no published outcome.
  */
 
 export type BoundKind = 'min' | 'max';
@@ -37,11 +24,7 @@ export interface Requirement {
   readonly label: string;
   readonly unit: string;
   readonly kind: BoundKind;
-  /**
-   * The span an axis draws this indicator over. Chosen to hold every bound and
-   * every declared value in the case study with room either side, so a mark
-   * never lands on the end of its own scale.
-   */
+  /** Axis range. Holds every bound and declared value with margin on both sides. */
   readonly domain: readonly [number, number];
 }
 
@@ -64,7 +47,7 @@ export const REQUIREMENTS: readonly Requirement[] = [
   },
 ] as const;
 
-/** Column-width names, for anywhere the full label will not fit. */
+/** Short labels for narrow columns. */
 export const SHORT_LABEL: Readonly<Record<RequirementKey, string>> = {
   w_c_ratio: 'w/c',
   cement_content: 'Cement',
@@ -75,9 +58,8 @@ export const SHORT_LABEL: Readonly<Record<RequirementKey, string>> = {
 const bound = (kind: BoundKind, value: number, source: Source): Bound => ({ kind, value, source });
 
 /**
- * §2.4's strictest-bound rule: the maximum of the minimums, the minimum of the
- * maximums. Where only one source speaks to an indicator, that source governs
- * on its own.
+ * §2.4 strictest-bound rule: the largest minimum, or the smallest maximum.
+ * A single source governs on its own.
  */
 export function reconcile(
   kind: BoundKind,
@@ -111,7 +93,7 @@ export function governingFrom(sources: SourceBounds): BoundSet {
   return governing;
 }
 
-/** Authority order. A later source may tighten a bound; it cannot loosen it. */
+/** Authority order. A later source can only tighten a bound. */
 export const AUTHORITY: readonly Source[] = ['regulation', 'drawing', 'user'];
 
 export const AUTHORITY_LABEL: Readonly<Record<Source, string>> = {
@@ -131,7 +113,7 @@ export interface Epd {
   readonly aggregateSize: number | null;
 }
 
-/** Table 1, verbatim. EPD 4's aggregate size is the paper's own "Not provided". */
+/** Table 1, verbatim. EPD 4's aggregate size is "Not provided" in the paper. */
 export const EPDS: readonly Epd[] = [
   {
     key: 'epd-1',
@@ -196,11 +178,8 @@ export const EPDS: readonly Epd[] = [
 ] as const;
 
 /**
- * A declared value as it is printed, wherever a product is drawn.
- *
- * The precision is the product's, not the constraint's: an undeclared indicator
- * keeps its unit and loses its number, because "no aggregate size" and
- * "aggregate size zero" are different claims and only one of them is true.
+ * A declared value formatted for display. An undeclared value prints as a dash
+ * with its unit, so it is never mistaken for zero.
  */
 export const readingOf = (epd: Epd, key: RequirementKey): string => {
   switch (key) {
@@ -238,9 +217,8 @@ const READ: Readonly<Record<RequirementKey, (epd: Epd) => number | null>> = {
 };
 
 /**
- * A product with no declared value for a governed indicator cannot be
- * verified against it. The paper's own scenarios fail EPD 4 for exactly this
- * reason wherever aggregate size is governed, so `missing` counts as `fail`.
+ * An undeclared value cannot be verified, so `missing` counts as a fail.
+ * The paper fails EPD 4 this way wherever aggregate size is governed.
  */
 function check(requirement: Requirement, governing: Bound, epd: Epd): Check {
   const value = READ[requirement.key](epd);
@@ -266,11 +244,8 @@ export function evaluate(epd: Epd, governing: BoundSet): Verdict {
 }
 
 /**
- * Why a screening stage exists ahead of the recommendation.
- *
- * Section 1: decision and optimisation tools assume the designer has already
- * excluded non-compliant products by hand. Where that exclusion has not
- * happened, a recommendation is well-formed and inadmissible.
+ * Stages from portfolio to recommendation (Section 1). Decision tools assume
+ * non-compliant products were already excluded by hand; screening does that step.
  */
 export const FUNNEL = [
   {
@@ -302,7 +277,7 @@ export interface Approach {
   readonly limitation: string;
 }
 
-/** The two established workflows, and what each one costs. Sections 1 and 5.1. */
+/** The two established workflows and their limits. Sections 1 and 5.1. */
 export const APPROACHES: readonly Approach[] = [
   {
     key: 'manual',
@@ -320,7 +295,7 @@ export const APPROACHES: readonly Approach[] = [
   },
 ] as const;
 
-/** What the architecture puts between them. Section 2.4. */
+/** The proposed middle ground. Section 2.4. */
 export const ARCHITECTURE = {
   label: 'Human-in-the-loop screening',
   parts: [
@@ -331,17 +306,9 @@ export const ARCHITECTURE = {
 } as const;
 
 /**
- * Fig. 1's inputs, in the four shapes they arrive in.
- *
- * Described as the tool takes them rather than as the case study supplies them:
- * the engine is indifferent to which standard is loaded, and naming EN 206 here
- * would make a general workflow look like a concrete one.
- *
- * `source` is the authority the input carries, and it is what colours the card.
- * Three of the four are the same three sources the reconciliation rule ranks, so
- * the palette introduced here is the palette read for the rest of the station.
- * `path` marks the one input no model touches: a regulatory schema is digitised
- * by hand into key-value pairs precisely so it cannot be misread (§2.1).
+ * Fig. 1's four inputs, described generically (no specific standard).
+ * `source` sets the card colour and matches the reconciliation sources.
+ * `path: 'direct'` marks the schema, which is digitised by hand and skips the model (§2.1).
  */
 export const DOCUMENTS = [
   {
@@ -378,11 +345,7 @@ export const DOCUMENTS = [
   },
 ] as const;
 
-/**
- * What the extraction returns. Fig. 1 groups it into exactly these two, and the
- * grouping matters: one bundle sets the requirement, the other is measured
- * against it.
- */
+/** Extraction output, grouped as in Fig. 1: requirements, and the products checked against them. */
 export const RECORDS = [
   {
     key: 'requirements',
@@ -396,7 +359,7 @@ export const RECORDS = [
   },
 ] as const;
 
-/** Section 2.4: the interaction layer, and the only place a human intervenes. */
+/** Section 2.4: the only step where a human intervenes. */
 export const CHECKPOINT = {
   label: 'Operator verification',
   detail: 'Every extracted value is checked against its source before a rule executes',
@@ -407,23 +370,15 @@ export const ENGINE = {
   detail: 'One indicator at a time, against the strictest bound the sources agree on',
 } as const;
 
-/** Fig. 1's two terminals, and the branch of the compliance check that reaches each. */
+/** Fig. 1's two end states and the compliance branch leading to each. */
 export const OUTCOMES = [
   { key: 'considered', label: 'Product considered', branch: 'Yes' },
   { key: 'discarded', label: 'Product discarded', branch: 'No' },
 ] as const;
 
 /**
- * Scenario 1, EN 206, no drawing (Table 2). The user proposes a cement
- * minimum below the regulatory floor and a water-to-cement maximum below the
- * regulatory ceiling. The engine keeps the regulatory floor and adopts the
- * user's tighter ceiling.
- */
-/**
- * EN 206, exposure class XC2. The cement floor and the strength class are the
- * paper's published screening constraints for scenario 1; the 0.60 ceiling is
- * the standard's own limiting value, and it is here so the reconciliation has
- * something for the operator's 0.53 to actually beat.
+ * EN 206, exposure class XC2. Cement and strength are the paper's scenario 1
+ * constraints. The 0.60 w/c ceiling is the standard's own limit.
  */
 export const EN206_XC2: BoundSet = {
   w_c_ratio: bound('max', 0.6, 'regulation'),
@@ -431,6 +386,10 @@ export const EN206_XC2: BoundSet = {
   strength: bound('min', 25, 'regulation'),
 };
 
+/**
+ * Scenario 1, EN 206, no drawing (Table 2). The engine keeps the regulatory
+ * cement floor and adopts the user's tighter w/c ceiling.
+ */
 export const HIERARCHY_CASE = {
   input:
     'This concrete is specified for a structural foundation. The mix design must adhere to a maximum water-to-cement ratio of 0.53 and a minimum cement content of 200 kg/m³.',
@@ -447,14 +406,14 @@ export const HIERARCHY_CASE = {
 
 export const HIERARCHY_GOVERNING = governingFrom(HIERARCHY_CASE.sources);
 
-/** EN 206, exposure class XC1. Table 2's scenario 2 asks the user for nothing but aggregate size, so its screening constraints are the regulatory baseline on its own. */
+/** EN 206, exposure class XC1. Regulatory baseline from Table 2, scenario 2. */
 export const EN206_XC1: BoundSet = {
   w_c_ratio: bound('max', 0.65, 'regulation'),
   cement_content: bound('min', 260, 'regulation'),
   strength: bound('min', 20, 'regulation'),
 };
 
-/** AS 3600, exposure class A2. Table 3's scenario 2, read the same way. */
+/** AS 3600, exposure class A2. Regulatory baseline from Table 3, scenario 2. */
 export const AS3600_A2: BoundSet = {
   cement_content: bound('min', 320, 'regulation'),
   strength: bound('min', 25, 'regulation'),
@@ -476,19 +435,17 @@ export interface Condition {
   readonly key: string;
   readonly label: string;
   readonly jurisdiction: 'EN 206' | 'AS 3600';
-  /** What the same "indoor application" description resolves to under it. */
+  /** Exposure class for "indoor application" under this jurisdiction. */
   readonly exposureClass: string;
   readonly drawing: boolean;
   readonly sources: SourceBounds;
-  /** What changed relative to the condition before it. */
+  /** Change from the previous condition. */
   readonly change: string;
 }
 
 /**
- * Scenario 2 ("indoor application, 25 mm max aggregate") across three
- * conditions. Chosen over scenarios 1 and 3 because it is the one case in
- * Table 5 where both the jurisdiction switch and the drawing addition each
- * flip a product's verdict, on two different products.
+ * Scenario 2 under three conditions. It is the only Table 5 case where both the
+ * jurisdiction switch and the added drawing each flip a different product's verdict.
  */
 export const CONDITIONS: readonly Condition[] = [
   {
@@ -523,11 +480,7 @@ export const CONDITIONS: readonly Condition[] = [
 export const SCENARIO_INPUT =
   'This concrete is specified for an indoor application. The mix design requires a maximum aggregate size of 25 mm.';
 
-/**
- * Scenario 2 as two demonstrations: the operator's description on its own, then
- * the same six products once the structural drawing has been read. Table 5's
- * case-2 column, columns (a) and (c).
- */
+/** Scenario 2 without and with the drawing. Table 5, case 2, columns (a) and (c). */
 export const DEMONSTRATION: readonly Condition[] = CONDITIONS.filter(
   (condition) => condition.jurisdiction === 'EN 206',
 );
@@ -538,7 +491,7 @@ export interface Handover {
   readonly body: string;
 }
 
-/** What the station produces, and what each output is for. */
+/** The station's outputs. */
 export const HANDOVER: readonly Handover[] = [
   {
     key: 'candidates',

@@ -9,34 +9,14 @@ import {
 import { RUN, SECTION } from '@/config/corridor';
 
 /**
- * The volume Act III is argued inside.
+ * Act III backdrop: a volume of small additive points around the camera, owned
+ * by the zone so it persists across scenes. One draw call.
  *
- * A composition set on nothing reads as a slide rather than as a place. What the
- * building opens onto is the thing the corridor was always moving: data, as a
- * volume the camera is standing in. It arrives with the roof, so the plan is
- * read inside it and the themes after it inherit a world rather than meet one.
- * It belongs to the zone rather than to a scene, so those themes can travel
- * through it and it will be where they left it.
- *
- * **Many and small, at the density the engine demos already run at.** A few
- * hundred large sprites is a screensaver: every one of them is an object, and an
- * object behind a word is something the eye keeps trying to resolve. Tens of
- * thousands of small points is a medium, and a medium is what text sits in front
- * of. It is one draw call either way.
- *
- * **Readability is bounded in code, not tuned by eye.** A field behind text is
- * the classic way to make a slide unreadable, so every lever that could do that
- * has a limit here:
- *
- * - `ceiling` is the most any one point may add to the ground. Nothing in this
- *   file may raise it to make the sea more visible. If the sea cannot be seen
- *   under the ceiling it should be removed.
- * - Points fade out both very near the camera and far from it. Near is what
- *   keeps the dive readable: a point the camera is about to pass is gone before
- *   it is large enough to sit over a word. Far stops the sea building into a
- *   bright plane behind the heading, which at the overlook is the top of frame.
- * - The wander is bounded in metres and slow enough that a still frame and a
- *   live one agree.
+ * Limits that keep text readable:
+ * - `ceiling`: max brightness one point adds. Do not raise it.
+ * - Points fade near the camera (so none grow over text) and far away (so they
+ *   do not build into a bright plane).
+ * - `wander` is small and slow.
  */
 const SEA = {
   ceiling: 0.5,
@@ -51,7 +31,7 @@ const SEA = {
   depth: { near: 12, rise: 30, fall: 86, far: 210 },
 } as const;
 
-/** Cool and almost colourless: the sea is depth, and depth is not a hue. */
+/** Cool, near-neutral blue. */
 const WATER = 0x9fc4e8;
 
 const VERTEX = `
@@ -107,18 +87,8 @@ export interface DataSea {
 }
 
 /**
- * A repeatable stream, drawn from in order.
- *
- * The first version hashed the point index once per axis, with the three seeds
- * one apart. A hash that cheap correlates at that spacing, so the coordinates
- * moved together and the whole field came out lying on a few diagonal planes
- * that happened to miss the frustum. On screen that read as empty, with a full
- * buffer, a visible object and a shader that compiled.
- *
- * One generator advanced per value cannot correlate with itself, and seeding it
- * from a constant keeps the sea the same sea on every reload: a presenter who
- * rehearses against one frame and defends against another has been handed a
- * different slide.
+ * Seeded LCG, so the sea is identical on every reload. Use one stream for all
+ * axes: per-axis index hashes correlate and collapse points onto planes.
  */
 const stream = (seed: number): (() => number) => {
   let state = seed >>> 0;
@@ -139,13 +109,12 @@ export function createDataSea(budget: number): DataSea {
   for (let index = 0; index < count; index += 1) {
     const at = index * 3;
     positions[at] = (next() - 0.5) * SEA.volume.across;
-    // Denser low and thinning upward, so the volume reads as something the
-    // camera is looking down into rather than as a cube of confetti.
+    // Denser near the floor, thinning upward.
     positions[at + 1] = SECTION.floor + next() ** 1.7 * SEA.volume.height;
     positions[at + 2] = -RUN / 2 + (next() - 0.5) * SEA.volume.along;
 
     seeds[index] = next();
-    // A spread of weights rather than one size, so the field has grain.
+    // Varied point sizes.
     scales[index] = 0.45 + next() ** 1.4 * 0.85;
   }
 
@@ -179,8 +148,7 @@ export function createDataSea(budget: number): DataSea {
   const object = new Points(geometry, material);
   object.name = 'sea';
   object.visible = false;
-  // The volume surrounds the camera during the dive, so its bounding sphere is
-  // a poor proxy for whether any of it is in shot.
+  // The volume surrounds the camera, so culling by bounding sphere is useless.
   object.frustumCulled = false;
   object.renderOrder = -1;
 

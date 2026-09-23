@@ -23,19 +23,14 @@ OUTPUT = PROJECT_ROOT / "src" / "assets" / "models" / "park-assets.glb"
 
 TEXTURE = 512
 
-# Furniture only. This file used to carry the park's trees as well — a jacaranda
-# split into a trunk and loose leaf sprigs for the web to reassemble, plus two
-# island trees — and that was 24 of its 25.5 MB for a canopy that never worked
-# and for a species the site had already rejected as Mediterranean. The park now
-# instances the conifers in `exterior-planting.glb`, which are modelled with
-# their foliage on their branches and were already downloaded.
+# Furniture only. Trees come from `exterior-planting.glb`.
 WANTED = {
     "lamp": "street_lamp_01",
     "lamp_tall": "street_lamp_02",
     "bench": "painted_wooden_bench",
 }
 
-# Flowers read as purple in the albedo, not as a separate slot.
+# Flower materials are tinted as foliage.
 FLOWER_NAMES = ("flower", "blossom", "petal", "bloom")
 
 def clear() -> None:
@@ -79,8 +74,7 @@ def seat(objects, name: str) -> None:
         obj.location -= Vector((centre.x, centre.y, low))
     bpy.ops.object.transform_apply(location=True)
 
-# A lamp post is a pole and a lantern. Anything past this is scan detail nobody
-# reads at the four metres a lamp is ever seen from.
+# Max faces per prop mesh.
 PROP_BUDGET = 5000
 CARD_FLOOR = 1500
 
@@ -88,7 +82,7 @@ def thin(objects, budget: int) -> int:
     removed = 0
     for obj in objects:
         faces = len(obj.data.polygons)
-        # Genuine alpha-mapped cards are tiny and must survive untouched.
+        # Leaves small alpha cards untouched.
         if faces <= max(budget, CARD_FLOOR):
             continue
 
@@ -124,9 +118,7 @@ def grade(objects) -> int:
 
                 if max(image.size) > TEXTURE:
                     image.scale(TEXTURE, TEXTURE)
-                # Every image, not just the graded ones: an unpacked image is
-                # re-read from its source file at export and the downscale is
-                # thrown away.
+                # Pack every image or export reloads the full-size source.
                 image.pack()
     return tinted
 
@@ -154,10 +146,7 @@ def main() -> None:
     if not exported:
         raise SystemExit("[park] nothing to export")
 
-    # Strip every remaining modifier before export. The `_geometry_nodes` object
-    # in each tree blend carries the scatter that builds the full canopy, and
-    # `export_apply` evaluates it — which silently reinstates the two-million
-    # triangle mesh that taking the parts was meant to avoid.
+    # Clear modifiers, or `export_apply` evaluates geometry-node scatters.
     for obj in exported:
         obj.modifiers.clear()
 

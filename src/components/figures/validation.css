@@ -1,13 +1,7 @@
 /*
- * Beat 4. What the model was tested against, and what the test showed.
- *
- * Three numbered blocks, ruled apart, because they are three different claims
- * and an unbroken wall of charts reads as one. Each block carries the paper's
- * own figure: Table 3 as paired intervals, Fig. 7 as its grouped bars, Fig. 8
- * as its heatmap, Fig. 10 as its ranked bars on one shared scale.
- *
- * One tone per product, held across all three blocks, so a colour means the
- * same alternative wherever it is met.
+ * Beat 4: model validation. Three ruled blocks, one per claim, each redrawing a
+ * paper figure (Table 3 intervals, Fig. 7 bars, Fig. 8 heatmap, Fig. 10 ranked
+ * bars). Each product keeps one colour across all blocks.
  */
 .vl-takeaway {
   padding-top: var(--s-2);
@@ -81,13 +75,8 @@
 }
 
 /*
- * The matrix sizes its own column and sits against the panel's right margin;
- * the bar chart takes everything left of the gutter.
- *
- * Split by ratio instead, the matrix is narrower than its column and floats in
- * the middle of it, leaving two hundred pixels of dead space to its right while
- * its own labels crowd the chart on its left. Sizing the column to the table
- * puts the whole gap in one place, and puts it between the two figures.
+ * The matrix column is sized to its content and sits at the right margin. The
+ * bar chart fills the rest, so the spare space falls between the two figures.
  */
 .vl-block-body[data-split='behaviour'] {
   grid-template-columns: minmax(0, 1fr) auto;
@@ -96,9 +85,8 @@
 }
 
 /*
- * The two conditioning inputs, segmented. §5.3 finds priority modest and
- * margin-level, §5.4 finds application capable of reordering the middle; under
- * one heading they read as one effect, so each takes its own.
+ * The two conditioning inputs, each under its own heading because their effects
+ * differ (§5.3 priority, §5.4 application).
  */
 .vl-study {
   display: grid;
@@ -126,8 +114,7 @@
   align-items: start;
 }
 
-/* Block one puts the chart and its aggregate figures side by side, because the
-   scenario and the thirty-two are one claim read at two scales. */
+/* Block one: chart and aggregate figures side by side. */
 .vl-block:first-child .vl-block-body {
   grid-template-columns: 62fr 38fr;
 }
@@ -193,8 +180,7 @@
   transform-origin: center;
 }
 
-/* The panel's interval, and the model's inside it. Both to one axis, so
-   containment is read off the picture rather than asserted beside it. */
+/* The expert panel's interval with the model's drawn inside it, on one axis. */
 .vl-band-expert {
   fill: color-mix(in srgb, var(--c-base) 13%, transparent);
 }
@@ -259,9 +245,8 @@
 
 /* ---- Block two, right: Fig. 8 --------------------------------------------------- */
 
-/* Started at the column's own left edge, and the row names left-aligned in a
-   fixed track, so the heading above and the reading below begin on the same
-   vertical as "Standard structural". Centred, the table floated free of both. */
+/* Left-aligned with a fixed row-name track, so the table lines up with the
+   heading above and the text below. */
 .vl-grid {
   display: grid;
   grid-template-columns: 9.5rem repeat(5, 2.75rem);
@@ -313,10 +298,7 @@
 
 /* ---- Block three: Fig. 10 ------------------------------------------------------- */
 
-/*
- * Three panels on one shared scale, because the comparison between them is the
- * point: two fall away steeply after their leading indicators and one does not.
- */
+/* Three panels on one shared scale so they can be compared directly. */
 .vl-shap {
   display: grid;
   gap: 2px;
@@ -374,8 +356,7 @@
   background-color: var(--c5-pd);
 }
 
-/* The seven indicators outside the top ten, kept grey as the paper keeps them:
-   it is a residual, not a competitor. */
+/* The seven indicators outside the top ten, grey as in the paper. */
 .vl-shap-fill[data-kind='remaining'] {
   background-color: color-mix(in srgb, var(--c-base) 22%, transparent);
 }

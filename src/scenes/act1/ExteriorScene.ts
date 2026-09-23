@@ -2,31 +2,21 @@ import { createCaption, type CaptionContent } from '@/components/Caption';
 import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 
 /**
- * A text composition and a camera pose, and nothing else.
- *
- * It builds no 3D content at all, because the argument is carried by the world
- * it is placed in: the zone holds the geometry, world state resolves how
- * specified it is, and the scene contributes the words and the place to stand.
- * That is what nine scenes looking at one building should cost.
- *
- * **Used with a caption and without one.** The card that closes Act III is a
- * composition; the establishing shot that opens Act I is the world alone, and a
- * scene that contributes only a pose is exactly what this class already was.
+ * A camera pose with an optional caption. Builds no 3D content; the zone
+ * owns the geometry. With no caption, the scene is the world alone.
  */
 export class ExteriorScene implements SceneInstance {
   constructor(private readonly content: CaptionContent | null = null) {}
 
   enter(context: SceneContext): void {
-    // A beat with nothing laid over it: the world is the whole composition, so
-    // the veil that exists to hold text off an unpredictable background is
-    // dimming the only thing being looked at.
+    // No text, so no legibility veil.
     if (!this.content) {
       context.root.dataset['veil'] = 'off';
       return;
     }
 
-    // Drives the legibility scrim: a centred composition needs a radial scrim,
-    // not the side gradient a left-aligned column is anchored against.
+    // Selects the legibility scrim: radial for centred text, side gradient for
+    // left-aligned text.
     context.root.dataset['align'] = this.content.align ?? 'start';
 
     const caption = createCaption(this.content);

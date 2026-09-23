@@ -3,122 +3,71 @@ import type { Vec3 } from '@/engine/camera/types';
 import { HEIGHT, WIDTH, dither, fbm, paintGradient, panoramaCanvas, smoothstep } from './panorama';
 
 /**
- * Daylight, as an equirectangular panorama built at load.
+ * Daylight sky as an equirectangular panorama, built once at load. Vertical
+ * axis is elevation, horizontal is azimuth, so no dome geometry is needed.
+ * The same texture drives image-based lighting.
  *
- * Mapped equirectangularly, the texture's vertical axis *is* elevation and its
- * horizontal axis *is* azimuth, so a canvas produces a correct sky for any
- * camera orientation with no dome geometry, no draw call and no per-frame
- * reposition. The same texture drives image-based lighting, which is what makes
- * the building's shaded faces pick up sky colour rather than going flat black.
- *
- * **It does not have to agree with the Blender bake.** That was believed for a
- * long time and it was wrong: the only thing `exterior_building.py` bakes is
- * ambient occlusion, and AO is sun-independent by construction. Nothing in the
- * exported textures carries a light direction, so the sun here can be moved
- * freely and the relight costs a constant, not a re-bake.
- *
- * A smooth ramp of blue with no sun, no cloud and nothing at any scale reads as
- * a background rather than as a sky, and with the fog back to being aerial
- * perspective (`ExteriorZone`) it fills the top half of every frame in the act.
- * The three things below are what make it a sky, all paid once at load.
+ * The Blender bake is AO only, so the sun direction here can change freely.
  */
 
 /**
- * A Nordic summer midday, per `work/act1_photo_ideas/`: a genuinely deep blue
- * zenith falling to a pale, slightly warm haze at the horizon.
- *
- * The saturation at the top matters more than it looks — it is what the water
- * reflects and what the shaded faces of the building pick up through image-based
- * lighting, so a washed-out sky produces a washed-out building even in full sun.
+ * Nordic summer midday (`work/act1_photo_ideas/`): deep blue zenith to pale,
+ * slightly warm horizon haze. Zenith saturation matters: the water and the
+ * building's shaded faces pick it up through IBL.
  */
 const STOPS: ReadonlyArray<readonly [number, string]> = [
   [0.0, '#1f5fb4'],
   [0.22, '#3d7cc8'],
   [0.4, '#79aadb'],
   [0.475, '#b6d3ea'],
-  // The horizon sits at exactly v = 0.5, which is eye level. This stop must
-  // stay close to the zone's fog colour: distant ground fades to fog and then
-  // gives way to sky, and any step between the two draws a hard line across
-  // the far field exactly where the eye is looking for one.
+  // Horizon (v = 0.5). Keep close to the zone's fog colour so distant ground
+  // blends into sky without a visible line.
   [0.5, '#d6e4f0'],
-  // Held at the fog colour for the first few degrees *below* the horizon, which
-  // is not cosmetic — it is load-bearing.
-  //
-  // The ground plane is 900 m across, so every ray that leaves the camera
-  // shallowly downward and clears the plane's edge shows this texture instead of
-  // ground. From an elevated pose that is a band several degrees deep sitting
-  // directly above the treeline, and with a green stop here it rendered as a
-  // hard olive stripe across the sky.
+  // Fog colour continues a few degrees below the horizon. Shallow downward rays
+  // miss the 900 m ground plane and sample here, just above the treeline.
   [0.545, '#cfe0ee'],
   [0.63, '#8d9a76'],
   [1.0, '#55603f'],
 ];
 
 /**
- * The cloud deck, as a plane at unit height above the eye.
- *
- * The perspective is the entire point and it is why this is not a noise texture
- * pasted across the upper half. A flat deck seen from under it converges: clouds
- * are large and sparse overhead, and compress into a crowded band as they
- * approach the horizon. That convergence is the single strongest cue that the
- * sky is a *space* rather than a surface, and it costs one `tan` per row.
- *
- * `reach` clamps how far out the plane is sampled: untruncated, the ground
- * distance goes to infinity at the horizon and the noise coordinate with it, so
- * the last rows alias into a moire of themselves. `fade` closes the deck into
- * haze well before that.
+ * Cloud deck, projected as a flat plane at unit height above the eye, so clouds
+ * shrink and crowd toward the horizon. `reach` caps the sample distance to
+ * avoid aliasing near the horizon; `fade` blends the deck into haze before that.
  */
 const DECK = {
   /** Metres of cloud per unit of deck height, as a noise wavelength. */
   scale: 0.62,
   /** Where the noise crosses into cloud. Higher is a clearer sky. */
   coverage: 0.53,
-  /** How hard the cloud edge is. */
+  /** Width of the cloud edge falloff. */
   softness: 0.13,
   /** Furthest the plane is sampled, in deck heights. */
   reach: 24,
   /**
-   * Elevation band over which the deck dissolves into horizon haze, radians.
-   *
-   * Nine degrees to twenty-six, and it is set by the **water** rather than by
-   * the sky.
-   *
-   * Convergence crowds the deck into a dense, high-contrast band just above the
-   * horizon, and that band is exactly what a lake mirrors: every pose in the act
-   * views the water at a grazing angle, so the reflected ray leaves at ten or
-   * fifteen degrees. Carried down to two degrees the deck turned two hundred
-   * metres of peat-dark water into swimming-pool cyan with every ripple train
-   * visible as corduroy, because a near-mirror sampling a black-and-white
-   * environment swings the full range on a normal perturbation of nothing.
-   *
-   * Real cloud that low is washed out by the air in front of it anyway, so
-   * lifting the deck out of the mirrored band costs the sky nothing.
+   * Elevation band where the deck fades into haze, in radians (about 6-17
+   * degrees). Kept above the angles the lake reflects, so low cloud does not
+   * show up as high-contrast ripples on the water.
    */
   fade: [0.1, 0.3] as const,
-  /** Peak opacity, so the deck is scattered summer cloud and not overcast. */
+  /** Peak opacity, for scattered summer cloud. */
   opacity: 0.85,
 } as const;
 
-/** Cloud in its own shadow, cloud in full sun, and the haze both dissolve into. */
+/** Cloud colours (RGB, 0 to 1): shaded, sunlit, and the horizon haze. */
 const SHADED = [0.62, 0.68, 0.76] as const;
 const SUNLIT = [0.99, 0.98, 0.95] as const;
 const HAZE = [0.81, 0.88, 0.93] as const;
 
 /**
- * How wide the glow around the sun is, in radians of arc, and how strong.
- *
- * No disc. A summer sun through any haze at all is a bright region several
- * degrees across rather than an edge, and a hard disc in a background texture is
- * the one thing guaranteed to read as a sticker. This also keeps the panorama's
- * peak well under the point where the tone curve clips it flat.
+ * Sun glow radii in radians of arc, and its strength. A soft glow with no
+ * disc, which also keeps the peak below tone-curve clipping.
  */
 const GLOW = { inner: 0.06, outer: 0.62, strength: 0.85 } as const;
 
 /**
- * @param sun Direction *towards* the sun, in world space. This is the zone's
- *   `keyOffset` and must stay that: a sky whose glow disagrees with the light
- *   casting the shadows is worse than no glow at all, so it is passed in rather
- *   than written down twice.
+ * @param sun Direction towards the sun, in world space. Pass the zone's
+ *   `keyOffset` so the glow matches the shadow-casting light.
  */
 export function createSkyTexture(sun: Vec3): Texture {
   const { canvas, context } = panoramaCanvas();
@@ -138,11 +87,8 @@ export function createSkyTexture(sun: Vec3): Texture {
 }
 
 /**
- * The deck, rendered at half the panorama's resolution and scaled up.
- *
- * Cloud is low-frequency by nature and the upscale is invisible, where the full
- * resolution is four times the noise evaluations for a layer that is then
- * blurred by its own alpha anyway.
+ * Renders the deck at half the panorama's resolution, then scales it up.
+ * Cloud is low-frequency, so the upscale is invisible and saves 4x noise work.
  */
 function clouds(sun: Vec3): HTMLCanvasElement {
   const width = WIDTH / 2;
@@ -154,7 +100,7 @@ function clouds(sun: Vec3): HTMLCanvasElement {
   const { data } = image;
 
   for (let row = 0; row < height; row += 1) {
-    // The panorama's v axis is elevation directly: v = asin(dir.y) / π + ½.
+    // v maps to elevation: v = asin(dir.y) / π + ½.
     const v = 1 - (row + 0.5) / height;
     const elevation = (v - 0.5) * Math.PI;
     if (elevation <= DECK.fade[0]) continue;
@@ -173,9 +119,8 @@ function clouds(sun: Vec3): HTMLCanvasElement {
       const cover = smoothstep(DECK.coverage, DECK.coverage + DECK.softness, density);
       if (cover <= 0) continue;
 
-      // Lit from the sun's side rather than uniformly white. The thick parts of
-      // the field take the light and the thin edges stay in their own shadow,
-      // which is what gives a deck volume without a second noise lookup.
+      // Dense cloud and the sun-facing side are lit; thin edges stay shaded.
+      // This gives volume without a second noise lookup.
       const facing =
         cosine * cos * sun[0] + sine * sun[1] + cosine * sin * sun[2];
       const body = smoothstep(DECK.coverage + 0.03, DECK.coverage + 0.26, density);
@@ -196,7 +141,7 @@ function clouds(sun: Vec3): HTMLCanvasElement {
   return canvas;
 }
 
-/** The sun, as light added to the sky rather than as an object placed in it. */
+/** Adds the sun glow to the sky additively. */
 function glow(context: CanvasRenderingContext2D, sun: Vec3): void {
   const azimuth = Math.atan2(sun[2], sun[0]);
   const elevation = Math.asin(Math.max(-1, Math.min(1, sun[1])));
@@ -207,8 +152,7 @@ function glow(context: CanvasRenderingContext2D, sun: Vec3): void {
   context.save();
   context.globalCompositeOperation = 'lighter';
 
-  // Drawn three times, a panorama width apart, so the glow wraps the seam
-  // instead of being clipped by it wherever the sun happens to stand.
+  // Drawn three times, one panorama width apart, so the glow wraps the seam.
   for (const offset of [-WIDTH, 0, WIDTH]) {
     const halo = context.createRadialGradient(x + offset, y, 0, x + offset, y, radius);
     halo.addColorStop(0, `rgba(255, 246, 224, ${GLOW.strength})`);

@@ -16,78 +16,45 @@ import type { QualitySettings } from '@/config/quality';
 import type { Atmosphere } from '@/engine/render/atmosphere';
 import { createCloudNoise } from './cloudNoise';
 
-/** Arbitrary: depth testing is off, so this only has to enclose the eye. */
+/** Any size works: depth testing is off, so it only has to surround the camera. */
 const RADIUS = 50;
 const RENDER_ORDER = 900;
 
 /**
- * Linear gain, so ACES hands the cloud back as white.
- *
- * Learnings §59 puts ~2.8x at white for this exposure and this sits under it:
- * ACES compresses hard above about 0.8 linear, so a field driven to the
- * clipping point lands its brightest cloud and its deepest mass a few percent
- * apart and the whole thing goes to ghost. Referenced to the air's own exposure
- * so the descent's grading cannot move it.
+ * Linear gain so the cloud comes out white after ACES. Kept below the ~2.8x
+ * clip point (learnings §59) so bright and dark parts stay distinct.
  */
 const GAIN = 2.1;
 
-/** World metres per repeat of the noise texture. Sets the size of a mass. */
+/** World metres per noise texture repeat. Sets the size of a cloud mass. */
 const TILE_METRES = 250;
 /**
- * How far down a ray the march is willing to go before it gives up.
- *
- * Not a step size: the march spans the *deck*, not a fixed distance from the
- * eye. A ray aimed steeply down crosses seventy metres of cloud and a ray aimed
- * near the horizon crosses hundreds, and a fixed stride either wastes its whole
- * budget in the air above the deck on the shallow one or oversamples the steep
- * one. Solving for where the ray enters and leaves the slab and dividing *that*
- * span by the step count spends every sample inside the cloud, which is most of
- * why thirty steps is enough to hold a horizon.
- *
- * This is the far cap on that span, and so the distance at which the deck
- * stops being drawn and becomes the air's own haze.
+ * Max ray length. The march only samples the part of the ray inside the cloud
+ * layer, so every step lands in cloud. Past this distance the haze takes over.
  */
 const MAX_DISTANCE = 620;
 /**
- * Ceiling on the stride, and so — times the step count — how far the march
- * reaches before the bank gives way to haze.
- *
- * **Generous, because the mip chain makes a long stride safe.** This was seven
- * while the field was sampled at full resolution, since anything longer stippled;
- * with each stride now reading the field pre-averaged at its own scale, the cap
- * is free to buy distance instead of paying for detail nothing could resolve.
- * Reach is what keeps the far deck closed — cut it and the bank breaks up and
- * the ground shows through.
+ * Max step length. Long steps are safe because each step samples a matching
+ * mip level. Lowering this shortens the reach and the ground shows through.
  */
 const MAX_STEP = 14;
 const LIGHT_STEP_METRES = 20;
 const EXTINCTION = 0.095;
 const LIGHT_EXTINCTION = 0.14;
 /**
- * Which horizontal slice of the noise decides the shape of the deck's top.
- *
- * Arbitrary, and it only has to be *fixed*: read at the sample's own height the
- * field varies vertically as well, and the roof it produces would then depend
- * on where you were standing when you asked. Drifted by the wind's vertical
- * component so the crowns evolve rather than only translate.
+ * The fixed noise slice that sets how tall each cloud column grows. Any value
+ * works. It drifts with the wind's vertical component so the tops change shape.
  */
 const SLICE = 0.31;
-/** How hard the finer bands carve the boundary into turrets. */
+/** How strongly fine noise carves the cloud edges. */
 const ERODE = 0.58;
 
-/** Where plan coverage becomes a tower rather than clear air. */
+/** Density threshold between clear air and cloud. */
 const THRESHOLD = 0.33;
 
-/** Frequency of the carving bands against the body's own. */
 /**
- * Frequency of the carving bands against the body's own.
- *
- * **Bounded by the ray step, not by taste.** The texture's finer channels have
- * periods of eight and sixteen cells, which over a 250 m tile is detail at
- * thirty and sixteen metres. Multiplied up to 3.4 they became nine and five,
- * far under the stride the march can afford — and a jittered march sampling
- * below its own detail does not soften, it stipples. Kept near one, the carving
- * lands at a scale the ray can actually resolve.
+ * Frequency of the carving noise relative to the main shape. Higher values
+ * make detail finer than the ray step, which shows up as speckle.
  */
 const DETAIL_SCALE = 1.5;
 
@@ -95,66 +62,34 @@ const DETAIL_SCALE = 1.5;
 const NOISE_SIZE = 64;
 
 /**
- * Henyey-Greenstein asymmetry: how forward-biased the scattering is.
- *
- * Cloud droplets are far larger than the wavelength, so they throw light
- * overwhelmingly in the direction it was already going. This is the number that
- * makes a crown blinding when the sun is behind it and its core nearly black at
- * the same moment, which is the entire look of a backlit cumulus and something
- * no exposure adjustment can fake.
+ * Henyey-Greenstein asymmetry. Cloud scatters light mostly forward, which gives
+ * backlit edges their bright rim.
  */
 const HG = 0.62;
 
-/**
- * Drift of the sampling position, in texture units per second.
- *
- * **This is the "moves slightly", and it is why the field is sampled in world
- * space.** Sliding a panorama moves the picture. Moving the sample position
- * moves the eye's relationship to a volume, so masses change shape, pass one
- * another and open up. Slow enough that nobody would call it an animation, and
- * present enough that the frame is never dead.
- */
+/** Noise drift in texture units per second. Slowly reshapes the clouds so the frame never looks frozen. */
 const WIND = { x: 0.0031, y: 0.0011, z: -0.0022 } as const;
 
 /**
- * The bank: the world heights its bases sit at and its tallest crowns reach.
- *
- * **This is the change that made it read as cloud at all.** Every earlier cut
- * put the camera *inside* an unbounded volume, and from inside a cloud there
- * are no silhouettes — scattering is isotropic, every direction looks the same,
- * and what the eye is handed is a fog with no form in it. A cloud is only
- * legible as a cloud when you can see its *shape* against something brighter,
- * which means seeing it from outside. A chamber, not an immersion.
- *
- * So the field is a layer with a floor and a ceiling, the camera stands above
- * the ceiling looking across the tops, and the sun lights them from above:
- * bright crowns, shaded flanks, silhouettes receding into haze. The descent
- * then sinks through the deck and comes out underneath it, which is also what
- * finally hides the empty ground past the edge of the built world — the deck is
- * opaque at every shallow angle, so the horizon is never in frame at all.
+ * World heights of the cloud layer's base and top. The camera starts above the
+ * layer so the cloud shapes are visible, then descends through it. The layer
+ * also hides the edge of the world at shallow angles.
  */
 const BAND = { base: 46, top: 262 } as const;
 
-/** Slack on the marched slab, so the feathered base is inside it. */
+/** Extra depth below the base so the soft underside is included in the march. */
 const FEATHER = 12;
 
 /**
- * When the cloud lets go, against the descent it happens inside.
- *
- * **It gets out of the way early, and that is the point of the beat.** An
- * earlier cut held it solid through the first half of a seven-second move, on
- * the reasoning that cloud has a base and an aircraft comes out of it all at
- * once. True of aeroplanes and wrong here: it spent four seconds of the opening
- * on a white frame with nothing happening in it. The cloud is the *title's*
- * ground, not the descent's — once the card has gone, the sooner the world is
- * visible the better, and the rest of the fall is a flight down to the water.
+ * Clearing timing in seconds: delay before clearing, clearing duration, and
+ * closing duration. It clears early so the descent shows the world.
  */
 const OPENING = { holds: 0.35, over: 1.7, closes: 0.55 } as const;
 
-/** Sun on the crowns, and the sky's own light filling the flanks. */
+/** Sunlight on the tops, and sky light filling the shaded sides. */
 const SUN_COLOR = 0xfff2dc;
 const AMBIENT_COLOR = 0x46566e;
-/** What the deck fades into with distance, and the value of the air itself. */
+/** Haze colour the cloud fades into with distance. */
 const HAZE_COLOR = 0x9db2c9;
 const HAZE = { near: 150, far: 780 } as const;
 
@@ -174,11 +109,8 @@ precision highp sampler3D;
 
 in vec3 vWorld;
 
-// **Declared, not inherited.** GLSL ES 3.00 removed the built-in output, and unlike
-// the GLSL1 path three.js does not alias it back in for a GLSL3 material — a
-// shader written against it draws every frame and writes nowhere, silently and
-// with no compile error to find it by. The mesh was rendering fifty-odd times a
-// second into nothing at all.
+// GLSL3 materials must declare their output. Without it the shader compiles
+// but writes nothing.
 layout(location = 0) out highp vec4 fragColor;
 
 uniform sampler3D uNoise;
@@ -211,64 +143,36 @@ const float HG_K = ${((1 - HG * HG) / (4 * Math.PI)).toFixed(6)};
 const float FEATHER = ${FEATHER.toFixed(1)};
 const vec3 WIND = vec3(${WIND.x.toFixed(5)}, ${WIND.y.toFixed(5)}, ${WIND.z.toFixed(5)});
 
-// **Towers, not a deck.** A layer read from above is a landscape of low swells
-// and it photographs as fog with a horizon. Convective cloud is the opposite
-// shape: it stands *up*, it is read from the side against the sky, and its
-// whole character is that every lobe is made of smaller lobes made of smaller
-// ones again. Three things build that here.
-//
-// Where a tower stands is decided in plan, from one horizontal slice, so a
-// column of air is either cloudy for its whole height or clear.
-//
-// How tall it grows and how it tapers is the vertical profile: pinched at the
-// base where it is still rising, widest through the body, breaking up towards
-// the crown. A tower over thick plan coverage climbs further than one over thin,
-// which is what gives a bank its skyline instead of a flat ceiling.
-//
-// And the cauliflower is erosion. The fine bands are *subtracted* from the
-// coarse body, remapped so the core keeps full density and only the boundary is
-// carved — detail added on top thickens a cloud uniformly and reads as noise,
-// detail taken away from the edges reads as turrets.
+// Cloud density at p. The 3D noise gives the body shape, a horizontal slice
+// sets each column's height, a vertical profile tapers the base and top, and
+// fine noise is subtracted from the edges for the lumpy cumulus look.
 float density(vec3 p, float lod, bool carve) {
   vec3 q = p * SCALE + WIND * uTime;
 
   float height = clamp((p.y - uBand.x) / (uBand.y - uBand.x), 0.0, 1.0);
 
-  // **The body is read in 3D, not in plan.** Taking the cross-section from a
-  // horizontal slice and tapering it by height builds a cone: the section is the
-  // same shape all the way up and only shrinks, which is a mountain rather than
-  // a cloud. Sampling the volume itself gives every level its own lumpy outline.
+  // Sampled in 3D so each height has its own outline.
   float shape = textureLod(uNoise, q, lod).r;
 
-  // Plan coverage decides only how *tall* a column grows, so a bank has a
-  // skyline instead of a flat ceiling.
+  // Varies column height so the tops are uneven.
   float reach = textureLod(uNoise, vec3(q.x, SLICE + WIND.y * uTime, q.z), lod).r;
   float ceiling = 0.24 + reach * 0.72;
 
-  // Pinched where it is still rising, cut off where it has run out of lift. The
-  // upper edge is deliberately short, so crowns break rather than taper away.
-  // Pinched where it is still rising, cut off where it has run out of lift. The
-  // upper edge is deliberately short, so crowns break rather than taper away.
+  // Thin at the base, cut off sharply at the top.
   float profile = smoothstep(0.0, 0.17, height) * (1.0 - smoothstep(ceiling - 0.13, ceiling, height));
   if (profile <= 0.0) return 0.0;
 
-  // Wider than it was: a narrow ramp between cloud and clear air is a step
-  // edge, and a step edge is the one thing a fixed stride cannot sample without
-  // aliasing however finely it is jittered.
+  // A wide ramp avoids hard edges, which alias with a fixed step.
   float body = smoothstep(THRESHOLD, THRESHOLD + 0.3, shape * profile);
   if (body <= 0.0) return 0.0;
 
-  // **The light march does not carve.** Occlusion is an integral over tens of
-  // metres and the turrets contribute nothing to it that survives the average,
-  // so skipping the second lookup there halves the shading's texture traffic
-  // and takes its noise out of the frame at the same time.
+  // The light march skips carving. It averages out anyway and this halves the lookups.
   if (!carve) return body;
 
   vec4 fine = textureLod(uNoise, q * DETAIL_SCALE, lod + DETAIL_LOD);
   float detail = fine.g * 0.5 + fine.b * 0.5;
 
-  // Remap rather than plain subtraction: the core stays solid and the carving
-  // is spent entirely on the boundary, which is where turrets live.
+  // Remapped so the core stays solid and only the edges get carved.
   float bite = detail * ERODE;
   return clamp((body - bite) / max(1.0 - bite, 0.05), 0.0, 1.0);
 }
@@ -277,8 +181,7 @@ void main() {
   vec3 origin = cameraPosition;
   vec3 direction = normalize(vWorld - cameraPosition);
 
-  // Where this ray enters and leaves the deck. Feathered faces are part of the
-  // cloud, so the slab solved against is the full extent of the field.
+  // Where the ray enters and leaves the cloud layer.
   float low = uBand.x - FEATHER;
   float high = uBand.y;
 
@@ -286,7 +189,7 @@ void main() {
   float far = MAX_DISTANCE;
 
   if (abs(direction.y) < 0.0005) {
-    // Travelling flat: either inside the layer for the whole ray, or never.
+    // Horizontal ray: either inside the layer the whole way or never.
     if (origin.y < low || origin.y > high) discard;
   } else {
     float a = (low - origin.y) / direction.y;
@@ -296,26 +199,19 @@ void main() {
     if (far <= near) discard;
   }
 
-  // **Capped, because the span is what was aliasing.** A ray near the horizon
-  // crosses most of a kilometre of bank, and dividing that by the step count
-  // put thirty metres between samples in a field whose detail is finer than
-  // that — which arrives as the crawling speckle a jittered march produces when
-  // it is undersampling. Beyond the cap the far cloud is simply not drawn, and
-  // the haze it would have faded into is already there.
+  // Cap the step so long horizon rays do not undersample. Cloud past the cap
+  // is left to the haze.
   float stepSize = min((far - near) / float(STEPS), MAX_STEP);
   far = min(far, near + stepSize * float(STEPS));
 
-  // How much of the field one stride covers, as a mip level. This is what ties
-  // the detail the march reads to the detail it can actually resolve.
+  // Mip level matching the step size.
   float lod = max(log2(stepSize / VOXEL_METRES), 0.0);
 
-  // Dithered start, so a fixed step does not lay banded shells across the
-  // frame. The offset is under one step and the integration absorbs it.
+  // Jittered start to avoid banding.
   float jitter = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
   float t = near + jitter * stepSize;
 
-  // How nearly this ray is looking down the sun's own direction, which is what
-  // decides whether cloud in front of it glows or silhouettes.
+  // Angle to the sun, for the phase function.
   float mu = dot(direction, uSun);
 
   vec3 accumulated = vec3(0.0);
@@ -326,25 +222,15 @@ void main() {
     float d = density(p, lod, true);
 
     if (d > 0.002) {
-      // How much sun reaches this sample, by Beer's law along a short march
-      // towards it. Two or three taps is enough: the field is smooth, and what
-      // comes out is a soft gradient across a billow rather than a shadow edge.
+      // Sunlight reaching this sample (Beer's law over a short march toward the sun).
       float occlusion = 0.0;
       for (int j = 1; j <= LIGHT_STEPS; j++) {
         occlusion += density(p + uSun * (float(j) * LIGHT_STEP), lod + 1.0, false);
       }
       float sunlight = exp(-occlusion * LIGHT_EXTINCTION * LIGHT_STEP);
 
-      // Aerial perspective across the deck. Without it every crown out to the
-      // far cap is lit the same and the field reads as a textured plane a few
-      // metres wide; with it the far ones sink into the air and the deck gets
-      // the one thing that tells the eye how big it is.
-      // **Forward scattering, which is what a backlit cloud actually is.**
-      // Beer's law alone gives a grey ball with a dark side; the reason a
-      // cumulus edge against the sun is blinding while its core is nearly
-      // black is that droplets throw light overwhelmingly *forwards*. The
-      // phase term is that bias, and without it no amount of exposure produces
-      // the rim.
+      // Forward scattering gives backlit edges their bright rim. Distant
+      // samples fade into haze to show scale.
       float phase = HG_K / pow(1.0 + HG_G2 - HG_2G * mu, 1.5);
 
       vec3 lit = uAmbient + uSunColor * sunlight * (0.35 + phase);
@@ -360,51 +246,24 @@ void main() {
     t += stepSize;
   }
 
-  // **Premultiplied, and the alpha is the cloud's own coverage.** Filling the
-  // gaps with a painted haze made the shell an opaque backdrop, so the only way
-  // out of it was to dissolve the whole thing. Handing the compositor what the
-  // march actually found instead means the deck occludes where it is thick and
-  // lets the world through where it is not — which is how a descent *through* a
-  // layer reads, near cloud clearing from the bottom of the frame first, with
-  // no dissolve involved at all.
+  // Premultiplied colour, with alpha as the actual cloud coverage, so the
+  // world shows through the gaps during the descent.
   float coverage = (1.0 - transmittance) * uCover;
   fragColor = vec4(accumulated * uGain * uCover, coverage);
 }
 `;
 
 /**
- * The cloud the defence opens inside, raymarched.
+ * The raymarched cloud layer the presentation opens in.
  *
- * **Not a picture of cloud on a sphere, which is what this was.** Three earlier
- * cuts painted a fractal field onto an equirectangular panorama and hung it
- * around the camera, and every one read as a painted surface however the field
- * was tuned — because that is what it was. Two things give it away and neither
- * is reachable by tuning. A panorama has no depth, so its masses have no
- * relationship to one another and the eye finds no volume to be inside of. And
- * a panorama on a camera-centred sphere can only be *moved* by rotating it,
- * which slides the whole image rigidly; cloud does not slide, it evolves, and a
- * rigid slide is the clearest tell that a backdrop is a backdrop.
+ * A sphere around the camera acts as the canvas. Each fragment marches a ray
+ * through a world-space 3D noise field, adding light front to back with a short
+ * march toward the sun for shading. World-space sampling gives real parallax as
+ * the camera descends.
  *
- * The geometry here is a carrier and nothing else. Every fragment walks a ray
- * out from the eye through a tiling 3D density field, accumulating light front
- * to back and taking a short march towards the sun at each step to find how
- * much of it arrives. That buys the three things the painted versions could
- * not: masses that occlude each other and so read as distance, soft
- * self-shadowed billows that come from integrating a volume rather than from
- * blurring an edge, and — because the field is sampled in world space — real
- * parallax as the camera falls, with evolution from drifting the sample
- * position rather than turning the picture.
- *
- * **Drawn over the world rather than behind it.** Cloud the camera is inside
- * sits between the eye and everything else, so the world does not appear from
- * behind a curtain: it resolves through a medium that is thinning. Depth
- * testing is off for the same reason — from inside, the near bank covers a tree
- * at forty metres and a ridge at four hundred equally.
- *
- * The shell carries the *look*; `clouded()` in `atmosphere.ts` carries the
- * *depth*. Fading it alone would reveal a pin-sharp site behind a dissolving
- * veil, which is a wipe. Opening the fog underneath is what makes near things
- * arrive before far ones.
+ * It draws on top of the world with depth testing off. `clouded()` in
+ * `atmosphere.ts` thickens the fog underneath, so near objects appear before
+ * far ones as the cloud clears.
  */
 export class CloudShell {
   private readonly noise: Data3DTexture;
@@ -425,9 +284,7 @@ export class CloudShell {
       glslVersion: GLSL3,
       vertexShader: VERTEX,
       fragmentShader: FRAGMENT,
-      // Compile-time so the loops unroll, which is worth a useful fraction of
-      // the march on integrated graphics, and so the ladder can buy the frame
-      // back on a machine that needs it.
+      // Defines so the loops unroll, and so the quality ladder can lower them.
       defines: {
         STEPS: String(quality.cloudSteps),
         LIGHT_STEPS: String(quality.cloudLightSteps),
@@ -444,10 +301,7 @@ export class CloudShell {
         uBand: { value: new Vector2(BAND.base, BAND.top) },
       },
       transparent: true,
-      // The march accumulates light already weighted by how much of the ray it
-      // covered, which is a premultiplied colour by construction. Told
-      // otherwise, three.js divides it back out against an alpha it does not
-      // have and thin cloud blows out.
+      // The shader outputs premultiplied colour.
       premultipliedAlpha: true,
       depthTest: false,
       depthWrite: false,
@@ -458,19 +312,12 @@ export class CloudShell {
     sun.set(air.keyOffset[0], air.keyOffset[1], air.keyOffset[2]).normalize();
 
     this.mesh = new Mesh(this.geometry, this.material);
-    // Late in the transparent pass, so it covers everything the world drew.
+    // Draw last so it covers the world.
     this.mesh.renderOrder = RENDER_ORDER;
     this.mesh.frustumCulled = false;
   }
 
-  /**
-   * How much cloud is between the eye and the world, 0 to 1.
-   *
-   * Visibility follows the value rather than the tween, so a cleared shell
-   * costs nothing for the remaining twenty scenes of the deck — which for a
-   * raymarched material is the difference between a full-screen march every
-   * frame and no draw call at all.
-   */
+  /** Cloud cover from 0 to 1. The mesh is hidden at 0 so it costs nothing once cleared. */
   setCover(cover: number, animate: boolean): void {
     this.tween?.kill();
     this.tween = null;
@@ -485,19 +332,14 @@ export class CloudShell {
     }
 
     this.mesh.visible = true;
-    // **Coming back is not the reverse of leaving.** Clearing takes its time
-    // because that is what descending out of a base looks like. Played
-    // backwards, a presenter jumping to the title card during questions watched
-    // seconds of open world before the cloud closed over it; restoring is a
-    // return to a state, so it is quick.
+    // Clearing is slow. Closing (jumping back to the title) is quick.
     const closing = cover > (uniform.value as number);
 
     this.tween = gsap.to(uniform, {
       value: cover,
       duration: seconds(closing ? OPENING.closes : OPENING.over),
       delay: closing ? 0 : seconds(OPENING.holds),
-      // Linear on the way out. Every eased curve spends most of its length near
-      // one end, which on a dissolve means either a long plateau or a snap.
+      // Linear when clearing, to avoid a long plateau or a sudden snap.
       ease: closing ? 'power2.out' : 'none',
       onComplete: () => {
         this.mesh.visible = (uniform.value as number) > 0;
@@ -510,22 +352,14 @@ export class CloudShell {
 
     this.elapsed += dt;
     this.mesh.position.copy(camera.position);
-    // The camera is in world space and the shell hangs off the zone group,
-    // which stands at the zone origin. Copied straight across it lands an
-    // origin away from the eye, and a back-faced sphere seen from outside draws
-    // nothing at all.
+    // Convert to the zone group's local space, which is offset from world space.
     this.mesh.parent?.worldToLocal(this.mesh.position);
 
     const { uniforms } = this.material;
     if (uniforms['uTime']) uniforms['uTime'].value = this.elapsed;
 
-    // **The cloud does not answer to the world's light.** Exposure moves with
-    // the air, and the beat this opens onto is `recessed` — three tenths darker
-    // than the zone it is in. Left alone the cloud dimmed with it and the
-    // reveal played out behind a sheet of grey. `RenderPipeline` ends in an
-    // `OutputPass`, so ACES runs over the whole framebuffer and no material can
-    // opt out of it (learnings §59); cancelling the exposure in the shader's
-    // own output is the only way to hold a value through the curve.
+    // Cancel out scene exposure changes so the cloud stays white. Tone mapping
+    // applies to everything (learnings §59), so this is done in the gain.
     if (uniforms['uGain']) {
       uniforms['uGain'].value = GAIN * (this.air.exposure / Math.max(exposure, 0.05));
     }

@@ -9,7 +9,7 @@ import type { World } from '@/engine/render/World';
 import type { FrameHandler, NavDirection } from '@/engine/types';
 import type { SceneContext, SceneDefinition, SceneInstance } from './types';
 
-/** How long an exiting layer stays mounted so its transition can play out. */
+/** Milliseconds an exiting layer stays mounted so its exit transition can finish. */
 const EXIT_REMOVAL_MS = 1400;
 
 interface ActiveScene {
@@ -26,7 +26,7 @@ export interface SceneState {
   readonly definition: SceneDefinition;
   /** How the scene was reached. `jump` means direct navigation, so no easing. */
   readonly direction: NavDirection;
-  /** Which beat of this scene is showing, and how many it has. */
+  /** Current beat index and total beat count. */
   readonly beat: number;
   readonly beats: number;
 }
@@ -42,11 +42,8 @@ export interface SceneDirectorDeps {
 }
 
 /**
- * Owns scene lifecycle and the transition between scenes.
- *
- * Requests are tokenised: if the presenter moves on while assets are still
- * loading, the stale request is abandoned rather than mounting a scene that
- * has already been navigated past.
+ * Owns scene lifecycle and transitions. Each request gets a token, so a stale
+ * request whose assets finish loading after navigation moves on is dropped.
  */
 export class SceneDirector {
   private readonly listeners = new Set<(state: SceneState) => void>();
@@ -76,8 +73,8 @@ export class SceneDirector {
   }
 
   /**
-   * Plays the next beat, or returns false when there is none left so the
-   * caller moves on. Beats are not in the URL: a jump arrives complete.
+   * Plays the next beat. Returns false when none is left. Beats are kept out
+   * of the URL, so a jump always lands on a whole scene.
    */
   advanceBeat(): boolean {
     const active = this.active;
@@ -128,7 +125,7 @@ export class SceneDirector {
     await this.ensureAssets(definition, requestToken);
     if (requestToken !== this.token) return;
 
-    // Camera first, so the scene can be paced against a measured move.
+    // Camera first, so the scene can time its entry to the move length.
     const previous = this.index;
     this.teardown(direction);
     const travel = this.moveCamera(definition, direction, previous);
@@ -201,7 +198,7 @@ export class SceneDirector {
     this.active = { instance, layer, group, controller, disposers };
     instance.enter(context, direction);
 
-    // Entering backwards lands on the last beat, already built.
+    // Entering backward lands on the last beat, fully built.
     const total = instance.beats ?? 1;
     this.beat = direction === 'backward' ? total - 1 : 0;
     for (let index = 1; index <= this.beat; index += 1) {
@@ -223,7 +220,7 @@ export class SceneDirector {
     active.layer.classList.remove('is-active');
     active.layer.classList.add('is-exiting');
 
-    // Disposal is deferred so the outgoing scene can animate away first.
+    // Deferred so the outgoing scene can animate out first.
     window.setTimeout(() => {
       for (const dispose of active.disposers) dispose();
       this.deps.world.stage.remove(active.group);
@@ -237,17 +234,15 @@ export class SceneDirector {
     direction: NavDirection,
     previousIndex: number,
   ): number {
-    // The first scene is arrived at, not travelled to. `previousIndex` rather
-    // than `this.index`, which is already the scene being entered.
+    // The first scene snaps into place with no camera move.
     if (direction === 'jump' && previousIndex === -1) {
       this.deps.camera.snapTo(definition.pose);
       return 0;
     }
 
-    // A crossing brings both its own length and its own motion signature. The
-    // ease is not a per-scene choice — every threshold in the deck is the same
-    // kind of move and reads wrong at the deck's default symmetric curve, which
-    // arrives at the doors travelling fastest. See `animations/entry.ts`.
+    // Crossings use their own length and `entryEase` for every threshold. The
+    // default symmetric ease reaches the doors at top speed. See
+    // `animations/entry.ts`.
     if (direction === 'forward' && definition.crossing) {
       return this.deps.camera.moveTo(definition.pose, {
         seconds: definition.crossing.seconds,
@@ -259,15 +254,15 @@ export class SceneDirector {
       return this.deps.camera.moveTo(definition.pose, definition.travel);
     }
 
-    // Sequential navigation is paced by the move itself; only the jump cut
-    // holds to a fixed length, because its whole job is to feel like one.
+    // Sequential moves use their natural length. Jumps use a fixed short
+    // length so they feel like a cut.
     return this.deps.camera.moveTo(
       definition.pose,
       direction === 'jump' ? { seconds: TRANSITION.jumpSeconds } : {},
     );
   }
 
-  /** Neighbours are warmed so ordinary next/previous never shows a loader. */
+  /** Prefetches neighbour assets so next/previous never shows a loader. */
   private prefetchNeighbours(index: number): void {
     for (const offset of [1, -1, 2]) {
       const neighbour = this.scenes[index + offset];

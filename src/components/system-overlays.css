@@ -83,10 +83,8 @@
 }
 
 /*
- * Sits on #viewport rather than inside #stage: the stage is scaled to about 0.2
- * in portrait, which is the condition being reported, so a notice within it
- * would be as unreadable as the deck behind it. Sized in vw/vh for the same
- * reason — these are real window units, not stage units.
+ * Lives on #viewport outside the scaled #stage, which shrinks to about 0.2 in
+ * portrait. Sized in vw/vh (window units) so it stays readable.
  */
 .orientation-notice {
   display: none;

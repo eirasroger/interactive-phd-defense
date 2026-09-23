@@ -9,18 +9,18 @@ export interface StatisticSpec {
   readonly value: number;
   readonly unit?: string;
   readonly decimals?: number;
-  /** What the number is *of*. One line, sentence case, no full stop. */
+  /** What the number measures. One line, sentence case, no full stop. */
   readonly label: string;
   readonly accent?: Accent;
 }
 
 export interface Statistic {
   readonly element: HTMLElement;
-  /** `settle` writes the end state without animating — see `SceneInstance.beat`. */
+  /** `settle` jumps to the end state without animating. See `SceneInstance.beat`. */
   play(settle?: boolean): gsap.core.Timeline;
 }
 
-/** A single quantity, counted up, with its qualification underneath. */
+/** A number that counts up, with its label underneath. */
 export function createStatistic(spec: StatisticSpec): Statistic {
   const decimals = spec.decimals ?? 0;
   const format = (value: number): string => value.toFixed(decimals);

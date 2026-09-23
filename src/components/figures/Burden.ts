@@ -13,7 +13,7 @@ const GROUPS = [
   { key: 'benefits', label: 'Benefits beyond the lifecycle · D' },
 ] as const;
 
-/** One grid for the spine and for the returns, so their ends are the same x. */
+/** Shared row grid so the spine and the returns align at both ends. */
 const row = (lead: HTMLElement | null, body: HTMLElement): HTMLElement =>
   el('div', {
     className: 'bd-row',
@@ -27,13 +27,9 @@ export interface Burden {
 }
 
 /**
- * Where the burden is made, and how much of it can be taken back afterwards.
- *
- * One rail carries both halves of the claim. The spine is the lifecycle at true
- * share, so the product stage is most of the picture and the modules that
- * follow it are the slivers they measure as. The two returns beneath run on the
- * same rail at the same scale, which is the only way the asymmetry between them
- * reads as a quantity: one of them is a span, and the other is a stub.
+ * Lifecycle burden by stage, and the module D offsets. The spine shows each
+ * stage at its true share. The offsets below use the same scale so their sizes
+ * compare directly.
  */
 export function createBurden(): Burden {
   const stageNodes = STAGES.map((stage) =>
@@ -46,8 +42,7 @@ export function createBurden(): Burden {
 
   const spine = el('div', { className: 'bd-spine', children: stageNodes });
 
-  // A key rather than an axis: four of the seven blocks are a few pixels wide,
-  // and a label pinned under one of those is a label nobody can attribute.
+  // A legend, since four of the seven blocks are too narrow to label directly.
   const legend = el('div', {
     className: 'bd-legend',
     children: GROUPS.map((group) =>
@@ -177,8 +172,7 @@ export function createBurden(): Burden {
 
       timeline
         .from(element, { opacity: 0, duration: seconds(DURATION.normal), ease: EASE.enter }, 0)
-        // The spine lays down in lifecycle order, so the product stage is
-        // already most of the rail before anything else has been drawn.
+        // Stages grow in lifecycle order.
         .from(
           stageNodes,
           {
@@ -222,8 +216,7 @@ export function createBurden(): Burden {
           seconds(DURATION.cinematic * 0.9),
         );
 
-      // The span, then the stub. Reversing them would make the finding land as
-      // a footnote instead of as the answer to what was just drawn.
+      // Offsets appear in data order: the large one first, then the small one.
       for (const [index, entry] of returns.entries()) {
         const at = seconds(DURATION.cinematic * 1.05 + DURATION.slow * 0.55 * index);
 

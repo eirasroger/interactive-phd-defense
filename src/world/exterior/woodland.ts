@@ -35,28 +35,19 @@ export interface Woodland {
 }
 
 export interface WoodlandInputs {
-  /** The belt registers here so the ground under it reads as woodland floor. */
+  /** Trees register here so the ground under them darkens. */
   readonly canopy: CanopyField;
 }
 
-/** Crown radius as a fraction of height, for a conifer. Only the ground reads it. */
+/** Conifer crown radius as a fraction of height. Used for ground shading only. */
 const CROWN = 0.26;
 
 /**
- * The belt of woodland that closes the site.
+ * The woodland ring that closes off the site, so nothing beyond it needs to
+ * exist. Eight rows deep with varied heights so it reads as a forest.
  *
- * It **bounds the world rather than filling it**: three hundred metres of open
- * ground cannot be populated at a price worth paying, but it can be ended, and
- * nothing beyond the canopy line has to exist because nothing beyond it is seen.
- *
- * **Depth, not height, makes it read as a wood.** One rank is a row with a
- * horizon behind it; eight ranks jittered at graded heights on rising ground
- * present an interior the eye cannot see through. The ranks cost nothing — the
- * instance count is the same however deep the band.
- *
- * Cross-cards rather than camera-facing billboards: a quad that turns to face
- * the camera shears whenever the camera moves, and at this distance the
- * silhouette is the entire read.
+ * Trees are fixed cross-shaped cards, which do not shear when the camera moves
+ * like camera-facing billboards do.
  */
 export function createWoodland(
   renderer: WebGLRenderer,
@@ -75,11 +66,7 @@ export function createWoodland(
   const time = { value: 0 };
   const placements = scatter();
 
-  // The belt's floor is woodland floor, and it is the largest single area of
-  // ground in the frame from any pose that looks out of the site. Left as mown
-  // amenity green it is the loudest thing saying the trees are standing *on*
-  // the park rather than in a wood — the cards close the sky and the ground
-  // underneath them carries on being a lawn.
+  // Register each tree so the ground under the woodland looks like forest floor.
   for (const placement of placements) {
     canopy.add(placement.x, placement.z, placement.height * CROWN);
   }
@@ -96,9 +83,7 @@ export function createWoodland(
     const material = new MeshBasicMaterial({
       map: impostor.texture,
       transparent: false,
-      // Cut, not blended. Eight hundred overlapping transparent cards would
-      // need sorting every frame and would still be wrong; a hard cut needs
-      // neither and writes depth, so the belt occludes itself correctly.
+      // Alpha test so no sorting is needed and depth is written.
       alphaTest: 0.45,
       side: DoubleSide,
       fog: true,
@@ -118,17 +103,13 @@ export function createWoodland(
       return new Matrix4().compose(position, quaternion, scale);
     });
 
-    // Split by position, and here it buys fill rather than vertices. The belt
-    // is six triangles a tree and 3.5 ms of frame, because a ring of
-    // alpha-tested cards closing the horizon is overdraw: the cost is the
-    // fragments, so rejecting the two thirds of the ring that is behind the
-    // camera is the whole saving.
+    // Split into cells so the part behind the camera is culled. The main cost
+    // here is overdraw.
     const chunked = chunkInstances({ geometry, material, matrices }, 'woodland');
     chunks.push(chunked);
 
     for (const mesh of chunked.meshes) {
-      // A belt this far out neither receives a shadow worth the map space nor
-      // casts one that lands anywhere the camera looks.
+      // Too far away for shadows to matter.
       mesh.castShadow = false;
       mesh.receiveShadow = false;
       object.add(mesh);
@@ -165,13 +146,7 @@ interface Placement {
   readonly height: number;
 }
 
-/**
- * Where the belt stands.
- *
- * Deterministic, from a seeded sequence rather than `Math.random`: a defence is
- * rehearsed, and a treeline that reshuffles between run-throughs is a thing the
- * speaker has to notice mid-sentence.
- */
+/** Tree positions. Seeded so the woodland is the same on every run. */
 function scatter(): Placement[] {
   const placements: Placement[] = [];
   let seed = 0x2f6a35;
@@ -188,11 +163,7 @@ function scatter(): Placement[] {
     range: { min: number; max: number } = WOODLAND.height,
   ): boolean => {
     if (!plantable(x, z)) return false;
-    // Nothing roots in bare bedrock. Asked here rather than at the hills' own
-    // scatter because the belt and the far bank both run across them, and a
-    // billboard standing on an outcrop is the one thing that hides it. Sampled
-    // rather than thresholded, so the treeline thins into the rock instead of
-    // stopping on a contour line.
+    // No trees on bare rock. Random rejection so the treeline thins out gradually.
     if (random() < outcropAt(x, z)) return false;
 
     placements.push({
@@ -200,8 +171,7 @@ function scatter(): Placement[] {
       y: surfaceAt(x, z),
       z,
       yaw: random() * Math.PI * 2,
-      // Taller at the back, so the belt builds upward away from the viewer and
-      // the front rank never hides the depth behind it.
+      // Taller toward the back, so the front rows do not hide the depth.
       height: range.min + (range.max - range.min) * rank * (0.55 + random() * 0.75),
     });
     return true;
@@ -212,17 +182,14 @@ function scatter(): Placement[] {
     const angle = random() * Math.PI * 2;
     const span = WOODLAND.far - WOODLAND.near;
 
-    // Ranks rather than a uniform annulus: real woodland edges are ragged in
-    // depth, and a uniform ring reads as a fence at a fixed radius.
+    // Placed in rows with jitter, so the edge is ragged.
     const rank = Math.floor(random() * WOODLAND.ranks);
     const radius = WOODLAND.near + (span * (rank + random() * 1.4)) / WOODLAND.ranks;
 
     const x = Math.sin(angle) * radius;
     const z = Math.cos(angle) * radius * 0.92;
 
-    // The approach corridor is held open well past the belt. Only the wedge the
-    // camera occupies, though — pushing the whole near side back strips the far
-    // bank of the river, which is the treeline two separate scenes look at.
+    // Keep the camera's approach corridor clear.
     if (Math.abs(x) < WOODLAND.corridor.halfWidth && z > 0 && radius < WOODLAND.corridor.clear) continue;
 
     admit(x, z, rank / WOODLAND.ranks);
@@ -247,19 +214,9 @@ type Admit = (
 ) => boolean;
 
 /**
- * The stands on the hills, one mass at a time.
- *
- * **Thinned at both ends of the slope, and that is the whole shape of them.** A
- * Nordic hill is mown grass at the foot, pine on the flanks and bare rock at the
- * top, so the acceptance ramps in off the skirt and `admit` takes the rock out
- * at the crest. The stand stays open rather than closing over: a solid canopy
- * hides the landform, and the landform is the whole point of planting it.
- *
- * Each mass gets a count from its own plan area, so a hill twice the size is
- * twice as wooded and a third one needs no number chosen for it. The target is
- * a count of *placements* rather than of attempts, because most of the square
- * this samples is not on the mass at all — an attempt count would hide the
- * density behind the geometry of a bounding box.
+ * Trees on the hills: grass at the foot, trees on the slopes, bare rock at the
+ * top (handled by `admit`). Kept sparse so the hill shape stays visible. The
+ * tree count per hill comes from its area.
  */
 function scatterHills(random: () => number, admit: Admit): void {
   for (const plot of HILL_PLOTS) {
@@ -279,32 +236,16 @@ function scatterHills(random: () => number, admit: Admit): void {
 }
 
 /**
- * Whether a tree can stand here.
- *
- * Three refusals, and all three are the plan answering rather than a list of
- * boxes to avoid. Nothing grows below the water line. Nothing stands in the
- * park, because the core is where the paving and the building are. And nothing
- * stands in the wedge the review row's camera looks through, because a tree
- * there is not a small defect — it is planted in front of an option the
- * audience is being asked to choose between.
+ * Whether a woodland tree can go here: above the water, clear of paths, the
+ * pavilion, the playground and the building core, and out of the review shot.
  */
 function plantable(x: number, z: number): boolean {
   if (surfaceAt(x, z) < LAND.lake.surface + 0.35) return false;
 
-  // Off the paving, and off it by enough that a canopy does not overhang the
-  // route. Asked of the path network rather than of a bounding rectangle: the
-  // promenade runs 250 m and the avenue bends, and a box big enough to contain
-  // both would exclude most of the site.
-  //
-  // The riverside walk is in the list now because it runs *into* the belt: its
-  // west end turns for the promenade and ends among these trees, which is the
-  // whole point of ending it there and would read as a path driven through a
-  // wood if the wood did not stand aside for it.
+  // Far enough from paths that canopies do not overhang them.
   if (offPromenade(x, z) < 9 || offAvenue(x, z) < 9 || offRiverside(x, z) < 7) return false;
   if (offPavilion(x, z) < 4) return false;
 
-  // Nothing stands in the playground, which is levelled ground with a fence
-  // round it and the one place on site where a tree would be actively wrong.
   if (pitch(x, z) > 0.01) return false;
 
   const { core } = LAND;
@@ -313,18 +254,7 @@ function plantable(x: number, z: number): boolean {
   return !inReviewShot(x, z);
 }
 
-/**
- * A unit-height cross of quads, origin at the base so height is a scale factor.
- */
-
-/**
- * A slow lean, so the belt is not the one dead thing in a moving landscape.
- *
- * Much simpler than the planting's wind and deliberately so: at 96 m the only
- * perceptible component is the top of the canopy drifting, and the flutter and
- * gust structure that matter at 20 m are invisible here and not worth the
- * fragment cost across eight hundred cards.
- */
+/** A slow sway. Simpler than the near planting's wind, since detail is invisible this far out. */
 function sway(material: MeshBasicMaterial, time: { value: number }): void {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = time;

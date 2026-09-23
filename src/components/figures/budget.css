@@ -1,7 +1,6 @@
 /*
- * Beat 5. The error budget across the top at reading size, and under it the
- * two things that qualify it: what the representation is worth against the
- * alternatives, and which pathways the declared data lets the model separate.
+ * Beat 5. Error budget on top. Below it, two panels: the comparison against
+ * other reductions, and per-pathway recall.
  */
 .bd {
   display: grid;
@@ -63,13 +62,11 @@
   color: var(--ink-faint);
 }
 
-/* The dataset, drawn. The bar's two tracks are sized by the counts themselves,
-   so the partition cannot drift from the numbers printed under it. */
+/* Train/test split bar. Track widths come from the counts (--train, --test). */
 .bd-split {
   display: grid;
   gap: 5px;
-  /* Wide enough that the smaller track still holds its own count and label:
-     the testing track is a fifth of the bar, so the bar is sized from it. */
+  /* The test track is a fifth of the bar and must still fit its count and label. */
   max-width: 29rem;
 }
 
@@ -134,8 +131,7 @@
   color: var(--ink-faint);
 }
 
-/* The losses the model converged to. They belong with the error budget above
-   them and not under the heading of a comparison against other reductions. */
+/* Converged losses, shown with the error budget. */
 .bd-converged {
   display: flex;
   gap: var(--s-8);
@@ -159,7 +155,7 @@
   color: var(--ink);
 }
 
-/* ---- The two qualifications ------------------------------------------------ */
+/* ---- Panels ---------------------------------------------------------------- */
 
 .bd-body {
   display: grid;
@@ -310,8 +306,7 @@
   transform-origin: left center;
 }
 
-/* The same hatch the absent cells carry at the opening. In both places the mark
-   means that the declared data does not say. */
+/* Same fill as the absent cells in the opening beat: the declared data does not say. */
 .bd-recall[data-resolved='false'] .bd-recall-fill {
   background-color: color-mix(in srgb, var(--c4-absent) 13%, transparent);
 }
@@ -331,10 +326,9 @@
   color: var(--ink-faint);
 }
 
-/* ---- Where the floor comes from -------------------------------------------- */
+/* ---- Error floor ----------------------------------------------------------- */
 
-/* The cause of the four unresolved rows, sitting directly under them: one
-   figure, and the two lines that say where it comes from. */
+/* Explains the unresolved recall rows above it: one figure and two lines. */
 .bd-floor {
   display: grid;
   gap: var(--s-2);

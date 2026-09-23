@@ -1,6 +1,6 @@
 /*
- * Two states over one cell, so the state arriving is never sized by the one
- * leaving. Same arrangement as `corpus.css` and `framework.css`.
+ * Both states stack in one cell so each keeps its own size during the swap.
+ * Same layout as `corpus.css` and `framework.css`.
  */
 .cx-state {
   position: absolute;
@@ -15,7 +15,7 @@
   position: relative;
 }
 
-/* ---- Where the stage sits ----------------------------------------------- */
+/* ---- Pipeline stages ---------------------------------------------------- */
 
 .cx-track {
   position: relative;
@@ -60,7 +60,7 @@
   box-shadow: inset 0 0 0 2px var(--rule-strong);
 }
 
-/* The stage the contribution is, marked once. */
+/* Highlights the screening stage (this contribution). */
 .cx-stage[data-key='screening'] .cx-stage-node {
   box-shadow: inset 0 0 0 4px var(--c3-accent);
 }
@@ -118,7 +118,7 @@
   box-shadow: 0 4px 12px color-mix(in srgb, var(--c3-pass) 22%, transparent);
 }
 
-/* ---- Why the gate cannot close by itself -------------------------------- */
+/* ---- Dilemma state ------------------------------------------------------ */
 
 .cx-state[data-state='dilemma'] {
   grid-template-rows: auto auto auto auto;
@@ -192,8 +192,8 @@
   background: linear-gradient(to bottom, var(--rule-strong), var(--c3-accent));
 }
 
-/* The resolution carries the accent and the only elevated surface on the
-   state, because it is the answer to both cards above it. */
+/* The resolution card answers both approaches above, so it alone gets the
+   accent and elevation. */
 .cx-resolution {
   position: relative;
   display: grid;

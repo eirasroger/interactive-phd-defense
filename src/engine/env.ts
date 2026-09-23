@@ -1,9 +1,6 @@
 /**
- * Runtime environment probe.
- *
- * A defense runs once, on hardware that has not been tested. Quality is
- * chosen from what the machine reports rather than assumed, and `?safe=1`
- * forces the most conservative path if anything looks wrong on the day.
+ * Runtime environment probe. Picks a quality tier from what the machine
+ * reports. `?safe=1` forces the most conservative tier.
  */
 
 export type QualityTier = 'safe' | 'standard' | 'high';
@@ -15,14 +12,11 @@ export const prefersReducedMotion = (): boolean =>
 
 export const isSafeMode = (): boolean => params.get('safe') === '1';
 
-/**
- * A coarse pointer that cannot hover is the one phone/tablet signal that does
- * not mean parsing a user-agent string.
- */
+/** Phone or tablet: coarse pointer with no hover. Avoids user-agent parsing. */
 export const isTouchPrimary = (): boolean =>
   window.matchMedia('(pointer: coarse) and (hover: none)').matches;
 
-/** `?quality=high` overrides the probe, for a tablet that can afford more. */
+/** `?quality=safe|standard|high` overrides the probe. */
 function requestedTier(): QualityTier | null {
   const value = params.get('quality');
   return value === 'safe' || value === 'standard' || value === 'high' ? value : null;
@@ -46,14 +40,8 @@ export function detectQualityTier(): QualityTier {
   if (isSafeMode() || prefersReducedMotion() || !supportsWebGL) return 'safe';
 
   /*
-   * Handsets take the conservative path regardless of what they report.
-   *
-   * The heuristic below cannot see them: `screen` is in CSS pixels, so a phone
-   * measures ~400x900 and clears the pixel bound far more easily than the large
-   * displays that bound exists to exclude. An 8-core Android — and Chrome caps
-   * `deviceMemory` at exactly 8 — therefore satisfied all three conditions and
-   * was handed 2048px shadow maps, bloom and an 80k particle budget on top of
-   * 47MB of models. That is what exhausts the GPU and loses the context.
+   * Phones and tablets always get `safe`. An 8-core phone passes the core and
+   * memory check below, and the `high` tier then exhausts its GPU.
    */
   if (isTouchPrimary()) return 'safe';
 
@@ -61,20 +49,8 @@ export function detectQualityTier(): QualityTier {
   const memory = (navigator as { deviceMemory?: number }).deviceMemory ?? 4;
 
   /*
-   * The display is deliberately not part of this any more.
-   *
-   * The test used to include the screen's pixel count, on the reasoning that a
-   * large display costs more to fill. It did, and it no longer does:
-   * `QualitySettings.maxRenderPixels` caps the drawing buffer at the surface the
-   * deck is composed on, so what gets plugged in changes how the image is
-   * scaled and not how much of it is drawn.
-   *
-   * Leaving the term in was the worse of the two failures. A 4K monitor put the
-   * pixel count at twice the bound and dropped a capable machine to `standard`,
-   * which is no post-processing, no bloom and quarter-area shadow maps — so the
-   * hall would have seen a different deck from the one that was rehearsed,
-   * decided by a cable. `isTouchPrimary` already catches the handsets this was
-   * really guarding against.
+   * Display size is ignored. `QualitySettings.maxRenderPixels` caps the drawing
+   * buffer, so the external display only changes scaling and never the tier.
    */
   if (cores >= 8 && memory >= 8) return 'high';
   return 'standard';
@@ -82,6 +58,6 @@ export function detectQualityTier(): QualityTier {
 
 export const qualityTier: QualityTier = detectQualityTier();
 
-/** Renderer pixel ratio is capped: it is the cheapest large performance lever. */
+/** Maximum renderer pixel ratio per tier. */
 export const maxPixelRatio: number =
   qualityTier === 'high' ? 2 : qualityTier === 'standard' ? 1.5 : 1;

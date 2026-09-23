@@ -27,12 +27,9 @@ export interface Model {
 /* ---- Vectors ------------------------------------------------------------- */
 
 /**
- * A term's vector, drawn the same way every time that term appears.
- *
- * The real vectors are 300 pre-trained coefficients and none of them is a claim
- * this deck can make, so what is drawn is a deterministic function of the term
- * itself. Two properties are load-bearing and both hold: the same term always
- * draws the same shape, and two different terms draw visibly different ones.
+ * Illustrative stand-in for a Word2Vec vector, hashed from the term (FNV-1a).
+ * The same term always gives the same shape and different terms give
+ * different ones.
  */
 const vectorFor = (term: string, count: number): readonly number[] => {
   let seed = 2166136261;
@@ -47,7 +44,7 @@ const vectorFor = (term: string, count: number): readonly number[] => {
   });
 };
 
-/** The mean of a set of vectors, which is how a multi-word material is built. */
+/** Element-wise mean. Builds a material from its terms. */
 const meanOf = (vectors: readonly (readonly number[])[]): readonly number[] => {
   const [first] = vectors;
   if (!first) return [];
@@ -56,7 +53,7 @@ const meanOf = (vectors: readonly (readonly number[])[]): readonly number[] => {
   );
 };
 
-/** The weighted sum of a set of vectors, which is how a product is built. */
+/** Weighted sum with weights in percent. Builds a product from its materials. */
 const weightedSum = (
   entries: readonly { readonly vector: readonly number[]; readonly weight: number }[],
 ): readonly number[] => {
@@ -68,21 +65,13 @@ const weightedSum = (
 };
 
 /**
- * A vector, drawn as coefficients about a midline.
- *
- * Diverging rather than stacked, because an embedding coefficient carries a
- * sign and a bar growing from a baseline would assert that it does not.
- */
-/**
- * How many coefficients a strip draws.
- *
- * The vectors are 300-dimensional and 300 bars across a 190 px lane is a solid
- * block, so the strips draw a fixed sample of that width. The count is shared
- * by every strip because the product embedding has to be the weighted sum of
- * the material embeddings drawn beside it, coefficient for coefficient.
+ * Coefficients drawn per strip. 300 bars would fill a 190 px lane solid. All
+ * strips share the count so the product strip is the exact weighted sum of the
+ * material strips.
  */
 const COEFFICIENTS = 40;
 
+/** A vector drawn as signed bars about a midline. */
 const vectorStrip = (values: readonly number[], scale: string): HTMLElement =>
   el('div', {
     className: 'md-vec',
@@ -102,7 +91,7 @@ const vectorStrip = (values: readonly number[], scale: string): HTMLElement =>
 
 const BOARD = { width: 1400, height: 390 } as const;
 
-/** Column height is proportional to width, so the funnel is the real shape. */
+/** Column height scales with layer width, so the funnel matches the network. */
 const heightOf = (units: number): number => 26 + 130 * (units / 300);
 
 interface Node {
@@ -127,12 +116,8 @@ const UPPER = 92;
 const LOWER = 292;
 
 /**
- * The network's geometry.
- *
- * Every width is read from `content/c4.ts` and every height is derived from it,
- * so the drawing cannot drift from the architecture it claims to be. The two
- * branches leave the same latent column, which is the whole point of the
- * figure: one representation, optimised by two objectives at once.
+ * Network layout. Widths come from `content/c4.ts`. Decoder and predictor both
+ * branch from the shared latent column.
  */
 const NODES: readonly Node[] = [
   {
@@ -237,7 +222,7 @@ const nodeNamed = (key: string): Node => {
   return found;
 };
 
-/** A ribbon between two columns, so the funnel is a surface and not two lines. */
+/** Filled ribbon joining the full height of two columns. */
 const ribbonPath = (from: Node, to: Node): string => {
   const x1 = from.x + HALF_WIDTH;
   const x2 = to.x - HALF_WIDTH;
@@ -253,20 +238,15 @@ const ribbonPath = (from: Node, to: Node): string => {
   );
 };
 
-/** Percentage placement against the board, so HTML text lands on SVG geometry. */
+/** Board coordinates as CSS percentages, to place HTML text over the SVG. */
 const atBoard = (x: number, y: number): string =>
   `left: ${((x / BOARD.width) * 100).toFixed(3)}%; top: ${((y / BOARD.height) * 100).toFixed(3)}%`;
 
 /* ---- The panel ------------------------------------------------------------ */
 
 /**
- * The model, in two states of one field.
- *
- * The dark ground is the station's signature and it is also the argument's
- * boundary: everything drawn on it is inside the model. It is one element
- * across both beats, so the second state is the same object re-forming instead
- * of a second picture arriving, and the composition that turns a declared table
- * into a vector hands that vector straight to the network that consumes it.
+ * C4 model panel, two beats on one dark field: the composition embedding, then
+ * the network architecture.
  */
 export function createModel(): Model {
   /* -- State one: composition into a vector -- */
@@ -417,8 +397,7 @@ export function createModel(): Model {
     });
   });
 
-  // Both branches meeting at one point is the claim the beat exists to make, so
-  // it is drawn rather than written: the weighted sum is a single objective.
+  // Both loss branches join at one point: the total loss.
   const converge = svg('path', {
     class: 'md-converge',
     d: `M 1032 ${UPPER} C 1130 ${UPPER}, 1140 ${SPINE}, 1214 ${SPINE} ` +
@@ -426,8 +405,6 @@ export function createModel(): Model {
   });
   board.appendChild(converge);
 
-  // The two weighted losses are added, and that sum is what training minimises.
-  // Written out, because a bare "one objective" beside two decimals is a puzzle.
   const total = el('div', {
     className: 'md-total',
     attrs: { style: atBoard(1228, SPINE) },
@@ -497,8 +474,6 @@ export function createModel(): Model {
 
   const embedHead = el('p', { className: 'c4-index', text: 'A composition, made readable' });
 
-  // The attribute sits above the schematic and at reading size, because the
-  // schematic is how the paper predicts it and this is what it predicts.
   const graphHead = el('div', {
     className: 'md-head-block',
     children: [
@@ -524,8 +499,7 @@ export function createModel(): Model {
   );
   const declaredBlocks = materials.map((entry) => entry.element.firstElementChild as HTMLElement);
   const productCoefficients = [...productStrip.querySelectorAll<HTMLElement>('.md-coef')];
-  // Disjoint from `productCoefficients`: two tweens on one property is the same
-  // trap whether they are written as `from` or as `fromTo`.
+  // Excludes `productCoefficients` so no element gets two scaleY tweens.
   const coefficients = [...embed.querySelectorAll<HTMLElement>('.md-coef')].filter(
     (node) => !productStrip.contains(node),
   );
@@ -593,8 +567,7 @@ export function createModel(): Model {
         },
         seconds(DURATION.normal * 0.9),
       )
-      // Coefficients grow out of the midline, so a vector reads as a quantity
-      // with a sign rather than as a row of ticks that happened to appear.
+      // Coefficients grow out of the midline to show their sign.
       .fromTo(
         coefficients,
         { scaleY: 0 },
@@ -671,8 +644,7 @@ export function createModel(): Model {
         { opacity: 1, y: 0, duration: seconds(DURATION.normal), ease: EASE.enter },
         0,
       )
-      // The spine is built before either branch leaves it, so the shared latent
-      // column is established as one thing and then seen to serve two.
+      // Columns appear before ribbons, so the shared latent column shows first.
       .fromTo(
         columns,
         { scaleY: 0 },

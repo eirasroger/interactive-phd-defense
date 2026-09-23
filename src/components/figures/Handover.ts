@@ -48,11 +48,8 @@ const label = (text: string): HTMLElement => el('p', { className: 'hv-label', te
 const body = (text: string): HTMLElement => el('p', { className: 'hv-body', text });
 
 /**
- * A product, drawn the way the field drew it.
- *
- * Same surface, same verdict tint, same reading strip, so the two the screening
- * kept read as the two objects that were on the wall a beat ago rather than as
- * a list of their names.
+ * A surviving product, styled like its card in the screening field so the
+ * audience recognises it.
  */
 const survivorCard = (verdict: Verdict): HTMLElement =>
   el('div', {
@@ -73,10 +70,8 @@ const survivorCard = (verdict: Verdict): HTMLElement =>
   });
 
 /**
- * The set that survived, and the fraction of the portfolio it is.
- *
- * This is the station's product, so it takes the weight of the composition: one
- * tall card carrying the count at display size over the two products it counts.
+ * The surviving set and its share of the portfolio. The main output, so it gets
+ * a tall card with the count at display size.
  */
 function candidateCard(): HTMLElement {
   const survivors = screened().filter((verdict) => verdict.pass);
@@ -100,8 +95,8 @@ function candidateCard(): HTMLElement {
 }
 
 /**
- * One product's checks under the final condition, with the source that set each
- * bound. This is the record the engine writes, not a summary of it.
+ * One product's checks under the final condition, with the source of each
+ * bound, as the engine logs them.
  */
 function logCard(): HTMLElement {
   const kept = screened().find((verdict) => verdict.pass);
@@ -148,7 +143,7 @@ function logCard(): HTMLElement {
   });
 }
 
-/** The jurisdictions the case study encodes, and the slot the next one takes. */
+/** Encoded jurisdictions, plus an open slot for the next one. */
 function ruleSetCard(): HTMLElement {
   const encoded = [...new Set(CONDITIONS.map((condition) => condition.jurisdiction))];
   const entry = entryFor('ruleset');
@@ -185,14 +180,8 @@ function ruleSetCard(): HTMLElement {
 }
 
 /**
- * What the station produces.
- *
- * Three equal rows said these outputs are the same kind of thing, and they are
- * not. One is a set of products and it is the reason the station exists; the
- * other two are the account of how that set was arrived at and the file that
- * would have to be written to arrive at a different one. The composition is
- * weighted accordingly: the candidate set takes a full-height card of its own
- * and the other two stack beside it.
+ * The station's outputs. The candidate set is the main one and gets a
+ * full-height card; the log and rule set stack beside it.
  */
 export function createHandover(): Handover {
   const candidates = candidateCard();
@@ -256,7 +245,7 @@ export function createHandover(): Handover {
           },
           seconds(DURATION.quick * 0.4),
         )
-        // The count is the claim, so it arrives before the products it counts.
+        // The count arrives before the products it counts.
         .from(
           hero,
           {

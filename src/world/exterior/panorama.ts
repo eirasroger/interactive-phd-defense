@@ -1,30 +1,17 @@
 /**
- * Shared machinery for the equirectangular panoramas this zone builds at load.
- *
- * Mapped equirectangularly, a texture's vertical axis *is* elevation and its
- * horizontal axis *is* azimuth, so a canvas produces a correct backdrop for any
- * camera orientation with no dome geometry and no per-frame reposition. Both
- * the daylight sky and the cloud interior are that same trick with different
- * paint, so the noise, the dither and the size live here rather than being
- * written twice and drifting apart.
+ * Shared helpers for the equirectangular canvas panoramas built at load (the
+ * daylight sky and the cloud interior). Vertical axis is elevation, horizontal
+ * is azimuth, so no dome geometry is needed.
  */
 
-/** Panorama size. Wide enough that a cloud edge is not a staircase at 44° fov. */
+/** Panorama size. Wide enough to keep cloud edges smooth at 44° fov. */
 export const WIDTH = 1024;
 export const HEIGHT = 512;
 
 /**
- * A quarter-level of noise over the whole panorama.
- *
- * A slow ramp between near neighbours crosses only a few 8-bit steps over
- * hundreds of pixels, and a step that wide is a visible contour once the tone
- * curve has stretched it across a projector. One LSB of ordered noise costs
- * nothing and removes every band; it is the same trick a print driver uses and
- * for exactly the same reason.
- *
- * Mandatory on any panorama that is mostly one value. The cloud interior is the
- * worst case in the deck: a near-flat near-white field is where banding is most
- * visible and it is the first thing the audience sees.
+ * Adds one LSB of ordered noise to remove 8-bit banding in slow gradients.
+ * Required on any mostly flat panorama, especially the near-white cloud
+ * interior.
  */
 export function dither(context: CanvasRenderingContext2D, width: number, height: number): void {
   const image = context.getImageData(0, 0, width, height);
@@ -44,14 +31,8 @@ export function dither(context: CanvasRenderingContext2D, width: number, height:
 export const clampByte = (value: number): number => (value < 0 ? 0 : value > 255 ? 255 : value);
 
 /**
- * Fractal noise. Five octaves is one more than the eye needs and two fewer than
- * it sees, which is right for a field being read as detail.
- *
- * `octaves` exists for fields being read as *form*. Every octave added is
- * higher frequency at lower amplitude, so a surface that has to be soft — one
- * whose whole character is that it has no edges — is asking for fewer of them,
- * and no amount of blurring afterwards recovers the smoothness of simply not
- * having generated the detail.
+ * Fractal noise, 0 to 1. Five octaves by default for detail. Use fewer octaves
+ * for soft, edgeless shapes.
  */
 export function fbm(x: number, z: number, octaves = 5): number {
   let sum = 0;
@@ -87,12 +68,8 @@ export function noise(x: number, z: number): number {
 }
 
 /**
- * Integer hash, not `sin(dot(...))`.
- *
- * `paths.ts` hashes with a sine because it is called a few hundred thousand
- * times at load and legibility wins. This one runs five octaves over a hundred
- * and thirty thousand pixels — two and a half million lookups — and a
- * transcendental in that loop is the difference between a frame and a stutter.
+ * Integer hash, 0 to 1. Used over a sine hash because it runs about 2.5
+ * million times per panorama.
  */
 export function hash(x: number, z: number): number {
   let value = Math.imul(x, 374761393) ^ Math.imul(z, 668265263);
@@ -105,7 +82,7 @@ export function smoothstep(edge0: number, edge1: number, value: number): number 
   return t * t * (3 - 2 * t);
 }
 
-/** A vertical ramp of colour stops, painted across the whole panorama. */
+/** Paints a vertical gradient across the whole panorama. */
 export function paintGradient(
   context: CanvasRenderingContext2D,
   stops: ReadonlyArray<readonly [number, string]>,
@@ -116,7 +93,7 @@ export function paintGradient(
   context.fillRect(0, 0, WIDTH, HEIGHT);
 }
 
-/** A panorama-sized canvas and its context, or a thrown error rather than a null. */
+/** Creates a panorama-sized canvas and its 2D context. Throws if no context. */
 export function panoramaCanvas(
   width = WIDTH,
   height = HEIGHT,

@@ -21,22 +21,16 @@ import riverbedTextureUrl from './textures/riverbed.jpg?url';
 import gravelTextureUrl from './textures/gravel.jpg?url';
 
 /**
- * Every loadable asset, addressed by a stable id.
- *
- * URLs come from Vite asset imports rather than string paths so hashing and
- * base-path rewriting are handled at build time — which is what keeps the same
- * build working on a GitHub Pages subpath and from a local directory.
+ * Every loadable asset, by stable id. URLs come from Vite `?url` imports so the
+ * build handles hashing and the GitHub Pages base path.
  */
 export const manifest: readonly AssetEntry[] = [
   { id: 'corridorShell', url: corridorShellUrl, kind: 'model' },
-  // The ceiling ships separately because it is the one rigged thing in the
-  // zone: its panels lift in sequence during the rise, so they cannot be part
-  // of the shell's joined mesh.
+  // Separate from the shell because its panels animate during the rise.
   { id: 'corridorCeiling', url: corridorCeilingUrl, kind: 'model' },
   { id: 'exteriorBuilding', url: exteriorBuildingUrl, kind: 'model' },
   { id: 'exteriorConstruction', url: exteriorConstructionUrl, kind: 'model' },
-  // The two sliding leaves, separate from the building because they move and
-  // the building exports as one joined mesh. 142 KB.
+  // The two sliding door leaves, separate because they move. 142 KB.
   { id: 'exteriorDoors', url: exteriorDoorsUrl, kind: 'model' },
   { id: 'facadeCandidates', url: facadeCandidatesUrl, kind: 'model' },
   { id: 'facadeSlotFill', url: facadeSlotFillUrl, kind: 'model' },
@@ -45,23 +39,16 @@ export const manifest: readonly AssetEntry[] = [
   { id: 'grassTexture', url: grassTextureUrl, kind: 'texture' },
   { id: 'meadowTexture', url: meadowTextureUrl, kind: 'texture' },
   { id: 'soilTexture', url: soilTextureUrl, kind: 'texture' },
-  // The channel bottom, and it is a third ground layer rather than a shading
-  // trick in the water. Once the stream absorbs by depth instead of being an
-  // opaque sheet, what the audience is looking at from the bridge is this.
+  // Stream bed ground layer, visible through the depth-absorbing water.
   { id: 'riverbedTexture', url: riverbedTextureUrl, kind: 'texture' },
-  // The paving split from `world_design.md` §2.2: red clay in the park, grey
-  // granite at the building, a cobble gutter against the planting at every edge.
+  // Paving per `world_design.md` §2.2: clay in the park, granite at the
+  // building, cobble gutters along planting edges.
   { id: 'clayTexture', url: clayTextureUrl, kind: 'texture' },
   { id: 'graniteTexture', url: graniteTextureUrl, kind: 'texture' },
   { id: 'cobbleTexture', url: cobbleTextureUrl, kind: 'texture' },
-  // The planting beds at the entrance. Without a surface of their own the beds
-  // are granite with plants standing in it, which is what "the ground the
-  // building sits on should be devoid of plants" is actually looking at.
+  // Surface for the entrance planting beds.
   { id: 'gravelTexture', url: gravelTextureUrl, kind: 'texture' },
-  // Normals for the three, and they are not optional dressing. Paving whose
-  // joints live only in the albedo is a photograph of paving: nothing on it
-  // ever catches the light, so the avenue read as a sheet of flat red whatever
-  // the tiling or the resolution.
+  // Paving normal maps. Required so the joints catch the light.
   { id: 'clayNormal', url: clayNormalUrl, kind: 'texture' },
   { id: 'graniteNormal', url: graniteNormalUrl, kind: 'texture' },
   { id: 'cobbleNormal', url: cobbleNormalUrl, kind: 'texture' },

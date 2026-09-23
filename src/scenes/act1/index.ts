@@ -21,11 +21,7 @@ import { MotivationScene } from './MotivationScene';
 import { ObjectivesScene } from './ObjectivesScene';
 import { PracticeScene } from './PracticeScene';
 
-/**
- * What the progress bar names. The thesis sections the audience is being walked
- * through, so the orientation cue reads as the argument rather than as the
- * staging that carries it.
- */
+/** Thesis section names shown in the progress bar. */
 const CHAPTER = {
   opening: 'Introduction',
   motivation: 'Motivation · Research context',
@@ -35,7 +31,7 @@ const CHAPTER = {
   contributions: 'Contributions',
 } as const;
 
-/** Poses are authored in site coordinates and lifted into the world here. */
+/** Converts site coordinates to world coordinates. */
 const at = ([x, y, z]: Vec3): Vec3 => [
   x + ZONE_ORIGIN.exterior[0],
   y + ZONE_ORIGIN.exterior[1],
@@ -68,118 +64,45 @@ const scene = (
 });
 
 /**
- * How far down the avenue the approach beat stands, as a fraction of its run.
- *
- * Derived rather than typed: the avenue's far end is the bridge and the bridge
- * is wherever the meander put it, so a literal z would drift the moment the
- * river changes.
+ * Z at a fraction (0 to 1) of the way from the avenue start to the bridge.
+ * Derived from `CROSSING` so it follows the river if the meander changes.
  */
 const alongAvenue = (fraction: number): number =>
   AVENUE.from + (CROSSING.z - AVENUE.from) * fraction;
 
-/** The face of the mass above the entrance — what the vista terminates on. */
+/** Z of the building face above the entrance, where the avenue view ends. */
 const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
 
 /**
- * Act I, walked as a route through the site rather than as twelve framings of
- * one elevation.
+ * Act I as one continuous camera route. Each move is short and keeps the
+ * previous heading, so scene transitions look like camera moves.
  *
- * **The twelve poses are one route, not twelve viewpoints.** Every move is
- * short and continues the last one's heading, because the transition between
- * scenes is a camera tween through open air: two poses a hundred metres apart
- * facing opposite ways do not read as a move, they read as a cut, and the whole
- * point of a continuous world is that there are none.
+ * 1. opening: inside cloud, 330 m up. Title card only.
+ * 2. contents: the descent, levelling at 70 m over the whole site.
+ * 3. lake: onto the water, facing the shore.
+ * 4. leverage: same bearing, still over water.
+ * 5. river: west along the outlet, over the channel.
+ * 6. park: turned inland, the riverside walk leading to the building.
+ * 7. construction: the scaffolded massing, from the east.
+ * 8. scaffold: close on the scaffold, at the unassigned bay.
+ * 9. alternatives: the four options, on the promenade 30 m east.
+ * 10. gaps: north-west into the park, facing away from the building.
+ * 11. objectives: from the bridge, entrance centred down the avenue.
+ * 12. contributions: halfway down the avenue, same aim. The act ends here.
  *
- * The route is a descent and a walk inland, and the descent now starts above
- * the weather:
- *
- * 1. **opening** — inside cloud, three hundred and thirty metres up. The title
- *    card, and nothing else in the frame.
- * 2. **contents** — the fall out of it, levelling off at seventy metres and
- *    aimed down at the whole site. The index of the talk, read off an aerial.
- * 3. **lake** — on down the same descent, onto the water facing the shore. The
- *    site is read off the water, as if off a boat.
- * 4. **leverage** — on down the same bearing, still over water. Its own
- *    composition: the room to change the building against what changing it
- *    costs.
- * 5. **river** — west along the outlet, over the channel, following it. Its
- *    own composition, not a caption: circular economy, as the value-retention
- *    hierarchy.
- * 6. **park** — off the water and turned inland: the riverside walk leading to
- *    the building.
- * 7. **construction** — in to the massing, scaffolded, from the east.
- * 8. **scaffold** — closer, on the scaffold itself, at the unassigned bay.
- * 9. **alternatives** — the four options, on the promenade thirty metres east.
- * 10. **gaps** — north-west into the park, facing away from everything.
- * 11. **objectives** — the bridge, and the entrance centred down the avenue.
- * 12. **contributions** — halfway down that avenue, same aim. The act ends here.
- *
- * **There is no establishing shot and no arrival-at-the-door beat.** The first
- * was a second title card over a site the audience was about to be flown into
- * anyway, which spent the reveal on a caption they had just read. `contents` is
- * not that beat returning: it is the index of the talk, and the aerial it is
- * read against is the frame the fall out of the cloud was going to produce
- * whether anything was written on it or not.
- *
- * **There was an arrival-at-the-door beat.** One stood here, carrying the words
- * *Five papers. One pipeline.* — which is the previous scene's last frame said
- * out loud, at the exact moment the audience has just watched it drawn. The act
- * now ends on the pipeline, and the way in is the doors opening, which is a
- * transition rather than a slide.
- *
- * Two composition rules run through every pose. The text column sits on the
- * left, so the subject is aimed **right of centre** — which for a camera
- * heading west means standing north of what it is looking at, and for one
- * heading east means the opposite. And the five `recessed` beats (leverage,
- * river, alternatives, gaps, method) turn into open site or step back from it,
- * which is both where the argument stops needing a picture and where the frame
- * budget is recovered.
- *
- * **`alternatives` and `gaps` now run consecutively recessed**, which the old
- * `ai` beat existed partly to prevent. Accepted: they are the two beats of the
- * act that carry the most information, the world has nothing to contribute to
- * either, and two is under the three-in-a-row threshold the rule is really
- * about.
- *
- * **Three recessed beats run consecutively at `lake`, `leverage` and `river`**,
- * against the rule that two and a half minutes of dimmed world is where a
- * continuous world starts reading as a slide deck. Taken deliberately: the
- * motivation and its premise are the one stretch of the act with no object to
- * look at, and the alternative is arguing them over a building whose relevance
- * has not been established yet.
+ * The text column is on the left, so each subject is aimed right of centre.
+ * `recessed` beats face open site, which also saves frame budget. `lake`,
+ * `leverage` and `river` run three recessed in a row on purpose: the
+ * motivation has no object to look at yet.
  */
 export const act1Scenes: readonly SceneDefinition[] = [
-  // The talk opens inside weather, with nothing on screen but the title and the
-  // light coming through it.
+  // Title card inside cloud. `clouded` limits visibility to 26 m, so only the
+  // `CloudShell` panorama is drawn. This hides the initial asset and shader
+  // load and turns the descent into a reveal.
   //
-  // **A hundred and twenty-four metres up and, for a moment, blind.** `clouded`
-  // closes the air to twenty-six metres, so for as long as the card is up no
-  // part of the site survives to be drawn and the frame is `CloudShell`'s
-  // panorama alone. What the numbers decide is where the fall begins.
-  //
-  // **Aimed steeply down, and that is arithmetic rather than taste.** The
-  // ground plane is 900 m across, so from any real altitude the band between
-  // the site's own horizon and the panorama's is empty grey — `sky.ts` says as
-  // much about its below-horizon stops. At 124 m the plane's edge sits about
-  // 15° below the horizon, and a 46° frame aimed 43° down has its top edge at
-  // 20°, which puts the whole band off the top of the screen. Aimed level, as
-  // an earlier cut was, it was the top third of the frame for four seconds.
-  //
-  // The fall from here to `lake` passes through very nearly the framing the act
-  // used to open on: the two poses share a bearing, so the site is read whole
-  // from altitude on the way down without spending a beat on it.
-  //
-  // Three things this beat is buying, in order of how much they matter:
-  //
-  // 1. **The title reads.** Dark ink on a light ground is the highest contrast
-  //    the deck can produce, and the opening card is the one frame where a
-  //    scrim over the world was costing the establishing shot most.
-  // 2. **The site arrives as an event.** The act used to open on the site
-  //    already in frame, so the descent it is built around started from a state
-  //    the audience had been looking at for half a minute. It is now a reveal.
-  // 3. **The load is invisible.** This is the heaviest moment in the deck —
-  //    assets streaming, shaders compiling, the first frame of a world that has
-  //    never been drawn. Nothing can hitch in an empty white volume.
+  // Aimed steeply down so the empty grey band below the horizon (see `sky.ts`)
+  // stays above the top of the frame. The 900 m ground plane ends well short of
+  // the horizon.
   {
     id: 'opening',
     title: 'Doctoral thesis defence',
@@ -192,41 +115,15 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new OpeningScene(act1Captions.overview),
   },
 
-  // **The fall out of the cloud, and the only time the whole site is in one
-  // frame.** Two hundred and sixty metres down onto a pose that levels off at
-  // seventy and looks back down at everything the next eight minutes are spent
-  // walking through. The index is read against it, which is the one beat in the
-  // deck where a diagram of the talk and a picture of the world are the same
-  // statement.
+  // The descent out of the cloud, ending on the only view of the whole site.
   //
-  // **Seventy metres, aimed thirty-seven degrees down, and both numbers are
-  // arithmetic.** The camera's far plane is 400 m (`CAMERA_DEFAULTS`), so ground
-  // past that is simply not drawn and an aerial aimed anywhere near level ends
-  // on a clipped arc with grey beyond it. A 48° frame aimed 37° down has its top
-  // edge 13° under the horizon, which at this height reaches 306 m of ground and
-  // lands inside the woodland belt: trees close the top of frame, no horizon is
-  // in it, and nothing visible is within ninety metres of the clip. Lower and
-  // the frame stops being an overview; higher and the top edge reaches past the
-  // world.
+  // 70 m up, aimed 37° down with a 48° fov: the top edge lands about 306 m out,
+  // inside the woodland belt and short of the 400 m far plane
+  // (`CAMERA_DEFAULTS`), so no clipped ground or horizon shows.
   //
-  // The building sits right of centre and small, which is correct for a beat
-  // whose subject is the site rather than the object in it. Water is in the
-  // near frame, the river and the riverside walk cross the middle, and the
-  // knoll closes the right.
-  //
-  // `travel` rather than the paced default, because this is not a hop between
-  // two things the camera is looking at: it is the one continuous fall the deck
-  // opens with, with the air opening and the cloud thinning around it, and
-  // `TRANSITION.camera` would cap it at four and a half seconds. The rest of Act
-  // I is paced normally — only the first move is a set piece. It is also spent
-  // on an empty frame, because the composition brackets the move
-  // (`decisions.md` §34): the aerial is seen undimmed for five seconds before
-  // anything is laid over it.
-  //
-  // `foreground`, and the composition is a column on the left rather than a
-  // full-width one, so the aerial keeps its value in the half of the frame
-  // nothing is read in. That is also what the act's default scrim is anchored
-  // for.
+  // `travel` sets a longer move than the `TRANSITION.camera` cap of 4.5 s. The
+  // frame stays empty during the move (`decisions.md` §34). The contents list is
+  // a left column, so the aerial stays visible on the right.
   {
     id: 'contents',
     title: 'Contents',
@@ -239,18 +136,8 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new ContentsScene(),
   },
 
-  // **The arrival, and the bottom of the descent out of the cloud.** The camera
-  // comes down the last seventy metres onto the water and reads the site off
-  // it. Nothing is built in the near half of this frame, which is the point —
-  // this beat is the reason the work exists, not yet the work.
-  //
-  // Paced rather than timed: the set piece is the leg above it, and this is a
-  // ninety-metre descent onto a pose the audience has just been shown the whole
-  // of from above.
-  //
-  // `recessed`, and the first scene in the act with its own composition rather
-  // than a caption: the argument is four numbers, so the world steps back and
-  // becomes the surface they are read against.
+  // Bottom of the descent, on the water facing the shore. Uses the default
+  // camera pacing. `recessed` so the four motivation figures stay readable.
   {
     id: 'lake',
     title: 'Motivation and research context',
@@ -262,19 +149,9 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new MotivationScene(),
   },
 
-  // Halfway from the lake pose to the river pose, on the same bearing and the
-  // same descent — literally a point on the glide the camera already travels
-  // between those two, which is how a beat is inserted into a continuous route
-  // without opening a corridor through anything.
-  //
-  // South of z = 98 for the reason the river pose carries: `WOODLAND.bank`
-  // starts there, has no corridor clearance, and both legs of this move now
-  // stop short of it.
-  //
-  // `recessed`, and its own composition: the argument is a shape, so the world
-  // steps back and becomes the surface it is read against. This is the second
-  // half of the motivation, and the premise the three stream scenes after it
-  // all assume — see `content/leverage.ts`.
+  // A point on the glide between the lake and river poses, so it needs no new
+  // clear corridor. Kept south of z = 98 (see `river`). Second half of the
+  // motivation; see `content/leverage.ts`.
   {
     id: 'leverage',
     title: 'Why the early stage',
@@ -286,20 +163,11 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new LeverageScene(),
   },
 
-  // West along the outlet, still on the water, now over the channel itself and
-  // following it. Four metres up and aimed down its length, so the stream
-  // recedes through the frame rather than crossing it — the shot is the
-  // travelling, not the water.
+  // West along the outlet, low over the channel and aimed down its length.
   //
-  // This pose and the lake's both sit **south of z = 98**, so the ninety metres
-  // of glide between them does too. That is a routing constraint rather than a
-  // framing one: `WOODLAND.bank` starts at 98, carries no corridor clearance
-  // and is the densest planting on the site, so a path a few metres north of
-  // here spends half the transition inside a hedge.
-  //
-  // `recessed`, and its own composition rather than a caption, like `lake`:
-  // the argument is the value-retention hierarchy, so the world steps back and
-  // becomes the surface it is read against.
+  // This pose and `lake` both sit south of z = 98, so the glide between them
+  // does too. `WOODLAND.bank` starts at z = 98 with dense planting and no
+  // corridor clearance.
   {
     id: 'river',
     title: 'Circular economy',
@@ -311,16 +179,9 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new CircularEconomyScene(),
   },
 
-  // Sixteen metres off the river and turned inland. The riverside walk leads
-  // out of the near corner and the building closes the frame beyond it; heading
-  // west-south-west, so south — and therefore the building — falls on the right
-  // of frame and the river on the left, under the text.
-  //
-  // Its own composition rather than a caption — the life-cycle band, built
-  // across five beats. Left `foreground` even so: `lake` and `river` are both
-  // recessed and a third in a row is two and a half minutes of dimmed world,
-  // which is where a continuous world starts reading as a slide deck again.
-  // The `wide` veil the composition sets is what carries legibility here.
+  // Turned inland, heading west-south-west: the building on the right, the river
+  // on the left under the text. `foreground` to break up the run of recessed
+  // beats. The composition's `wide` veil keeps the text legible.
   {
     id: 'park',
     title: 'Sustainability assessment',
@@ -332,14 +193,9 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new AssessmentScene(),
   },
 
-  // The massing whole, from the east three-quarter, which is the side the
-  // scaffold stands on. Aimed past the building's west corner so the elevation
-  // sits right of centre.
-  //
-  // Its own composition rather than a caption: the declaration, read on the
-  // building it would describe. The panel in the slot is the product this beat
-  // is holding a document about, so the running example is met here as data
-  // before it is met at C2 as a corpus.
+  // The whole massing from the east three-quarter, the scaffold side. Aimed past
+  // the west corner so the elevation sits right of centre. The panel in the slot
+  // is the product the EPD describes.
   {
     id: 'construction',
     title: 'Environmental product declarations',
@@ -351,15 +207,9 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new EpdScene(),
   },
 
-  // Close on the scaffold. This is the Blender preview framing, converted:
-  // Blender is Z-up facing -Y and glTF maps that to web +Z, so (x, y, z) there
-  // is (x, z, -y) here. Aimed a few metres west of the bays it wraps so the
-  // structure stands right of centre.
-  //
-  // A caption, because the world is already the figure: the unassigned bay and
-  // the access standing in front of it say the whole beat, and this is the one
-  // pose in the act close enough to read either. It is also where the review
-  // row walks on, thirty-five metres behind the camera.
+  // Close on the scaffold, matching the Blender preview camera. Blender (x, y, z)
+  // is (x, z, -y) here. Aimed a few metres west so the scaffold sits right of
+  // centre. The review row walks on 35 m behind the camera during this scene.
   scene(
     'scaffold',
     'The decision',
@@ -369,31 +219,16 @@ export const act1Scenes: readonly SceneDefinition[] = [
     act1Captions.decision,
   ),
 
-  // The options' own scene, and the only one that turns its back on the
-  // building entirely. Square to the row and close, aimed `lead` metres back
-  // toward the building so the four panels sit across the right of frame and
-  // the left stays clear for the composition.
-  //
-  // Thirty-five metres from the scaffold pose and on the same side of the site,
-  // so the two beats are one continuous move rather than a cut. That continuity
-  // is what makes the scaffold and the row read as one place. The panels cannot
-  // stand in the scaffold's own frame: it is a close elevation study aimed
-  // upward, with no ground in it and no half of the frame to spare, and a bay
-  // module stood at that distance is taller than the shot and occludes the
-  // elevation it is a candidate for.
-  //
-  // Derived from `REVIEW`, never typed: the row's position decides where this
-  // stands, so the two cannot drift apart.
+  // Square to the review row, facing away from the building. Aimed `lead` metres
+  // back so the four panels fill the right of frame. 35 m from the scaffold
+  // pose, so the move between them is short. Derived from `REVIEW` so the pose
+  // follows the row.
   {
     id: 'alternatives',
     title: 'What decides in practice',
     chapter: CHAPTER.state,
     zone: exteriorZone.id,
-    // `recessed`, and it is the one beat in the act where information has to
-    // dominate: a four-by-four matrix laid at full contrast over four lit
-    // panels leaves both unreadable. Receding rather than blurring is the
-    // design system's own answer, and the row stays legible behind it as the
-    // four things the matrix is about.
+    // Recessed so the 4x4 matrix stays readable over the lit panels.
     world: 'recessed',
     pose: pose(
       [REVIEW.centre[0], 3.6, REVIEW.centre[2] + REVIEW.standoff],
@@ -405,32 +240,14 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new PracticeScene(),
   },
 
-  // Out into the park, which puts the review row **behind the camera** while it
-  // walks itself off site during this scene. It also swings the building
-  // seventy degrees off axis, so what is left is grass, a path and the far bank
-  // — the whole job of a recessed beat.
+  // Out into the park, facing away from the building. The review row walks off
+  // site behind the camera, and the scaffold is struck, during this scene.
   //
-  // **Held south of the pavilion, and that is what decides the numbers.**
-  // `PAVILION` stands at x 38.5 to 55.5, z 61.3 to 68.7, with eaves at 3.9 m
-  // and a roof raking to 5.2. The pose this replaces stood at (30, 62), and the
-  // straight line `CameraDirector` tweens from `alternatives` — which begins at
-  // (62, 57) — crosses the pavilion's x span at z 58.0 to 60.7, clearing its
-  // near face by 0.6 m with the camera passing through 4.3 m of height. That is
-  // inside the near clip plane of a wall, not a near miss.
-  //
-  // Twelve metres south instead. The incoming leg runs z 57 to 50, away from
-  // the pavilion the whole way; the outgoing leg to `objectives` never reaches
-  // x 38.5, so neither touches it. The bearing and pitch are the old pose's,
-  // translated — the frame is the same park, read from twelve metres nearer the
-  // promenade.
-  //
-  // **Unverified against a render.** The site is authored blind and there is no
-  // free-look camera yet (`PLAN.md`), so the clearances above are arithmetic.
-  // Park groups scatter outside the review corridor at x < 38, which is where
-  // this stands: check the arrival for a tree before rehearsing on it.
-  //
-  // Its own composition rather than a caption: the coverage field, struck one
-  // row at a time. See `content/gaps.ts` and `scenes/act1/GapsScene.ts`.
+  // Kept south of `PAVILION` (x 38.5 to 55.5, z 61.3 to 68.7, roof up to
+  // 5.2 m): the leg from `alternatives` runs z 57 to 50 and the leg to
+  // `objectives` stays west of x 38.5, so neither crosses it. These clearances
+  // are unchecked in a render. Park trees scatter at x < 38, so check the
+  // arrival for a tree.
   {
     id: 'gaps',
     title: 'Research gaps and open challenges',
@@ -442,12 +259,8 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new GapsScene(),
   },
 
-  // From the bridge, on the site axis. The one terminated vista in the act: the
-  // entrance sits dead centre at the end of fifty metres of avenue, with the
-  // tree rows converging on it. Derived from the crossing rather than typed, so
-  // meandering the river moves the bridge and this pose together.
-  // Its own composition rather than a caption: the six gap keys gathered into
-  // four. See `content/objectives.ts` and `scenes/act1/ObjectivesScene.ts`.
+  // From the bridge on the site axis, with the entrance centred at the end of
+  // the avenue. Derived from `CROSSING` so it moves with the bridge.
   {
     id: 'objectives',
     title: 'Four objectives',
@@ -459,17 +272,9 @@ export const act1Scenes: readonly SceneDefinition[] = [
     create: () => new ObjectivesScene(),
   },
 
-  // Halfway down the same walk, aimed at the same point. Nothing changes but
-  // the distance, which is what makes the beat read as an approach rather than
-  // as a new place.
-  //
-  // Its own composition rather than a caption: the four objectives answered,
-  // then the five answers travelling into the plan of the corridor the next
-  // scene walks into. See `content/contributions.ts`.
-  //
-  // `recessed`, and it has to be. This is the widest composition in the act — a
-  // 1664-unit field carrying five cards and six edges — and the avenue it sits
-  // over is a lit vista with tree rows converging down the middle of frame.
+  // Halfway down the avenue, same aim as `objectives`, so the move is a straight
+  // approach. `recessed` because this is the widest composition in the act
+  // (1664 units, five cards) over a bright avenue view.
   {
     id: 'contributions',
     title: 'Contributions',
@@ -483,18 +288,9 @@ export const act1Scenes: readonly SceneDefinition[] = [
 ];
 
 /**
- * Two spans in `site.ts` are really statements about *this* file's order, and
- * the deck is what actually produces them.
- *
- * The review row must open one scene before the options are looked at and close
- * one scene after, because that is what puts the panels' travel inside a scene
- * that cannot see them. The scaffold comes down on `gaps`, because that is the
- * one beat in the act facing away from the building.
- *
- * Reorder the act and they disagree silently, which is the worst way for this to
- * fail: the panels either stay parked off frame while the scene arguing about
- * them plays to an empty promenade, or they walk across the middle of a shot —
- * and a scaffold vanishing on camera is a bug the audience watches happen.
+ * `REVIEW.from`, `REVIEW.to` and `CONSTRUCTION.struck` in `site.ts` must match
+ * this scene order, so the review panels and scaffold only move off camera.
+ * The check below throws on load if the act is reordered.
  */
 const progressOf = (id: string): number => {
   const index = act1Scenes.findIndex((entry) => entry.id === id);

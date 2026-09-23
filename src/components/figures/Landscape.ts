@@ -69,9 +69,9 @@ const buildRow = (pathway: Pathway): Row => {
 /**
  * Circular origin and declared end-of-life pathways across the corpus.
  *
- * Ten tracks on one scale. Bars are means, hard ticks are medians, and the
- * hairline past each bar is the range the declared values reach. Recycling is
- * counted as recovery: the material does get a second use.
+ * Ten tracks on one 0-100% scale. Bars are means, ticks are medians, and the
+ * hairline past each bar reaches the maximum declared value. Recycling counts
+ * as recovery.
  */
 export function createLandscape(): Landscape {
   const originRow = buildRow(ORIGIN);
@@ -95,7 +95,7 @@ export function createLandscape(): Landscape {
     'Declared end-of-life pathways, as a share of the product. A product may declare more than one',
   );
 
-  /** The scale, laid out on the row grid so its rail is the rows' rail. */
+  /** Axis on the row grid, so it lines up with the row tracks. */
   const axis = el('div', {
     className: 'ls-axis',
     children: [
@@ -187,9 +187,8 @@ export function createLandscape(): Landscape {
           0,
         );
 
-      // Origin first, then the nine in the order the corpus ranks them, so the
-      // eye reaches landfill early and arrives at the four minor pathways last,
-      // by which point they are hairlines against everything already drawn.
+      // Origin first, then the nine pathways in corpus rank order, so the four
+      // minor pathways arrive last.
       for (const [index, row] of bars.entries()) {
         const at = seconds(DURATION.quick + MOVE.apart * index);
 

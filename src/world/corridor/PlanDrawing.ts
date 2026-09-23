@@ -4,32 +4,16 @@ import { CELLS, SECTION, SWEEP, WALL, sweepFront, type Cell } from '@/config/cor
 const INK = 0xe4e9f0;
 
 /**
- * One tone for every floor, and the foundation edge is not drawn.
- *
- * Giving the members before C2 a darker ground was an attempt at the C2 → C5
- * foundation edge — `world_design.md` §3's *after C2 the abstract frame becomes
- * populated ground* — and it fails for a reason that has nothing to do with the
- * colours chosen. The split falls where the audience has been given no reason to
- * expect one, so it does not read as two grounds; it reads as **C1's room being
- * darker than the others**, which is a lighting fault, not a claim. A drawing
- * cannot carry a distinction the viewer has no key for.
- *
- * So the edge is unexpressed here, and that is the honest state: the floor's two
- * layers are `world_design.md` §8.1, still open, and the place to solve them is
- * Act II's floor at eye level, where the presenter is standing on the change and
- * can say what it is.
+ * One tone for every floor. The C2-C5 foundation edge is not drawn here: a
+ * darker C1 floor looks like a lighting fault. See `world_design.md` §8.1.
  */
 const GROUND = 0x2f4152;
 
 const FILL = { opacity: 0.9, lift: 0.005 } as const;
 
 /**
- * The whole drawing lies on the floor, walls included.
- *
- * Standing each band at the height of the wall it describes is the truthful
- * version and it is the wrong one: from a steep pose a band 4.5 m up projects a
- * metre off the plate it belongs to, so every room reads as a fill that has
- * come loose from its outline. Nobody is reading storey heights off a plan.
+ * Wall bands lie on the floor too. At wall height they project off their
+ * floor plates from steep camera poses.
  */
 const HEAD = 0.02;
 
@@ -88,33 +72,17 @@ export interface PlanDrawing {
   readonly object: Group;
   /** 0 the building, 1 the drawing. */
   setDrawn(level: number): void;
-  /**
-   * 0 the whole figure, 1 an empty field. Independent of `setDrawn`, because
-   * the two answer different questions: whether the drawing has replaced the
-   * building, and whether the drawing is still being read.
-   */
+  /** 0 the whole figure, 1 an empty field. Independent of `setDrawn`. */
   setCleared(level: number): void;
   dispose(): void;
 }
 
 /**
- * The corridor as a plan drawn in light.
+ * The corridor as a plan drawing, shown from high overhead poses where the
+ * baked shell looks wrong. Walls are bright bands, floors a dim ground. The
+ * shell fades to black underneath and stays in place.
  *
- * Seen from sixty metres the built shell has nothing left to give: its bake was
- * lit and exposed for standing inside it, its parquet is a 3.4 m tile viewed
- * from forty times that, and an interior with its ceiling off is a dollhouse.
- * None of that is fixable by relighting — the pose is outside what the asset
- * was authored for, and re-authoring it for one shot would cost the sixteen
- * scenes played at eye level.
- *
- * So the building stops being a building on the way up. What replaces it is the
- * drawing it was extruded from: walls as bands at their own height, floors as a
- * dim ground, and the flow — unchanged, still running — as the only colour in
- * the frame. The shell drains to black underneath rather than being removed, so
- * the drawing is standing in the space it describes and the move back down
- * finds the building where it was left.
- *
- * Two draw calls: every band is one merged geometry and every floor another.
+ * Two draw calls: all bands in one merged geometry, all floors in another.
  */
 export function createPlanDrawing(): PlanDrawing {
   const object = new Group();
@@ -167,7 +135,7 @@ export function createPlanDrawing(): PlanDrawing {
   };
 }
 
-/** Every wall the enfilade actually has, at the height it stands. */
+/** Every wall of the enfilade as a band. */
 function wallBands(): Rect[] {
   const rects: Rect[] = [];
   const reach = WALL / 2;
@@ -180,11 +148,9 @@ function wallBands(): Rect[] {
       if (cell.opens.includes(side)) continue;
       const inner = cell.centre + side * cell.half;
 
-      // A wing is a pocket in the gallery's own wall, not a replacement for it.
-      // The wall carries on past both ends of the opening — the Blender script
-      // skips the whole face because it is deciding where *fittings* hang, and
-      // reading that rule as geometry left every winged gallery drawn as an
-      // outline with two holes in it.
+      // A wing opens a pocket in the gallery wall. The wall continues past both
+      // ends of the opening. (The Blender script skips the whole face only for
+      // fitting placement.)
       for (const [from, to] of clear(cell, side)) {
         rects.push(span(inner, inner + side * WALL, from - reach, to + reach, y));
       }
@@ -199,9 +165,8 @@ function wallBands(): Rect[] {
     }
   }
 
-  // Each end reaches out to meet the wall it turns into, and only the end that
-  // is furthest from the axis has one: the other is the narrower member's own
-  // face, whose band already runs back inside the jamb.
+  // Only the end furthest from the axis extends to meet the side wall. The
+  // other end already meets the narrower member's wall band.
   for (const { z, from, to } of jambs()) {
     const out = (edge: number, other: number): number =>
       Math.abs(edge) >= Math.abs(other) ? edge + Math.sign(edge || 1) * WALL : edge;
@@ -211,7 +176,7 @@ function wallBands(): Rect[] {
   return rects;
 }
 
-/** The stretches of a gallery's own wall a wing does not open through. */
+/** Stretches of a gallery wall outside its wing opening. */
 function clear(cell: Cell, side: number): Array<[number, number]> {
   const wing = cell.wings.find((entry) => entry.side === side);
   if (!wing) return [[cell.y0, cell.y1]];
@@ -222,24 +187,16 @@ function clear(cell: Cell, side: number): Array<[number, number]> {
 }
 
 /**
- * The walls across the run, found rather than listed.
- *
- * At any station on the run, some members end and some begin, and what is solid
- * is whatever exactly one of them covers: where a link meets a gallery that is
- * the two jambs of the opening, where the last gallery ends it is the terminal
- * wall, and across the cross — where three members share one station and none
- * of them is sequential with another — it is nothing at all in the middle and
- * the front and back walls of C3 and C4 either side.
- *
- * Listing them by hand gets the cross wrong, which is the one place in the
- * building where getting it wrong closes a route the figure depends on.
+ * Cross walls, computed from the cells. At each station a span is solid where
+ * exactly one side (ending or starting members) covers it. This handles jambs,
+ * the terminal wall and the C3/C4 cross correctly.
  */
 function jambs(): Array<{ z: number; from: number; to: number }> {
   const stations = [...new Set(CELLS.flatMap((cell) => [cell.y0, cell.y1]))].sort((a, b) => a - b);
   const found: Array<{ z: number; from: number; to: number }> = [];
 
   for (const z of stations) {
-    // The mouth is an opening into the vestibule, not a wall.
+    // Station 0 is the open mouth into the vestibule.
     if (z === 0) continue;
 
     const ending = CELLS.filter((cell) => cell.y1 === z);
@@ -275,7 +232,7 @@ function exactlyOne(ending: readonly Cell[], starting: readonly Cell[]): Array<[
   return solid;
 }
 
-/** The ground each member stands on. */
+/** Floor plate of each member and its wings. */
 function floorPlates(): Rect[] {
   const y = SECTION.floor + FILL.lift;
   return CELLS.flatMap((cell) => [
@@ -292,7 +249,7 @@ const span = (a: number, b: number, c: number, d: number, y: number): Rect => ({
   y,
 });
 
-/** The plan is authored with z running into the corridor; the world runs back. */
+/** Merges rects into one geometry. Plan z runs into the corridor, so world z is negated. */
 function plate(rects: readonly Rect[]): BufferGeometry {
   const positions = new Float32Array(rects.length * 12);
   const indices: number[] = [];

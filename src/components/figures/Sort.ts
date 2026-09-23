@@ -30,12 +30,8 @@ const CONSIDERED = 0;
 const DISCARDED = 1;
 
 /**
- * A quantity in the precision its indicator is argued in.
- *
- * The water-to-cement ratio is the reason this is not one `Math.round`: 0.65
- * rounds to 1, and a governing constraint printed as "w/c ≤ 1" is not a
- * rounding error the room can recover from. Everything carrying a unit is a
- * whole number in the paper's own tables and rounds.
+ * Formats a value at its indicator's precision. Values with a unit round to
+ * whole numbers; unitless ones (w/c ratio) keep two decimals.
  */
 const amount = (requirement: Requirement, value: number): string =>
   requirement.unit ? String(Math.round(value)) : value.toFixed(2);
@@ -44,11 +40,8 @@ const withUnit = (requirement: Requirement, value: number): string =>
   requirement.unit ? `${amount(requirement, value)} ${requirement.unit}` : amount(requirement, value);
 
 /**
- * Why a product left, in the words the paper's own reason column uses.
- *
- * An undeclared indicator is reported ahead of any threshold the product also
- * misses. It is the same product for all three conditions and the same reason
- * every time, and it is the one failure C4 exists to answer.
+ * Discard reason, worded as in the paper's reason column. A missing indicator
+ * is reported before any failed threshold, since that is the gap C4 addresses.
  */
 const reasonFor = (verdict: Verdict): string => {
   const missing = verdict.checks.find((check) => check.status === 'missing');
@@ -65,12 +58,9 @@ const reasonFor = (verdict: Verdict): string => {
 };
 
 /**
- * The inputs the engine was given, in the order they arrive.
- *
- * The drawing sits last so that its arrival between the two demonstrations
- * lengthens the row rather than displacing the two chips that hold. They also
- * do the work of a legend: the colour on a chip is the colour on the left edge
- * of any constraint that source ends up governing.
+ * Input sources in arrival order. The drawing is last so it appends to the row
+ * without shifting the other chips. Chip colours double as the legend for
+ * constraint sources.
  */
 const SOURCE_ORDER: readonly Source[] = ['regulation', 'user', 'drawing'];
 
@@ -82,20 +72,16 @@ const SOURCE_CHIP: Readonly<Record<Source, string>> = {
 
 interface Roll {
   readonly element: HTMLElement;
-  /** Writes a value with no motion, and leaves the track at rest. */
+  /** Writes a value instantly and resets the track. */
   set(text: string): void;
-  /** Rolls to a new value. Reports whether there was anything to roll. */
+  /** Rolls to a new value. Returns false if the value is unchanged. */
   roll(text: string, line: gsap.core.Timeline, at: number, duration: number): boolean;
 }
 
 /**
- * A quantity that changes by being replaced rather than by being redrawn.
- *
- * Two cells in a clipped box, one above the other; the track travels exactly
- * one cell and the arriving value is written back into both on landing, so the
- * component is always at rest between beats and never depends on the step
- * before it. The whole reading travels together — a per-digit roll on
- * "≥ 325 kg/m³" reads as a slot machine rather than as a constraint tightening.
+ * A value that rolls vertically to its next reading. Two stacked cells in a
+ * clipped box; on landing both cells get the new value, so the track is always
+ * at rest between beats. The whole string rolls as one unit.
  */
 function createRoll(className: string): Roll {
   const outgoing = el('span', { className: 'so-roll-cell' });
@@ -170,22 +156,12 @@ function buildCard(epd: Epd): Card {
 }
 
 /**
- * Fig. 2 run on Table 5, with the products doing the travelling.
+ * Fig. 2 applied to Table 5. Each product keeps its row; a card moves between
+ * columns only when its verdict changes. The second demonstration is a delta on
+ * the first: the drawing chip appends and changed constraints roll in place.
  *
- * Every product owns a row for the whole panel and never leaves it, so the only
- * thing that moves horizontally is a verdict changing. Between the two
- * demonstrations exactly three cards cross the centre, and because nothing else
- * shifts they need no annotation.
- *
- * The two demonstrations are one case study, so the second is staged as a delta
- * on the first rather than as a second picture: the jurisdiction line is written
- * once and never touched again, the drawing arrives as a chip on the end of the
- * input row, and every quantity that the drawing changes rolls to its new
- * reading in place.
- *
- * The travel is a FLIP against `offsetLeft` rather than `getBoundingClientRect`:
- * the stage is a scaled surface, so a rect delta is in screen pixels while the
- * transform that has to undo it is in layout pixels.
+ * Card travel is a FLIP on `offsetLeft`. The stage is scaled, so
+ * `getBoundingClientRect` would give screen pixels where layout pixels are needed.
  */
 export function createSort(): Sort {
   const cards = EPDS.map(buildCard);
@@ -274,11 +250,8 @@ export function createSort(): Sort {
     condition.sources[source] !== undefined;
 
   /**
-   * The state a condition *is*, with nothing tweened and nothing rolled.
-   *
-   * The jurisdiction line is written from the condition every time and is the
-   * same string in both demonstrations, so it is never a target of motion. Its
-   * holding still is what says the case study did not restart.
+   * Writes a condition's static state (labels, columns, verdicts) with no
+   * animation. The jurisdiction line is identical in both demonstrations.
    */
   const apply = (condition: Condition): readonly Verdict[] => {
     const verdicts = verdictsFor(condition);
@@ -313,7 +286,7 @@ export function createSort(): Sort {
     return verdicts;
   };
 
-  /** What a slot reads under a condition, in the form it is printed in. */
+  /** Printed bound for a slot under a condition, e.g. "≥ 325 kg/m³". */
   const boundText = (condition: Condition, slot: Slot): string => {
     const governing = governingFrom(condition.sources);
     const bound = governing[slot.key];
@@ -367,8 +340,7 @@ export function createSort(): Sort {
       const verdicts = apply(condition);
       const last = cards.map((card) => card.node.offsetLeft);
 
-      // The two columns are the same width, so the gap between them is the only
-      // distance a card ever travels, and it is the same for every card.
+      // Both columns share a width, so every card travels the same distance.
       const travel = (columnHeads[1]?.offsetLeft ?? 0) - (columnHeads[0]?.offsetLeft ?? 0);
 
       if (shown < 0) {
@@ -409,8 +381,7 @@ export function createSort(): Sort {
             seconds(DURATION.normal),
           );
 
-        // The first sort is the cohort splitting. Every card comes in on the
-        // centre line and is pushed to the side its verdict puts it on.
+        // First sort: each card enters from the centre and moves to its column.
         for (const [row, card] of cards.entries()) {
           const outward = verdicts[row]?.pass ? 1 : -1;
           line.fromTo(
@@ -431,9 +402,7 @@ export function createSort(): Sort {
         return line;
       }
 
-      // A source arriving is the whole cause of everything that follows, so it
-      // lands on its own before a single quantity moves. It sits at the end of
-      // the row, so the two chips that hold do not shift by a pixel.
+      // New source chips land first, before any constraint changes.
       for (const chip of chips) {
         const wanted = present(condition, chip.source);
         const held = chip.node.dataset['present'] === 'true';
@@ -462,9 +431,7 @@ export function createSort(): Sort {
         }
       }
 
-      // Then the constraints it changed, left to right, each one rolling from
-      // the reading it held to the reading it now holds. A constraint the new
-      // source did not touch does not move at all.
+      // Then changed constraints roll to their new values, left to right.
       const rollAt = seconds(DURATION.quick * 1.3);
       const rollFor = seconds(DURATION.slow * 0.62);
       let rolled = 0;
@@ -478,10 +445,8 @@ export function createSort(): Sort {
         if (changed) rolled += 1;
       }
 
-      // Only the cards whose verdict changed have anywhere to go. The rest hold
-      // position exactly, which is what makes the movement mean something. A
-      // card in transit is lifted off the surface and set back down, so the
-      // move reads as deliberate rather than as a slide.
+      // Only cards whose verdict changed move. A moving card scales up slightly
+      // and back down.
       const cardsAt = seconds(DURATION.slow * 0.95);
       const cardTravel = seconds(DURATION.cinematic * 0.62);
       let moved = 0;
@@ -509,8 +474,7 @@ export function createSort(): Sort {
         moved += 1;
       }
 
-      // The tally is the result, so it lands with the last card rather than
-      // ahead of it.
+      // The tally updates while the cards are moving.
       tallyValue.roll(String(consideredIn(condition)), line, cardsAt + cardTravel * 0.5, rollFor);
 
       shown = step;

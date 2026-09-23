@@ -32,7 +32,7 @@ import { createOutcrop, type StoneField } from './stones';
 import { createTerrain, type Terrain } from './terrain';
 import { createWoodland, type Woodland } from './woodland';
 
-/** Asset ids every Act I scene declares, so they resolve before the zone mounts. */
+/** Asset ids every Act I scene declares, so they load before the zone mounts. */
 export const EXTERIOR_ASSET = 'exteriorBuilding';
 export const CONSTRUCTION_ASSET = 'exteriorConstruction';
 export const DOORS_ASSET = 'exteriorDoors';
@@ -63,53 +63,29 @@ export const EXTERIOR_ASSETS = [
 ] as const;
 
 /**
- * Daylight, and now the building's only light.
- *
- * These levels were set when every exterior asset was drawn unlit and this rig
- * lit nothing but the ground and the planting. Under that arrangement a key of
- * 2.6 was fine, because no value here ever touched the facade.
- *
- * It does now, and the arithmetic is unforgiving: brick at 0.078 albedo takes
- * `albedo / π × intensity × 0.71` from a 28° sun, which at 2.6 landed the
- * sunlit elevation near sRGB 0.22 — a black silhouette against a bright sky
- * from every establishing pose. The key carries the facade, so it is set from
- * the facade and the ground follows.
+ * Exterior daylight. This also lights the building, so the key intensity is
+ * set high enough for the dark brick facade to not read as a silhouette.
  */
 const EXTERIOR_ATMOSPHERE: Atmosphere = {
-  // Pale, faintly warm horizon haze. Must stay close to the `v = 0.5` stop in
-  // `sky.ts`: distant ground fades to this and then gives way to the sky, and a
-  // step between the two draws a line across the far field.
+  // Horizon haze. Must stay close to the `v = 0.5` stop in `sky.ts`, or a line
+  // appears where distant ground meets the sky.
   fogColor: 0xcfe0ee,
-  // Aerial perspective, not a curtain. `LAND.ridge` and the woodland belt close
-  // the horizon by construction, so the fog does not have to hide anything — a
-  // ramp short enough to do that also washes the belt itself to a grey wall,
-  // which reads as weather rather than as distance.
+  // Light distance haze. The ridge and woodland already close the horizon.
   fogNear: 110,
   fogFar: 1400,
   skyColor: 0x9fc4ea,
   groundColor: 0x6a7a4e,
-  // Lifted with the sun. A high sun leaves the north and east elevations taking
-  // nothing but sky, and at 0.55 they went to silhouette — which is the same
-  // failure the key was raised to fix, arriving from the other direction.
+  // High enough that the shaded facades do not go black.
   ambientIntensity: 0.9,
   keyColor: 0xfff4e4,
   keyIntensity: 6.2,
-  // A Nordic summer midday: roughly 48° elevation, from the west of the
-  // approach so the +Z entrance elevation is lit rather than in its own shade.
-  //
-  // Free to choose: the only Blender bake is `type='AO'`, which is
-  // sun-independent, so nothing in the exported textures carries a light
-  // direction this could disagree with.
+  // Nordic summer midday sun, about 48° up, from the west so the entrance face
+  // is lit. The bake is AO only, so any sun direction works.
   keyOffset: [-50, 90, 64],
-  // Lands as *colour* rather than as lift: at midday the shaded faces of a
-  // building are lit almost entirely by a deep blue sky, and that blue in the
-  // shadows is most of what separates daylight from a flat white key.
-  //
-  // Tuned against the panorama in `sky.ts` — the sun-to-sky *ratio* is the look,
-  // so changing the sky is a retune here rather than a swap.
+  // Adds blue sky light to the shadows. Tuned together with `sky.ts`, so
+  // changing the sky means retuning this.
   environmentIntensity: 1.25,
-  // Every asset bakes to p99 ≈ 0.57 specified with 0% clipped, so there is
-  // headroom to spend here rather than in the bake, where it would clip.
+  // Bakes peak around 0.57, so there is headroom for exposure here.
   backgroundIntensity: 1,
   exposure: 1.1,
 };
@@ -118,13 +94,8 @@ const EXTERIOR_ATMOSPHERE: Atmosphere = {
 const REVIEW_TRAVEL = 2.2;
 
 /**
- * Held until the camera has finished its own move.
- *
- * The panels travel during the scene either side of the ones that show them,
- * where the review row is outside the frustum — but the *transition* into that
- * scene sweeps through poses that look west across open park, which is exactly
- * where the row parks. Starting the travel on arrival rather than on the cut
- * keeps the whole journey off camera.
+ * Delay before the panels move, so the camera finishes its transition first.
+ * The transition passes views where the panels would be visible.
  */
 const REVIEW_HOLD = TRANSITION.camera.maxSeconds + 0.25;
 
@@ -142,21 +113,17 @@ class Exterior implements ZoneInstance {
   private readonly parkland: Parkland;
   private readonly outcrop: StoneField;
   private readonly building: Building;
-  /** The vestibule recess's dark lining, wanted only while nothing is behind it. */
+  /** Dark lining of the entrance recess. Hidden once the corridor is behind it. */
   private readonly lining: Object3D[];
   private readonly construction: Building;
   private readonly slotFill: Building;
   private readonly candidates: readonly Building[];
   private readonly entrance: Entrance;
   private readonly parts: readonly Building[];
-  // Built from the key's own direction, so the sun in the panorama and the light
-  // casting the shadows cannot disagree.
+  // Uses the key light direction so the sky's sun matches the shadows.
   private readonly sky: Texture = createSkyTexture(EXTERIOR_ATMOSPHERE.keyOffset);
   private readonly environment: Texture;
-  /**
-   * Built from the air it is seen through, so the light inside the cloud agrees
-   * with the sun and its gain is referenced to the exposure it was tuned at.
-   */
+  /** Uses the exterior atmosphere so its lighting matches the sun and exposure. */
   private readonly cloud: CloudShell;
   private presence = -1;
   private scaffolded = true;
@@ -176,27 +143,14 @@ class Exterior implements ZoneInstance {
       clay: { map: assets.texture('clayTexture'), normal: assets.texture('clayNormal') },
       granite: { map: assets.texture('graniteTexture'), normal: assets.texture('graniteNormal') },
       cobble: { map: assets.texture('cobbleTexture'), normal: assets.texture('cobbleNormal') },
-      // No normal map of its own: loose gravel under planting is read at three
-      // metres and its relief is below the threshold a normal buys anything at,
-      // so the cobble's stands in rather than shipping a fourth map.
+      // Reuses the cobble normal map. Gravel detail is too small to need its own.
       gravel: { map: assets.texture('gravelTexture'), normal: assets.texture('cobbleNormal') },
     });
 
-    // Three modules read the planting asset's node hierarchy directly, and all
-    // three must run before `createPlanting` collapses it into instanced draws
-    // and the individual templates stop being addressable. The woodland
-    // photographs the trees onto billboards, the bankside clones species by
-    // name, and the parkland instances whole trees into the park — none of them
-    // ships an asset of its own.
-    // **The planting is built before the ground it stands on**, and the order is
-    // the design rather than an accident of construction. Grass does not grow
-    // the same under a tree, and the only description of where the trees are is
-    // the plan that just placed them — painting a matching map would be a second
-    // description of one thing, agreeing until the seed changes.
-    //
-    // Nothing here needs the terrain *mesh*, only `heightAt`, which is a pure
-    // function. So the dependency runs one way: the planting asks the ground
-    // where it is, then the ground asks the planting what is standing on it.
+    // Woodland, bankside and parkland read the planting asset's templates, so
+    // they must run before `createPlanting` merges it into instanced meshes.
+    // Planting is built before the terrain so the ground can darken under the
+    // trees. Planting only needs `heightAt`.
     const canopy = createCanopyField();
 
     const flora = assets.model(PLANTING_ASSET).scene;
@@ -204,9 +158,7 @@ class Exterior implements ZoneInstance {
     this.bankside = createBankside(flora);
     this.parkland = createParkland(flora, assets.model(PARK_ASSET).scene, {
       canopy,
-      // The park swaps modelled trees for cards by distance, so it needs both
-      // the camera it is measured from and the renderer that takes the
-      // photographs — see `parkland.ts` `FAR`.
+      // For the model/billboard swap. See `FAR` in `parkland.ts`.
       camera: context.camera,
       renderer: context.renderer,
     });
@@ -219,8 +171,7 @@ class Exterior implements ZoneInstance {
       canopy,
     });
 
-    // After the terrain, because the slabs are seated on the drawn surface and
-    // the surface is where the knoll's own shading has already given way to rock.
+    // After the terrain, since the slabs sit on its surface.
     this.outcrop = createOutcrop();
 
     stage.add(
@@ -258,9 +209,7 @@ class Exterior implements ZoneInstance {
     this.parts = [this.building, this.construction, this.slotFill, ...this.candidates];
     stage.add(...this.parts.map((part) => part.object), this.entrance.object);
 
-    // Act I is the building under construction with the bay still open. The
-    // fill is Act IV's, and the options are parked off frame until the act
-    // asks for them.
+    // Act I starts with the bay empty and the facade options off screen.
     this.slotFill.object.visible = false;
     this.setReview(0, false);
 
@@ -276,38 +225,23 @@ class Exterior implements ZoneInstance {
   }
 
   /**
-   * Walks the review row on or off site, entirely outside the frame.
-   *
-   * The travel is never watched. It runs during the scene before the options
-   * are discussed and the scene after, both of which face the building, and it
-   * waits out the camera's own move first. What the audience sees is a stretch
-   * of act with four panels standing on the promenade and a stretch without —
-   * never the join.
-   *
-   * An earlier version travelled them into their own scene, so the row slid
-   * across frame while the camera was still swinging onto it. Two things moving
-   * at once reads as a slide transition rather than as objects being brought
-   * out, which is the one thing this must not look like.
+   * Moves the facade options on or off site. This always happens off screen,
+   * during scenes that face the building, after the camera move ends.
    */
   private setReview(presence: number, animate: boolean): void {
-    // Only on a change of state. Every scene in the span reports the row as
-    // present, and re-issuing the tween each time would restart a travel that
-    // has already happened.
+    // Only on a change, so the tween is not restarted.
     if (presence === this.presence) return;
     this.presence = presence;
 
     const last = this.candidates.length - 1;
-    // Which way is away from the building, and therefore which way the row
-    // walks off. The panels are exported at `REVIEW.baked` and stand at
-    // `REVIEW.centre`, so every position here is that shift plus the travel.
+    // Direction away from the building. Positions are the offset from
+    // `REVIEW.baked` to `REVIEW.centre`, plus the travel.
     const away = Math.sign(REVIEW.centre[0]);
     const rest = REVIEW.centre[0] - REVIEW.baked;
 
     this.candidates.forEach((candidate, index) => {
       const { object } = candidate;
-      // Staggered from the building outward, so the panel nearest it arrives
-      // first and the row builds away. Reversed, the far panels would cross
-      // through the near ones on the way in.
+      // The panel nearest the building arrives first, so panels never cross.
       const rank = away > 0 ? index : last - index;
       const parked = away * (REVIEW.offstage + rank * REVIEW.stagger);
       const x = rest + parked * (1 - presence);
@@ -333,19 +267,9 @@ class Exterior implements ZoneInstance {
   }
 
   /**
-   * Strikes the scaffold, or puts it back.
-   *
-   * **The timing is asymmetric, and it has to be.** The strike is never watched
-   * — `gaps` is the one beat that turns its back on the building — but the beat
-   * before it, `alternatives`, has the scaffolded elevation at frame left. So
-   * going forward the change waits out the camera's move and happens on arrival,
-   * where nothing can see it; going back it happens immediately, on departure
-   * from `gaps`, for the same reason read the other way round. Either rule
-   * applied in both directions pops the scaffold in shot at one end.
-   *
-   * A cut rather than a fade: the construction asset is one joined object
-   * carrying several opaque materials, and making it transparent to dissolve it
-   * would buy a transition nobody is present to see.
+   * Removes or restores the scaffold. Going forward it waits for the camera to
+   * reach `gaps` (which faces away). Going back it restores at once, before the
+   * camera turns to face it. Both are instant cuts done off screen.
    */
   private setScaffold(standing: boolean, animate: boolean): void {
     if (standing === this.scaffolded) return;
@@ -365,48 +289,29 @@ class Exterior implements ZoneInstance {
   }
 
   /**
-   * The recess lining, and why the corridor makes it wrong rather than redundant.
-   *
-   * The recess is lined in a dark material so that from the forecourt it reads
-   * as a space that continues rather than a rectangle painted on the back wall.
-   * That is its whole job, and it is finished the moment the space that
-   * continues is actually standing there: the corridor nests three metres into
-   * the recess, its own walls and ceiling sit *inside* the lining's, and its
-   * floor is **coplanar with the lining's** at 0.14. Two floors in one plane,
-   * and the one that wins is a 0.085-albedo slab lying across the parquet — a
-   * dark band three metres deep, right where the camera is about to walk. It
-   * reads as a hole in the floor, which is exactly what it looks like.
-   *
-   * `ZONE_ORIGIN.corridor` says the two sections are 200 mm apart so neither
-   * pair contends. That is true of the walls and the ceiling and it is not true
-   * of the floor, because a floor cannot be inset from another floor.
+   * The dark recess lining fakes depth from outside. Once the corridor is
+   * present it must be hidden, because its floor lies in the same plane as the
+   * corridor floor and shows as a dark band.
    */
   private setLining(): void {
     for (const part of this.lining) part.visible = !this.beyond;
   }
 
-  /**
-   * Re-installed rather than set once at build time: the corridor clears both,
-   * so coming back out here has to put them back.
-   */
+  /** Restores the sky and environment, which the corridor clears. */
   takeSky(): void {
     this.context.world.setBackground(this.sky);
     this.context.world.setEnvironment(this.environment);
   }
 
   setProgress(progress: number, animate: boolean): void {
-    // Derived from position in the deck rather than owned by the opening scene,
-    // which is what lets a presenter jump back to the title card during
-    // questions and find the cloud closed again without the scene knowing.
+    // Driven by deck position, so jumping back to the title closes the cloud.
     this.cloud.setCover(progress <= CLOUD.clears ? 1 : 0, animate);
 
     const onStage = progress >= REVIEW.from && progress <= REVIEW.to;
     this.setReview(onStage ? 1 : 0, animate);
     this.setScaffold(progress < CONSTRUCTION.struck, animate);
-    // Shut for the whole act, including on a jump back into it from the
-    // corridor. The doors are not zone progress — they are an event, and
-    // `setThreshold` owns it — but the *closed* state is what every Act I scene
-    // is entitled to, and re-entering the exterior has to restore it.
+    // Doors stay shut in Act I, including after jumping back from the corridor.
+    // `setThreshold` handles opening.
     this.entrance.open(0, 0);
     this.entrance.seal(!this.beyond);
     this.setLining();
@@ -419,19 +324,9 @@ class Exterior implements ZoneInstance {
   }
 
   /**
-   * Opens the doors, timed against the move that is carrying the camera in.
-   *
-   * They part at `DOORS_AT` of the move rather than on arrival, and the
-   * difference is the whole register of the shot: doors that open as you reach
-   * them are automatic doors reacting to a body; doors already opening as you
-   * approach are a building admitting you. See `animations/entry.ts`, where the
-   * fraction is defined next to the speed profile it is a fraction of, because
-   * the two are one piece of choreography.
-   *
-   * Driven off the move's own length rather than a clock of its own, and killed
-   * with the zone — a presenter who navigates on mid-flight leaves a zone that
-   * is released, so there is no timer left running against doors nobody is
-   * travelling towards.
+   * Opens the doors at `DOORS_AT` of the camera move, so they are already
+   * opening as the camera approaches. See `animations/entry.ts`. The timer is
+   * killed with the zone.
    */
   setThreshold(open: boolean, seconds: number): void {
     this.entrance.seal(!open && !this.beyond);
@@ -494,8 +389,7 @@ export const exteriorZone: ZoneDefinition = {
   id: 'exterior',
   origin: ZONE_ORIGIN.exterior,
   atmosphere: EXTERIOR_ATMOSPHERE,
-  // Wide enough to hold the building's shadow and the trees', which is most of
-  // what sells the ground plane as ground.
+  // Covers the building's and trees' shadows.
   shadow: { radius: BUILDING_HEIGHT * 3.4, far: BUILDING_HEIGHT * 11 },
   create: (context) => new Exterior(context),
 };

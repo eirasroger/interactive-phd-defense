@@ -10,13 +10,13 @@ export interface BriefSpec {
   readonly accent?: Accent;
   /** `claims` reserves a fixed column beside the figure; `even` splits in half. */
   readonly split?: 'claims' | 'even';
-  /** Attribution, and anything else the figure states about itself. */
+  /** Attribution for the figure. */
   readonly source?: string;
   readonly note?: string;
 }
 
 export interface CardSpec {
-  /** Named above the drawing. A card with no label gives the row back. */
+  /** Shown above the drawing. Without a label the card has no head row. */
   readonly label?: string;
   readonly note?: string;
   readonly accent?: Accent;
@@ -24,7 +24,7 @@ export interface CardSpec {
 
 export interface Card {
   readonly element: HTMLElement;
-  /** Where the drawing goes. Already declared as a row, so an SVG cannot size it. */
+  /** Container for the drawing. Its grid row is fixed, so an SVG inside cannot resize it. */
   readonly body: HTMLElement;
   reveal(settle?: boolean): gsap.core.Timeline;
 }
@@ -32,32 +32,19 @@ export interface Card {
 export interface Claims {
   readonly element: HTMLElement;
   /**
-   * Lights the claims named in `live`, leaves everything before them made, and
-   * holds everything after them pending.
+   * Marks the claims in `live` as live, earlier ones as made, and later ones as
+   * pending. A beat can light several claims at once.
    *
-   * **A beat may carry more than one claim, and it usually does.** Passing a
-   * single index made the last claim of a merged beat live and left the one
-   * beside it at `made`, which on screen is indistinguishable from a claim that
-   * was skipped: two lines arrive on the same click and only one of them lights.
-   * The scene says which claims that click is about, and a beat carrying one
-   * still passes one number.
-   *
-   * The whole state is written every time rather than the difference from the
-   * beat before, so stepping backwards, jumping in from the deck and walking
-   * forwards all land on the same frame.
+   * Writes the full state each call, so forward, backward and jump navigation
+   * all end in the same frame.
    */
   show(live: number | readonly number[], settle?: boolean): gsap.core.Timeline;
 }
 
 export interface ClaimsSpec extends CardSpec {
   /**
-   * `stack` reads down a narrow column beside a figure; `row` reads across the
-   * full width underneath one.
-   *
-   * The column is right where the figure is tall enough to leave a column
-   * beside it. Where the drawing wants the whole width, three claims in a
-   * 30rem sidecar force it into a third of the frame, and the composition is
-   * the same two-card split as every other slide in the act.
+   * `stack`: a narrow column beside the figure. `row`: full width below it,
+   * for figures that need the whole width.
    */
   readonly flow?: 'stack' | 'row';
 }
@@ -66,20 +53,17 @@ export interface Brief {
   readonly element: HTMLElement;
   /** The evidence region. Cards are appended here in column order. */
   readonly stage: HTMLElement;
-  /** Everything the entry timeline moves, so a killed entry can be settled. */
+  /** Elements the entry timeline animates, so a killed entry can be settled. */
   readonly head: readonly HTMLElement[];
   revealHead(settle?: boolean): gsap.core.Timeline;
   addCard(spec?: CardSpec): Card;
-  /** A claims run on a card of its own, in the evidence region. */
+  /** Adds a claims list on its own card in the evidence region. */
   addClaims(lines: readonly string[], spec?: ClaimsSpec): Claims;
 }
 
 /**
- * A numbered claims run, without a card around it.
- *
- * Separate from `Brief.addClaims` so a scene can put the run inside a card it
- * already owns — under a figure that wants the full width, rather than beside
- * one that does not.
+ * A numbered claims list with no card, so a scene can place it inside a card
+ * it already owns (for example under a full-width figure).
  */
 export function createClaims(lines: readonly string[], spec: ClaimsSpec = {}): Claims {
   const items = lines.map((line, index) => {
@@ -95,12 +79,8 @@ export function createClaims(lines: readonly string[], spec: ClaimsSpec = {}): C
   element.dataset['flow'] = spec.flow ?? 'stack';
 
   /*
-   * The run stands whole and only its light advances.
-   *
-   * Opacity is left to CSS through `data-state` rather than tweened here, for
-   * the reason `conditions.css` records: a quantity driven from one declaration
-   * cannot drift out of step with the others, and a transition on a class is one
-   * declaration.
+   * All claims stay visible; only their state changes. Opacity is handled in
+   * CSS via `data-state` (see `conditions.css`).
    */
   return {
     element,
@@ -128,14 +108,7 @@ export function createClaims(lines: readonly string[], spec: ClaimsSpec = {}): C
   };
 }
 
-/**
- * The card both a figure and a claims run stand on.
- *
- * One builder rather than two, so the drawing and the argument beside it are
- * plainly the same object at the same elevation. They were diverging within an
- * hour of the first being written: only one of them had a head, and a card with
- * a label sitting next to one without reads as a panel next to a note.
- */
+/** Shared card for figures and claims lists, so both look identical. */
 function surface(spec: CardSpec, body: HTMLElement, fallback: Accent): HTMLElement {
   const children: HTMLElement[] = [];
 
@@ -159,18 +132,9 @@ function surface(spec: CardSpec, body: HTMLElement, fallback: Accent): HTMLEleme
 }
 
 /**
- * Act I's standard composition.
- *
- * A claim across the top and the evidence underneath it, which is the shape
- * Act II and Act III both use and the one thing Act I did not. Scenes compose
- * this rather than laying themselves out, so the register, the card treatment
- * and the reveal timing are identical across the act.
- *
- * **What it replaces.** `Slide` put the claim in a five-column well beside a
- * seven-column figure and centred both, and its beat material was paragraphs
- * accreting down that well. Long prose on a defence slide is read instead of
- * listened to, so the claims are short, numbered and lit one at a time here,
- * and the figure gets the width it was drawn for.
+ * Act I's standard slide layout: heading on top, evidence cards below, and
+ * short numbered claims lit one at a time. Scenes use this so type, cards and
+ * reveal timing match across the act.
  */
 export function createBrief(spec: BriefSpec): Brief {
   const accent = spec.accent ?? 'circular';
@@ -237,10 +201,8 @@ export function createBrief(spec: BriefSpec): Brief {
             return timeline;
           }
 
-          // `fromTo` rather than `from`: the card may be revealed more than once
-          // across a walk, and a second `from` on an element already carrying
-          // one resolves its destination to the first one's start value —
-          // `learnings.md` §31c.
+          // `fromTo`: the card can be revealed more than once, and a repeated
+          // `from` ends at the previous start value (`learnings.md` §31c).
           return timeline.fromTo(
             card,
             { opacity: 0, y: 22 },

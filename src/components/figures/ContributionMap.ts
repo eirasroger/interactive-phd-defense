@@ -8,13 +8,13 @@ export type Lane = 'axis' | 'high' | 'low';
 
 export interface Contribution {
   readonly key: string;
-  /** The station name from `narrative.md`. Survives into the plan. */
+  /** Station name from `narrative.md`. Shown in both layouts. */
   readonly role: string;
-  /** The published page. Carries title and authorship; nothing repeats them. */
+  /** Image of the published first page. It carries title and authors. */
   readonly sheet: string;
   readonly journal: string;
   readonly locator: string;
-  /** The objective key this answers. O4 is claimed twice, on purpose. */
+  /** Objective key this paper answers. O4 appears twice by design. */
   readonly answers: string;
   readonly plan: { readonly column: number; readonly lane: Lane };
 }
@@ -31,27 +31,17 @@ export interface ContributionMapSpec {
 
 export interface ContributionMap {
   readonly element: HTMLElement;
-  /** The five cards, for the scene's own entrance stagger. */
+  /** The five cards, for the scene's entrance stagger. */
   readonly frames: readonly HTMLElement[];
-  /** `PAPERS` for the five as published, `PLAN` for the pipeline they make. */
+  /** `PAPERS` shows the row of papers, `PLAN` shows the pipeline diagram. */
   show(state: number, settle?: boolean): gsap.core.Timeline;
 }
 
 /*
- * The five papers, and then the pipeline they are.
- *
- * **One set of cards in two layouts, not two figures.** The audience has to see
- * that the diagram is made of the papers they were just shown, or the corridor
- * opens in Act II as a new drawing they have to take on trust. So the cards are
- * absolutely placed, every state computes a full box for each one, and the
- * change is five objects rearranging rather than one composition being swapped
- * for another.
- *
- * **The masthead survives the morph.** In the plan each node keeps a sliver of
- * its own page — the running head, the journal, the year — so a node is still
- * visibly a paper at the size of a diagram box. Fading the sheets out entirely
- * was the first attempt and it turned five documents into five rectangles the
- * moment the beat landed.
+ * Five paper cards that morph from a row into the pipeline diagram. The same
+ * absolutely placed cards move between both layouts, so the audience sees the
+ * diagram is built from the papers. Each plan node keeps the top strip of its
+ * page so it still looks like a paper.
  */
 
 export const PAPERS = 0;
@@ -59,43 +49,30 @@ export const PLAN = 1;
 
 /* ---- Geometry ------------------------------------------------------------ */
 /*
- * All in field units, and the field is a fixed box — the stage is 1920x1080 and
- * does not reflow (`decisions.md` §31), so a layout solved once is solved. The
- * SVG shares the coordinate system through its `viewBox`, which is what lets an
- * edge terminate exactly on a card edge without measuring anything.
+ * All values are field units. The stage is a fixed 1920x1080 (`decisions.md`
+ * §31). The SVG `viewBox` uses the same units, so edges meet card edges exactly.
  */
 
-/**
- * Sized to the plan, which is the taller layout, and no taller — every unit
- * beyond what the plan needs is dead air under the papers, and it reads as the
- * row having come loose from the heading above it.
- */
+/** Sized to fit the plan, the taller of the two layouts. */
 const FIELD = plan.field;
 
 /**
- * Five across, as published.
- *
- * The sheet's height is its source aspect at this width, so the page is never
- * scaled anisotropically — 1072x460 at 310 wide is 133. Getting this wrong by a
- * pixel is a masthead subtly stretched, which is exactly the tell that separates
- * a document from a picture of one.
+ * Row layout. `sheet` keeps the source image aspect (1072x460 at 310 wide is
+ * 133) so the page is never stretched.
  */
 const ROW = { width: 310, height: 382, pitch: 338, sheet: 133 } as const;
 
-/** Plan geometry lives in `config/corridorPlan.json` — see `config/corridor.ts`. */
+/** Plan geometry lives in `config/corridorPlan.json` (see `config/corridor.ts`). */
 const PLAN_BOX = { ...plan.box, sheet: 46 } as const;
 const COLUMN_X = plan.columnX;
-/**
- * The axis lane is clear between the two branch lanes, which is what lets
- * C2 → C5 run straight through the middle rather than around anything.
- */
+/** The axis lane sits between the branch lanes, so C2 to C5 is a straight line. */
 const LANE_Y: Record<Lane, number> = plan.laneY;
 
-/** Elbow corner radius. A plan drawing turns corners; it does not kink. */
+/** Elbow corner radius. */
 const BEND = 16;
 const ARROW = 9;
 
-/** Centred in the field, which is sized for the plan — the taller layout. */
+/** Vertically centred in the field. */
 const ROW_TOP = (FIELD.height - ROW.height) / 2;
 
 /* ---- Choreography -------------------------------------------------------- */
@@ -110,7 +87,7 @@ const CUE = {
 const SPAN = {
   release: 0.32,
   fade: 0.34,
-  /** The morph. Long, soft at both ends — five documents crossing the frame. */
+  /** Duration of the layout morph. */
   travel: 1.2,
   edge: 0.9,
 } as const;
@@ -121,12 +98,7 @@ const MOVE = {
   travel: 'power3.inOut',
 } as const;
 
-/**
- * The cards leave in reading order and arrive in pipeline order, which are not
- * the same order — C5 is last in the row and last in the plan, but C3 and C4
- * swap lanes on the way. Staggering by index is what makes that legible as five
- * objects finding their places rather than one block sliding.
- */
+/** Per-card stagger, so each card is seen moving to its own place. */
 const CARD_STEP = 0.07;
 const EDGE_STEP = 0.09;
 
@@ -160,12 +132,8 @@ const slotOf = (item: Contribution): Slot => {
 };
 
 /**
- * Orthogonal routing with turned corners, because this is a plan drawing and the
- * corridor it previews is orthogonal. A diagonal between two lanes reads as a
- * relationship; an elbow reads as a route, and these are routes.
- *
- * Same-lane pairs come back as a plain horizontal, which is the whole of
- * C1 → C2 and C2 → C5.
+ * Orthogonal edge with rounded elbows, matching the corridor layout. Same-lane
+ * pairs (C1 to C2, C2 to C5) are a plain horizontal line.
  */
 const edgePath = (from: Slot, to: Slot): string => {
   const [x1, y1] = [from.right, from.centreY];
@@ -203,7 +171,7 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
     edgeLit: token('--c-border-strong'),
   };
 
-  // ---- The edges, under the cards ---------------------------------------- //
+  // ---- Edges, drawn under the cards --------------------------------------- //
 
   const canvas = svg('svg', {
     class: 'contribution-plan',
@@ -225,10 +193,7 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
     const path = svg('path', { class: 'plan-edge', d: edgePath(a, b) });
     canvas.appendChild(path);
 
-    // `getTotalLength` is defined for every geometry element, but a browser that
-    // disagrees should degrade to an edge that fades rather than to a scene that
-    // throws on entry. The resting state is `opacity: 0` in CSS, so a length of
-    // zero costs the draw-on and nothing else.
+    // If `getTotalLength` throws, the edge skips the draw-on and only fades in.
     let length = 0;
     try {
       length = path.getTotalLength();
@@ -253,12 +218,11 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
     return { path, length, head };
   });
 
-  // ---- The five ----------------------------------------------------------- //
+  // ---- Cards -------------------------------------------------------------- //
 
   const cards = spec.items.map((item) => {
-    // The page itself. `object-position: top` and a container whose height is
-    // animated, so shrinking the card slides the page up behind its own window
-    // rather than squashing it — the masthead stays the masthead at every size.
+    // `object-position: top` in an animated-height container crops the page
+    // from the bottom, so the masthead stays visible and unscaled.
     const image = el('img', {
       className: 'paper-image',
       attrs: {
@@ -313,7 +277,7 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
   const plan = (state: number, previous: number): Step[] => {
     const steps: Step[] = [];
     const planned = state === PLAN;
-    /** The layout itself changes, in either direction. */
+    /** True when switching between layouts. */
     const travelling = previous !== state;
 
     cards.forEach((card, index) => {
@@ -339,9 +303,7 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
           duration,
           ease,
         },
-        // The record is what the plan has no room for and no use for: a node in
-        // a pipeline is a station, and a volume number is not part of what a
-        // station does. It goes first and comes back last.
+        // Journal details are hidden in the plan. They fade out first and back in last.
         {
           node: card.record,
           vars: { opacity: planned ? 0 : 1, y: planned ? -6 : 0 },
@@ -363,8 +325,7 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
       });
       steps.push({
         node: edge.head,
-        // After its own line has arrived, never before. An arrowhead landing
-        // ahead of the route it terminates is a diagram assembling backwards.
+        // Arrowhead appears once its line is mostly drawn.
         vars: { opacity: planned ? 1 : 0 },
         at: planned ? at + SPAN.edge * 0.75 : CUE.release,
         duration: planned ? SPAN.fade : SPAN.release,

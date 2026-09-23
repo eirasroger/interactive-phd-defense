@@ -9,11 +9,8 @@ export interface RendererEvents {
 }
 
 /**
- * Owns the WebGL context and everything that must survive losing it.
- *
- * Context loss is treated as expected rather than exceptional: a laptop that
- * sleeps, switches GPU or is put under load mid-defense will drop the context,
- * and the presentation has to come back rather than show a blank canvas.
+ * Owns the WebGL context and recovers from context loss (sleep, GPU switch or
+ * heavy load), so the presentation resumes after it.
  */
 export class Renderer {
   readonly canvas: HTMLCanvasElement;
@@ -34,16 +31,11 @@ export class Renderer {
 
     this.renderer = new WebGLRenderer({
       canvas: this.canvas,
-      // Always on. This was conditioned on `maxPixelRatio < 2`, which assumed a
-      // high tier implies a high-DPI display and supersamples the edges away.
-      // It does not: `effectivePixelRatio` is `min(devicePixelRatio, max)`, so a
-      // high-tier machine on an ordinary 1x monitor got pixel ratio 1 *and* no
-      // antialiasing — the worst of both, and the single largest quality defect
-      // in the exterior.
+      // Always on: a high tier on a 1x monitor still renders at pixel ratio 1.
       antialias: true,
       alpha: false,
       powerPreference: 'high-performance',
-      // Needed so a lost context can be recovered rather than ending the talk.
+      // Keeps context creation working on constrained GPUs.
       failIfMajorPerformanceCaveat: false,
     });
 
@@ -55,15 +47,12 @@ export class Renderer {
 
     this.bindContextEvents();
 
-    // Sized immediately so anything constructed after this reads a real
-    // viewport, but no event is emitted yet: subscribers do not exist.
+    // Sized now so later code reads a real viewport. No event yet, since
+    // nothing is subscribed.
     this.measure();
   }
 
-  /**
-   * Begins observing size. Called once the engine has wired its subscribers,
-   * so the initial resize reaches a fully constructed graph.
-   */
+  /** Starts observing size. Call after the engine has wired its subscribers. */
   start(): void {
     this.resizeObserver = new ResizeObserver(() => {
       if (this.measure()) this.events.onResize?.(this.width, this.height);
@@ -73,12 +62,8 @@ export class Renderer {
   }
 
   /**
-   * Re-reads the container after the stage has been rescaled.
-   *
-   * `measure` uses `getBoundingClientRect`, which is post-transform, so the
-   * drawing buffer always matches the pixels actually painted. But scaling the
-   * stage does not change any layout box inside it, so `ResizeObserver` stays
-   * silent and this has to be called by hand.
+   * Re-reads the container after the stage is rescaled. A CSS scale does not
+   * trigger `ResizeObserver`, so call this by hand.
    */
   refresh(): void {
     if (this.measure()) this.events.onResize?.(this.width, this.height);
@@ -92,7 +77,7 @@ export class Renderer {
     return this.width / Math.max(this.height, 1);
   }
 
-  /** Driven by the atmosphere, so exposure is part of a zone's look rather than a constant. */
+  /** Set by the atmosphere, so each zone can have its own exposure. */
   setExposure(value: number): void {
     if (this.renderer.toneMappingExposure === value) return;
     this.renderer.toneMappingExposure = value;
@@ -105,17 +90,8 @@ export class Renderer {
   }
 
   /**
-   * Scales resolution down when frames are being missed.
-   *
-   * **This is a real resize now, and it was not before.** `RenderPipeline`
-   * hands `EffectComposer` its own render target so the composer can carry
-   * MSAA, and three.js responds by setting the composer's internal pixel ratio
-   * to 1. Every step down therefore changed the size of the final blit to the
-   * canvas and left the buffer the scene is actually drawn into untouched:
-   * measured, halving the pixel ratio moved the frame from 26.1 ms to 25.5 ms.
-   * The one safety net a talk on unseen hardware has was softening the image
-   * and buying nothing. The pipeline now sizes itself from the drawing buffer,
-   * so this notifies rather than silently adjusting a number nobody reads.
+   * Lowers resolution when frames are missed. Emits a resize because
+   * `RenderPipeline` sizes its targets from the drawing buffer.
    */
   setPixelRatioScale(scale: number): void {
     const next = Math.max(ADAPTIVE.minPixelRatio, Math.min(scale, 1));
@@ -126,16 +102,9 @@ export class Renderer {
   }
 
   /**
-   * How many device pixels are drawn per CSS pixel, after the budget.
-   *
-   * Three bounds, and the third is the one that makes the deck safe on a
-   * display nobody has measured. `devicePixelRatio` is what the panel asks for
-   * and `maxPixelRatio` is what the tier allows, but neither of them knows how
-   * large the stage has been scaled to: `StageFit` stretches one 1920x1080
-   * surface to fill the window, so on a 4K screen the container rect is
-   * 3840x2160 and the drawing buffer followed it to four times the pixels and
-   * six times the frame cost. The budget expresses the ceiling in the unit that
-   * actually governs fill cost, which is pixels rather than a ratio.
+   * Device pixels per CSS pixel. Capped by `devicePixelRatio`, the tier's
+   * `maxPixelRatio` and a total pixel budget (`maxRenderPixels`), which keeps
+   * a large display such as 4K from multiplying the frame cost.
    */
   get effectivePixelRatio(): number {
     const requested = Math.min(window.devicePixelRatio, this.quality.maxPixelRatio);
@@ -173,7 +142,7 @@ export class Renderer {
 
   private bindContextEvents(): void {
     this.canvas.addEventListener('webglcontextlost', (event) => {
-      // Preventing the default is what makes restoration possible at all.
+      // Required for the context to be restored.
       event.preventDefault();
       this.events.onContextLost?.();
     });

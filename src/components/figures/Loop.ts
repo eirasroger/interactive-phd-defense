@@ -6,69 +6,41 @@ import './loop.css';
 export interface LoopReturn {
   /** Index in `stages` this return arrives at. Always before the last stage. */
   readonly to: number;
-  /** What the return is called. One word — it sits over the run. */
+  /** One word, drawn over the run. */
   readonly label: string;
 }
 
 export interface LoopMark {
   /** Index in `stages` the mark rings. */
   readonly at: number;
-  /**
-   * What happens at that stage, one line per entry.
-   *
-   * Two short lines rather than one long one: the marks sit over adjacent
-   * stages, and a single line wide enough to say something useful runs into
-   * its neighbour.
-   */
+  /** One text line per entry. Keep lines short so adjacent marks do not collide. */
   readonly lines: readonly string[];
 }
 
 export interface LoopSpec {
   /** Left to right: raw material through to end of life. Fixed at four. */
   readonly stages: readonly [string, string, string, string];
-  /** Tightest first — the diagram stacks them in the order given. Fixed at three. */
+  /** Tightest first, stacked in the order given. Fixed at three. */
   readonly returns: readonly [LoopReturn, LoopReturn, LoopReturn];
-  /** Held back for the second beat, and drawn above the chain, not on it. */
+  /** Shown in the second beat, above the chain. */
   readonly marks: readonly LoopMark[];
 }
 
 export interface Loop {
   readonly element: HTMLElement;
-  /** The chain, then the returns closing it, tightest first. */
+  /** Draws the chain, then the returns, tightest first. */
   close(settle?: boolean): gsap.core.Timeline;
-  /** The returns fall back and the chain is marked with what actually happens on it. */
+  /** Dims the returns and shows the marks over the chain. */
   recede(settle?: boolean): gsap.core.Timeline;
 }
 
 /*
- * The linear chain runs along the top; the returns come back underneath it.
- *
- * Depth is the encoding, and the only one: a return that arrives further left
- * gives back less, so it is drawn longer, lower, thinner and dimmer. Reuse is
- * the short bright one under the chain, recycling the long dim one at the
- * bottom.
- *
- * Routed orthogonally rather than as nested curves, which is not a stylistic
- * choice. Every return carries a label, and a curve gives text no reliable
- * clearance: the label of a shallow arc sits on the arc, because moving away
- * from the apex is moving into the line. A straight run at a fixed depth gives
- * each return its own horizontal band instead, laid out against itself and
- * never against a neighbour. Nested arcs were tried here and reverted.
- *
- * The band above the chain is empty until the second beat, when the marks land
- * in it. They go above rather than below because everything below is spoken
- * for, and because a mark over a stage reads as a caption on it.
+ * The chain runs along the top and the returns run back underneath it. A return
+ * that arrives further left is drawn longer, lower, thinner and dimmer. Returns
+ * are routed orthogonally so each label gets its own horizontal band. Marks
+ * appear in the band above the chain in the second beat.
  */
-/*
- * 1180 x 334, and the width is the deliberate half.
- *
- * This figure is given the whole 1600 the card leaves, with the claims reading
- * across underneath it rather than down a column beside it. At 820 x 334 that
- * width made it 652px tall and it crowded everything else off the frame. Spread
- * to 1180 the same drawing lands at 453, the chain has room to be read as a
- * chain, and the three returns get bands wide enough to carry their names
- * without touching the runs above them.
- */
+/* Wide aspect so the figure spans the card with the claims below it. */
 const VIEW_W = 1180;
 const VIEW_H = 334;
 
@@ -82,48 +54,38 @@ const NODE_BOTTOM = NODE_Y + NODE_H / 2;
 const CENTERS = [170, 467, 763, 1060] as const;
 
 /**
- * Where each return leaves the last node, and how deep it runs.
- *
- * The two are ordered together and cannot be reordered independently: the
- * tightest return drops nearest the node's left edge and runs highest, which
- * is the only arrangement in which no return crosses another.
+ * Exit x on the last node and run depth per return. Ordered together so no
+ * return crosses another: the tightest exits leftmost and runs highest.
  */
 const EXITS = [1010, 1060, 1110] as const;
 const RUN_Y = [180, 246, 312] as const;
 
 const CORNER = 18;
-/** Arrival, just below the node: the head occupies the gap above it. */
+/** Where a return ends, just below the node. The arrowhead fills the gap. */
 const ARRIVE_Y = NODE_BOTTOM + 13;
 
-/*
- * A return is named where it arrives, not over the middle of its run.
- *
- * Centred on the run, `Recycle` sat at the midpoint of a line eight hundred
- * units long, which is a place nothing happens. Set just past the riser it
- * climbs, each name reads into the stage it returns to, and the three fall
- * into a staircase that says the same thing the depths do.
- */
+/* Return names sit just right of the riser they climb, near their target stage. */
 const NAME_INSET = 20;
 const NAME_LIFT = 15;
 /** Baseline of a mark's first line, in the clear band over the chain. */
 const MARK_Y = 14;
 const MARK_LEADING = 18;
-/** How far a mark's ring stands off the node it rings. */
+/** Gap between a mark's ring and its node. */
 const RING_INSET = -4;
 
 /** Down from the last node, round the corner, and left along the run. */
 const routeFrom = (x: number, runY: number, midX: number): string =>
   `M${x},${NODE_BOTTOM} L${x},${runY - CORNER} Q${x},${runY} ${x - CORNER},${runY} L${midX},${runY}`;
 
-/** On along the run, round the corner, and up into the stage it returns to. */
+/** Along the run, round the corner, and up into the target stage. */
 const routeInto = (midX: number, runY: number, x: number): string =>
   `M${midX},${runY} L${x + CORNER},${runY} Q${x},${runY} ${x},${runY - CORNER} L${x},${ARRIVE_Y}`;
 
-/** A triangle on its tip, pointing up into the node it arrives at. */
+/** Arrowhead pointing up into the target node. */
 const headUp = (x: number): string =>
   `M${x},${NODE_BOTTOM + 2} L${x - 5.5},${ARRIVE_Y} L${x + 5.5},${ARRIVE_Y} Z`;
 
-/** The same, laid on its side for the chain. */
+/** Arrowhead pointing right, for the chain. */
 const headRight = (x: number, y: number): string =>
   `M${x},${y} L${x - 10},${y - 5} L${x - 10},${y + 5} Z`;
 
@@ -170,8 +132,7 @@ export function createLoop(spec: LoopSpec): Loop {
       const exit = EXITS[depth]!;
       const target = CENTERS[ret.to]!;
       const runY = RUN_Y[depth]!;
-      // The halves meet at the middle of the run, which is where the draw-on
-      // hands over from one to the other.
+      // The two halves meet mid-run, where the draw-on hands over.
       const midX = (exit + target) / 2;
 
       return `
@@ -207,7 +168,7 @@ export function createLoop(spec: LoopSpec): Loop {
   svg.setAttribute('class', 'loop-diagram');
   svg.setAttribute('viewBox', `0 0 ${VIEW_W} ${VIEW_H}`);
   svg.setAttribute('aria-hidden', 'true');
-  // Returns first, so the nodes they arrive at are drawn over their heads.
+  // Returns first, so nodes draw over their arrowheads.
   svg.innerHTML =
     `<g class="loop-returns">${returns}</g>` +
     `<g class="loop-chain">${chain}</g>` +
@@ -241,8 +202,7 @@ export function createLoop(spec: LoopSpec): Loop {
     }),
   );
 
-  // Path length is only knowable once the SVG is laid out, and the figure is
-  // built before it is appended. Measured on first use, then kept.
+  // Path length needs a laid-out SVG, so measure on first use and cache.
   let measured = false;
   const measure = (): void => {
     if (measured) return;
@@ -250,13 +210,13 @@ export function createLoop(spec: LoopSpec): Loop {
     for (const arc of arcs) {
       arc.lengthFrom = arc.from.getTotalLength();
       arc.lengthInto = arc.into.getTotalLength();
-      // A dash as long as the path turns offset into "how much is missing".
+      // One dash as long as the path, so dashoffset controls the draw-on.
       gsap.set(arc.from, { strokeDasharray: arc.lengthFrom });
       gsap.set(arc.into, { strokeDasharray: arc.lengthInto });
     }
   };
 
-  /** Longer runs take longer to travel, but not proportionally — that drags. */
+  /** Draw duration grows with path length, capped at 0.95 s. */
   const sweep = (length: number): number => seconds(Math.min(0.36 + length / 900, 0.95));
 
   return {
@@ -299,8 +259,7 @@ export function createLoop(spec: LoopSpec): Loop {
           seconds(DURATION.instant),
         );
 
-      // One nested timeline per return, so the three read as three statements
-      // of the same shape rather than as a wall of overlapping tweens.
+      // One nested timeline per return, staggered by depth.
       arcs.forEach((arc, depth) => {
         const outward = sweep(arc.lengthFrom);
         const back = sweep(arc.lengthInto);
@@ -333,7 +292,7 @@ export function createLoop(spec: LoopSpec): Loop {
         timeline.add(travel, seconds(DURATION.normal) + depth * 0.42);
       });
 
-      // Whatever the next beat did to the figure is undone on the way back in.
+      // Reset the second beat's state when stepping back.
       timeline
         .set(
           annotations.map((mark) => mark.group),

@@ -13,11 +13,8 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import type { QualitySettings } from '@/config/quality';
 
 /**
- * Wraps the two rendering paths behind one call.
- *
- * Post-processing is a tier decision, so the rest of the engine should never
- * branch on whether it is enabled. Lower tiers render straight to the canvas
- * and pay nothing for the composer.
+ * One render call for both paths. Tiers with post-processing use the composer;
+ * lower tiers render straight to the canvas.
  */
 export class RenderPipeline {
   private composer: EffectComposer | null = null;
@@ -35,50 +32,16 @@ export class RenderPipeline {
   }
 
   /**
-   * How many samples the composer's own buffer takes.
-   *
-   * **The renderer's `antialias: true` does nothing once a composer is in the
-   * path.** MSAA belongs to the drawing buffer, and a composer renders into its
-   * own render target instead — which `EffectComposer` creates with `samples:
-   * 0`. The result was that the *high* tier, the only one that enables
-   * post-processing, was the only tier in the deck with no antialiasing at all:
-   * every edge in every act stair-stepped, on the machines best able to afford
-   * not to. Four is the knee; eight costs bandwidth for a difference a
-   * projector cannot resolve.
-   *
-   * It is also the most expensive single thing in the frame once the display
-   * grows. Four samples of `HalfFloatType` is 32 bytes per pixel of framebuffer
-   * traffic, and on an integrated GPU sharing system memory that measured 8.7 ms
-   * at 1080p — more than the whole park.
-   *
-   * **Two, because four was measured against it and could not be told apart.**
-   * Crops of a railing, a facade corner and a canopy were rendered at 4x, 2x and
-   * off, magnified five times and compared pixel by pixel. Going from 2x to off
-   * is the visible step: mean difference 9.65 on the facade with 17% of pixels
-   * changed, and the louvre bands visibly stair-step. Going from 4x to 2x is
-   * not: 6.52 mean, and nothing an eye finds at a magnifier's distance, let
-   * alone a projector's. Foliage is unchanged by any of the three, because
-   * alpha-cut edges come from a texture threshold rather than from geometry
-   * coverage, and foliage is most of the frame.
-   *
-   * So 2x is the default rather than the ladder's first concession, and the
-   * ladder's rungs start at bloom instead. Four is still reachable by hand for a
-   * machine with headroom to spare.
+   * MSAA samples for the composer's render target. The renderer's `antialias`
+   * has no effect once a composer is used. 2x looks the same as 4x on a
+   * projector; 4x half-float cost 8.7 ms at 1080p on an integrated GPU.
    */
   private static readonly SAMPLES = 2;
 
   /**
-   * The size the composer's buffers must be, which is the drawing buffer and
-   * never the CSS box.
-   *
-   * `EffectComposer` keeps a pixel ratio of its own and multiplies `setSize` by
-   * it — except when it is handed a render target at construction, which is
-   * exactly what this class does to get MSAA back. In that case three.js sets
-   * that ratio to 1, so passing CSS pixels sized the scene buffer in CSS pixels
-   * and the deck rendered at 1557x876 while presenting a 1751x985 canvas: 44%
-   * of the pixels it was displaying, upscaled. Reading the drawing buffer here
-   * rather than accepting a width and a height means the composer and the canvas
-   * cannot be given different units in the first place.
+   * Composer buffer size in device pixels, read from the drawing buffer.
+   * With a custom render target, `EffectComposer` uses a pixel ratio of 1,
+   * so CSS sizes would render at reduced resolution.
    */
   private bufferSize(): Vector2 {
     return this.renderer.getDrawingBufferSize(new Vector2());
@@ -95,8 +58,7 @@ export class RenderPipeline {
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-    // Tight radius and a threshold above mid-grey, so bloom picks out genuine
-    // highlights instead of haloing every lit surface.
+    // Tight radius and a high threshold, so only bright highlights bloom.
     this.bloom = new UnrealBloomPass(
       new Vector2(width, height),
       quality.bloomStrength,
@@ -119,9 +81,7 @@ export class RenderPipeline {
     }
   }
 
-  /**
-   * Re-reads the drawing buffer. Takes no size, deliberately — see `bufferSize`.
-   */
+  /** Resizes from the drawing buffer. See `bufferSize`. */
   setSize(): void {
     if (!this.composer) return;
     const { x: width, y: height } = this.bufferSize();
@@ -130,13 +90,9 @@ export class RenderPipeline {
   }
 
   /**
-   * Multisampling, as a rung the adaptive ladder can step down.
-   *
-   * Changing `samples` and disposing is the supported way to resize a render
-   * target's sample count: the datablock is freed and reallocated against the
-   * new value on next use, which costs an allocation rather than a shader
-   * recompile. Rebuilding the composer instead would recompile bloom's five
-   * downsample programs in the frame the presenter is speaking over.
+   * Sets the MSAA sample count, used by the adaptive quality ladder.
+   * Disposing the targets reallocates them on next use without recompiling
+   * bloom's shaders.
    */
   setSamples(samples: number): void {
     if (samples === this.samples) return;
@@ -150,9 +106,8 @@ export class RenderPipeline {
   }
 
   /**
-   * Bloom is a pass rather than a rebuild, so switching it off is one flag.
-   * `UnrealBloomPass` does not swap buffers, so a disabled one leaves the chain
-   * behind it reading exactly what the render pass wrote.
+   * `UnrealBloomPass` does not swap buffers, so disabling it passes the render
+   * pass output through unchanged.
    */
   setBloomEnabled(enabled: boolean): void {
     if (this.bloom) this.bloom.enabled = enabled;

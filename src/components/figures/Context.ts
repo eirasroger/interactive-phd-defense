@@ -11,7 +11,7 @@ export interface Context {
   play(step: number, settle: boolean): gsap.core.Timeline | null;
 }
 
-/** Enough marks to read as a portfolio, few enough to count the survivors. */
+/** Mark counts for the full portfolio and the shortlist. */
 const POOL = 28;
 const SURVIVORS = 5;
 
@@ -38,12 +38,9 @@ const stage = (
   });
 
 /**
- * Why the station exists, in two states of one composition.
- *
- * The first states the position of the stage: a ranking computed over a pool
- * that still contains inadmissible products is well-formed and wrong, so the
- * gate has to close before preference is applied. The second states why the
- * gate cannot close by itself.
+ * Two-state figure for the station's context. Step 0: where the stage sits in
+ * the funnel (filter before ranking). Step 1: why the gate cannot close by
+ * itself.
  */
 export function createContext(): Context {
   const pool = marks(POOL, 'cx-mark');
@@ -176,8 +173,7 @@ export function createContext(): Context {
         },
         seconds(DURATION.quick),
       )
-      // The pool recedes and the shortlist arrives travelling, so the narrowing
-      // is one movement across the rail rather than two separate fades.
+      // Pool dims while the shortlist slides in along the rail.
       .to(
         pool,
         {

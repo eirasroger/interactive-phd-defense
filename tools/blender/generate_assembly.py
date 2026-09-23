@@ -27,8 +27,7 @@ def reset_scene() -> None:
         for datablock in list(collection):
             collection.remove(datablock, do_unlink=True)
 
-    # glTF bakes scene unit scale into exported geometry, so pin it rather than
-    # inheriting whatever the running Blender happens to be set to.
+    # glTF bakes unit scale into geometry.
     bpy.context.scene.unit_settings.scale_length = 1.0
 
 def make_material(name: str, colour: tuple[float, float, float], roughness: float, metallic: float):
@@ -48,7 +47,6 @@ def make_panel(name: str, thickness: float, z: float, material) -> None:
 
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
-    # A small bevel catches the key light and keeps edges from reading as CG.
     bevel = panel.modifiers.new(name="bevel", type="BEVEL")
     bevel.width = 0.012
     bevel.segments = 2

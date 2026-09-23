@@ -1,17 +1,16 @@
 import { STAGE } from '@/config/presentation';
 
 /**
- * Scales the fixed stage to fit the window, letterboxing the remainder.
+ * Scales the fixed stage to fit the window, letterboxing the rest.
  *
- * `onChange` fires after the new scale is written, and must be used to
- * re-measure anything that reads painted size: a CSS transform changes what a
- * box looks like without changing its layout box, so `ResizeObserver` on
- * anything inside the stage never fires.
+ * `onChange` fires after the new scale is set. Use it to re-measure painted
+ * sizes: the scale is a CSS transform, so `ResizeObserver` inside the stage
+ * never fires.
  */
 export function bindStageFit(onChange: (scale: number) => void, signal: AbortSignal): void {
   const root = document.documentElement;
 
-  // The surface is defined once, here, rather than restated in CSS.
+  // Single source for the stage size; CSS reads these variables.
   root.style.setProperty('--stage-w', `${STAGE.width}px`);
   root.style.setProperty('--stage-h', `${STAGE.height}px`);
 
@@ -30,10 +29,8 @@ export function bindStageFit(onChange: (scale: number) => void, signal: AbortSig
   };
 
   /*
-   * iOS updates viewport metrics *after* `orientationchange` fires, so reading
-   * synchronously latches the pre-rotation size — and the early-out above then
-   * holds it there until some unrelated resize happens. Re-reading on the next
-   * frame catches the settled value; the early-out makes the extra call free.
+   * iOS updates the viewport size after `orientationchange` fires, so fit again
+   * on the next frame. The early-out makes the extra call cheap.
    */
   const refit = (): void => {
     fit();

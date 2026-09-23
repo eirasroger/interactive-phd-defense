@@ -13,32 +13,25 @@ export interface MethodBand {
 
 export interface MethodInput {
   readonly label: string;
-  /**
-   * Available at early design, so this row survives the second beat.
-   *
-   * The choice under consideration and the quantity it comes in are both
-   * known at concept; everything downstream of them is what is still open.
-   * Draining all five said the specifier knows nothing, which overstates the
-   * problem and understates what the pipeline is given to work with.
-   */
+  /** Known at early design, so this row stays filled in the `missing` state. */
   readonly known?: boolean;
 }
 
 export interface ImpactMethodSpec {
-  /** What the inventory has to supply before any of it can run. */
+  /** Inventory data the method needs. */
   readonly inputs: readonly MethodInput[];
   readonly bands: readonly MethodBand[];
-  /** What the three add up to. */
+  /** Label under the bands (their sum). */
   readonly sum: string;
-  /** Named under the inputs once the undecided ones have emptied. */
+  /** Note shown under the inputs in the `missing` state. */
   readonly missing: string;
 }
 
 export const METHOD = {
   void: -1,
-  /** The method, and the inventory it runs on. */
+  /** Method and inputs shown. */
   method: 0,
-  /** The inventory empties. */
+  /** Unknown inputs drain. */
   missing: 1,
 } as const;
 
@@ -50,13 +43,9 @@ export interface ImpactMethod {
 }
 
 /*
- * What the sector evaluates impact with, and what it has to be given first.
- *
- * One move, and it is the whole scene, so it is choreographed rather than
- * switched: each input's fill drains toward the method it was feeding, its
- * border dissolves from solid into dashes, and the emptying propagates down the
- * stack. The method itself is never redrawn — it recedes. It is not wrong, it
- * has nothing to run on.
+ * Impact method diagram: inventory inputs feeding LCA, LCC and S-LCA. In the
+ * `missing` state unknown inputs drain and turn dashed, top to bottom, and the
+ * method fades back.
  */
 const VIEW_W = 880;
 const VIEW_H = 268;
@@ -82,17 +71,17 @@ const MISSING_RULE_Y = MID_Y + 102;
 const MISSING_RULE_H = 2;
 const MISSING_NOTE_Y = MID_Y + 124;
 
-/** Solid, and the start of the tween that breaks it up. */
+/** Solid stroke written as a dash pattern so it can tween to dashed. */
 const STROKE_SOLID = '40 0';
 const STROKE_DASHED = '6 5';
 
-/** How far the method recedes once it has nothing to run on. */
+/** Method opacity in the `missing` state. */
 const RECEDED = 0.42;
 
 const stackTop = (count: number, height: number, gap: number): number =>
   MID_Y - (count * height + (count - 1) * gap) / 2;
 
-/** Tokens are the source of truth for colour, and GSAP needs resolved values. */
+/** Resolves a CSS colour token, since GSAP cannot tween `var()`. */
 const token = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -123,13 +112,9 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
     })
     .join('');
 
-  // Every input converges on one point and one arrow enters the method: the
-  // inventory is a single thing the method either has or does not.
-  //
-  // Two paths on the same curve. The first is the route and the second is what
-  // travels it, so the beat can dim a feed by its group and the flow goes with
-  // the line it belongs to. The stagger is a delay rather than a phase, which
-  // keeps the five arrivals from landing on the arrowhead together.
+  // All feeds converge on one arrow into the method. Each feed has a line and
+  // a flow path on the same curve, grouped so dimming the group dims both.
+  // `--feed` staggers the flow delay.
   const feeds = spec.inputs
     .map((_, index) => {
       const y = inputY(index) + INPUT_H / 2;
@@ -201,7 +186,6 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
 
     const steps: Step[] = [
       { node: arrow, vars: { opacity: alive ? (missing ? 0.3 : 1) : 0 }, at: 0.05 },
-      // Receding, not restyled. The method is correct; the attention moves.
       { node: bandNodes, vars: { opacity: alive ? (missing ? RECEDED : 1) : 0 }, at: 0.05 },
       { node: sum, vars: { opacity: alive ? (missing ? RECEDED : 1) : 0 }, at: 0.05 },
       {
@@ -218,10 +202,8 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
     ];
 
     inputNodes.forEach((node, index) => {
-      // A known row holds. The beat is about what the inventory is missing, and
-      // a row that empties when it has not emptied is the wrong claim.
       const drains = missing && !spec.inputs[index]?.known;
-      // Down the stack, so the emptying reads as one movement rather than five.
+      // Staggered down the stack.
       const cue = 0.08 + index * 0.075;
 
       steps.push({
@@ -250,8 +232,7 @@ export function createImpactMethod(spec: ImpactMethodSpec): ImpactMethod {
         at: cue + 0.1,
         duration: DURATION.normal,
       });
-      // A surviving feed stays lit against a receded method, which is the
-      // point: the evidence arrives, and it is not enough on its own.
+      // Feeds from known inputs stay lit while the method fades.
       steps.push({
         node: feedNodes[index]!,
         vars: { opacity: alive ? (drains ? 0.16 : 1) : 0 },

@@ -17,18 +17,10 @@ const TEAL = 0x2dd4a7;
 const CORNER = { radius: 1.5, samples: 8 } as const;
 
 /**
- * A channel, and what travels in it.
- *
- * Every route here is inference-time, so each carries discrete tokens moving at
- * a legible speed, and branches. The design-time edge C2 -> C5 is not drawn:
- * see `decisions.md` §40 and `world_design.md` §8.1.
- *
- * Drawn only once the roof is off. Ambient and always on, it put a saturated
- * teal strip down the middle of every station shot - a claim about the whole
- * pipeline made five times while the presenter talks about one contribution.
- *
- * Inlaid in the floor rather than at eye level: a horizontal ribbon 27 cm under
- * the camera floods the bottom of the frame (`learnings.md` §52).
+ * Token channel settings. All routes are inference-time; the design-time edge
+ * C2 -> C5 is omitted (`decisions.md` §40, `world_design.md` §8.1).
+ * Shown only once the roof is off, so station shots stay clean. Inlaid in the
+ * floor: a ribbon at eye level floods the bottom of the frame (`learnings.md` §52).
  */
 const CHANNEL = {
   y: SECTION.floor + 0.03,
@@ -99,8 +91,7 @@ void main() {
   float trace = uTrace * (1.0 - smoothstep(0.0, wake, abs(lead)));
   float level = uBase + token * token * uLead + trace * trace * 3.0;
   float haze = 1.0 - smoothstep(fogNear, fogFar, vDepth);
-  // The same front the drawing clears on, so the two layers of one figure
-  // leave together rather than on two curves that can drift apart.
+  // Same clearing front as the plan drawing, so both layers leave together.
   float grain = sin(vAcross * 0.31) * cos(vRun * 0.17 + 1.7);
   float front = uSweep + grain * uSweepSoft * uSweepGrain;
   float standing = smoothstep(front, front + uSweepSoft, vRun);
@@ -114,16 +105,14 @@ export interface Flow {
   readonly object: Group;
   update(dt: number): void;
   /**
-   * Draws the network and releases one token at the mouth, following it to C5
-   * through both branches. Off, the ribbons are not drawn at all — in Act II
-   * the flow does not exist. `settle` puts it at rest for a beat reached
-   * backwards or by jump.
+   * Shows the network and sends a pulse from the mouth to C5 through both
+   * branches. Off hides the ribbons entirely (Act II). `settle` jumps to the
+   * resting state for a beat reached backwards or by jump.
    */
   trace(on: boolean, settle: boolean): void;
   /**
-   * How much of the network has been cleared, 0 to 1, on the front the plan
-   * drawing uses. The pulse keeps running in whatever is still standing: the
-   * signal is the last thing to stop, which is the point of keeping it.
+   * Fraction of the network cleared, 0 to 1, on the plan drawing's front.
+   * The pulse keeps running in the part still shown.
    */
   setCleared(level: number): void;
   suspend(): void;
@@ -131,9 +120,8 @@ export interface Flow {
 }
 
 /**
- * The pipeline, running. One ribbon per route, animated entirely in the fragment
- * shader against a shared clock, so the overhead pose costs what a station pose
- * costs. It belongs to the zone rather than any scene: sixteen scenes look at it.
+ * Animated pipeline flow: one ribbon per route, animated in the fragment
+ * shader on a shared clock. Owned by the zone because many scenes show it.
  */
 export function createFlow(): Flow {
   const object = new Group();
@@ -263,7 +251,7 @@ export function createFlow(): Flow {
 
 const TRACE_SECONDS = 6.4;
 const TRACE_REST = 1.4;
-/** How far the pulse's tail reaches behind it, and how far it starts outside. */
+/** Pulse tail length in metres, also its start offset before the mouth. */
 const TRACE_WAKE = 12;
 
 const REVEAL = { delay: 3.0, seconds: 1.8 } as const;
@@ -304,11 +292,8 @@ function channel(origin: number, span: number): ShaderMaterial {
 }
 
 /**
- * A plan polyline turns corners; it does not kink.
- *
- * Same rule the drawing follows in `ContributionMap`, and for the same reason:
- * a mitred right angle in a ribbon reads as two separate lines meeting, where a
- * turned one reads as one route changing direction.
+ * Rounds polyline corners with a quadratic curve, as `ContributionMap` does,
+ * so each route looks like one continuous line.
  */
 function rounded(points: readonly PlanPoint[], radius: number): PlanPoint[] {
   if (points.length < 3) return [...points];
@@ -348,15 +333,9 @@ function rounded(points: readonly PlanPoint[], radius: number): PlanPoint[] {
 }
 
 /**
- * A flat ribbon through the plan, carrying its own arclength.
- *
- * `aU` is metres travelled and `aV` is −1 to 1 across, so the shader animates
- * against real distance: a token's speed is metres per second everywhere in the
- * network, whatever the route's shape, and the pitch that separates them is a
- * length the eye can compare against the building.
- *
- * The plan is authored with z running into the corridor; the world runs the
- * other way, and this is the one place that is turned round.
+ * Flat ribbon along the plan path. `aU` is arclength in metres and `aV` is
+ * -1 to 1 across, so token speed and pitch are in metres.
+ * Plan z runs into the corridor; world z is negated here.
  */
 function ribbon(points: readonly PlanPoint[], width: number, y: number): BufferGeometry {
   const path = rounded(points, CORNER.radius);

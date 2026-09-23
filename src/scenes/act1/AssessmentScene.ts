@@ -6,22 +6,15 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 
 const BEAT = { method: 0, gap: 1 } as const;
 
-/** Which claims are live on each beat. The turn carries the last two. */
+/** Claims shown on each beat. */
 const CLAIM = [[0], [1, 2]] as const;
 
 /**
- * Scene 5 — how impact is evaluated.
+ * Scene 5: how impact is evaluated. The method shows on arrival; the one beat
+ * empties the inventory it depends on.
  *
- * The method is on screen from arrival; the one click empties the inventory it
- * depends on.
- *
- * **The card is what makes this beat legible.** It is the one `foreground`
- * composition in this stretch of the act — `lake` and `river` are both recessed
- * and a third dimmed beat in a row is where a continuous world starts reading
- * as a slide deck — so the drawing stands over a lit park with a scaffold in
- * it. Left on the glass, the two secondary bands were being read through a
- * tree. A translucent ground under the figure fixes that without dimming the
- * frame the world is the reason for.
+ * The figure sits on a translucent card so it stays legible over the lit park
+ * without dimming the world.
  */
 export class AssessmentScene implements SceneInstance {
   readonly beats = 2;
@@ -77,8 +70,7 @@ export class AssessmentScene implements SceneInstance {
     const card = this.figureCard;
     if (!figure || !claims || !card) return;
 
-    // Killed rather than completed: every tween the figure runs targets an
-    // absolute value, so nothing is stranded when a click outruns the motion.
+    // Safe to kill: every figure tween targets an absolute value.
     this.motion?.kill();
     gsap.set(this.head, { opacity: 1, y: 0 });
     card.reveal(true);

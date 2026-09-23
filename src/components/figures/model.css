@@ -1,9 +1,6 @@
 /*
- * Beats 3 and 4. One dark field, two states.
- *
- * The field is the station's signature and it carries a meaning: everything
- * drawn on it is inside the model. It is a single element across both beats, so
- * the second state is the same object re-forming and the ground never blinks.
+ * Beats 3 and 4: one dark field with two states. Everything on the field is
+ * inside the model. The field persists across both beats so it never blinks.
  */
 .md {
   display: grid;
@@ -26,14 +23,13 @@
   padding: var(--s-4) var(--s-6);
 }
 
-/* Two states over one cell, so the state arriving is never sized by the one
-   leaving. Same arrangement as `context.css` and `corpus.css`. */
+/* Both states share one grid cell. Same layout as `context.css` and `corpus.css`. */
 .md-state {
   grid-area: 1 / 1;
   min-height: 0;
 }
 
-/* ---- State one: a composition, made readable ----------------------------- */
+/* ---- State one: composition embedding ------------------------------------ */
 
 .md-state[data-state='embed'] {
   display: grid;
@@ -80,9 +76,8 @@
   color: var(--c4-accent-soft);
 }
 
-/* Always the same number of columns, whatever a material decomposes into, so a
-   single-term material draws a strip the same width as a composite one and the
-   two are comparable. `--terms` is the widest decomposition in the example. */
+/* Fixed column count so single-term and composite strips match in width.
+   `--terms` is the widest decomposition in the example. */
 .md-terms {
   display: grid;
   grid-template-columns: repeat(var(--terms, 2), minmax(0, 1fr));
@@ -118,13 +113,7 @@
   gap: var(--s-1);
 }
 
-/*
- * A vector: coefficients about a midline.
- *
- * Signed, because an embedding coefficient carries a sign and a bar growing
- * from a baseline would assert that it does not. The midline is the strip's own
- * rule and every bar is measured from it.
- */
+/* A vector as signed bars about a midline. */
 .md-vec {
   position: relative;
   display: grid;
@@ -157,13 +146,9 @@
 }
 
 /*
- * The cell is the full height of the strip and the bar is drawn inside it from
- * the midline out. Every length here resolves against height: `height` on an
- * absolutely positioned box does, and so do `top` and `bottom`. A margin would
- * not, which is why the bar is not offset by one.
- *
- * Scaling the cell about its own centre therefore grows the bar out of the
- * midline, so the reveal needs no second element and no per-sign origin.
+ * The cell spans the strip and the bar grows from the midline inside it. Bar
+ * offsets use `top`/`bottom`, which resolve against height (margins would
+ * resolve against width). Scaling the cell about its centre grows the bar.
  */
 .md-coef {
   position: relative;
@@ -197,8 +182,7 @@
   background-color: color-mix(in srgb, var(--c4-accent-soft) 52%, transparent);
 }
 
-/* The two lanes gathering into one product. The weights are printed on the
-   lanes, so the bracket only has to say that a sum happens here. */
+/* Bracket summing the two lanes into one product. */
 .md-gather {
   display: grid;
   align-items: center;
@@ -206,8 +190,7 @@
   width: var(--s-16);
 }
 
-/* A one-pixel vertical rule at 28% is invisible on the dark ground, so the
-   bracket is drawn wide enough for its arms to carry the shape. */
+/* Wide enough for the arms to show on the dark ground. */
 .md-brace {
   position: relative;
   width: 16px;
@@ -249,10 +232,8 @@
 
 /* ---- State two: one representation, two objectives ----------------------- */
 
-/* Height-driven and centred: the board takes the field's height and derives its
-   width from the viewBox ratio. Sizing it by width instead let it grow taller
-   than the field, and the overlay coordinates only line up while the frame's
-   aspect and the viewBox's are the same number. */
+/* The board takes the field's height and derives its width from the viewBox
+   ratio, so it never overflows the field. */
 .md-state[data-state='graph'] {
   display: flex;
   align-items: stretch;
@@ -260,9 +241,8 @@
 }
 
 /*
- * The board's aspect is fixed to the viewBox, which is what lets HTML text be
- * placed in the SVG's own coordinates: with the same ratio on both, a
- * percentage offset resolves to the same point in each.
+ * Aspect matches the viewBox, so HTML overlays positioned in percentages line
+ * up with SVG coordinates.
  */
 .md-board-frame {
   position: relative;
@@ -284,12 +264,8 @@
 }
 
 /*
- * `fill-box`, because the column is scaled about its own centre.
- *
- * An SVG child's `transform-box` defaults to `view-box`, so `transform-origin:
- * center` resolves against the whole 1400x390 board rather than against the
- * rect. GSAP bakes the origin into the matrix, and with the wrong reference box
- * that compensation left every column translated up by half its own height.
+ * `fill-box` makes `transform-origin: center` refer to the rect. The SVG
+ * default is `view-box` (the whole board), which offsets GSAP scaling.
  */
 .md-column {
   fill: color-mix(in srgb, #a98cf0 52%, transparent);
@@ -316,8 +292,7 @@
   stroke-dasharray: 260;
 }
 
-/* Centred on its column by a negative margin of half its own width, so the
-   transform stays free for the reveal to tween. */
+/* Centred with a negative margin so `transform` stays free for the reveal. */
 .md-caption {
   position: absolute;
   display: grid;
@@ -354,7 +329,7 @@
   color: var(--ink-faint);
 }
 
-/* An objective, tagged where its branch ends. */
+/* Objective tag at the end of its branch. */
 .md-objective {
   position: absolute;
   display: grid;
@@ -393,7 +368,7 @@
   color: var(--ink-faint);
 }
 
-/* Where the two objectives meet, named on the field itself. */
+/* Label where the two objectives meet. */
 .md-total-label {
   display: block;
   font-family: var(--font-display);
@@ -426,10 +401,7 @@
   pointer-events: none;
 }
 
-/* The claim itself sits on the white ground under the field, where the rest of
-   the station's prose sits. */
-/* The predicted attribute, above the schematic that predicts it, on one line
-   so it takes presence from its size and nothing from the board's height. */
+/* The predicted attribute, on one line above the schematic. */
 .md-head-block {
   display: flex;
   gap: var(--s-4);
@@ -451,7 +423,7 @@
   color: var(--ink-muted);
 }
 
-/* ---- The white ground under the field ------------------------------------ */
+/* ---- Footer below the field ---------------------------------------------- */
 
 .md-foot {
   display: grid;

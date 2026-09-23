@@ -20,37 +20,29 @@ export interface Lake {
 const OVERLAP = 40;
 
 /**
- * Metres per cell. Sized by the depth gradient rather than the shoreline: the
- * near margin goes from nothing to half a metre in about ten metres, and the
- * whole read hangs off it.
+ * Metres per cell. Sized to resolve the depth gradient at the near margin
+ * (0 to 0.5 m over about 10 m).
  */
 const CELL = 3.5;
 
-/**
- * How far light gets through the water. Four times the stream's, which is the
- * difference between a body you see a little way into at its margin and a
- * window onto gravel.
- */
+/** Light extinction depth in metres. Four times the stream's value. */
 const EXTINCTION = 0.7;
 
-/** How much of a grazing reflection survives the water being transparent. */
+/** Alpha at grazing angles, 0 to 1. Keeps the sky reflection visible. */
 const SHEEN = 0.88;
 
-/** How hard the wave field tilts the surface. */
+/** Ripple strength on the surface normal. */
 const CHOP = 0.09;
 
 /**
- * Where the stream discharges, and how far its current survives.
- *
- * The plume is a fan out of the outlet in which the surface is disturbed and
- * rougher, spreading and decaying over `reach`. `mouth` is the half-width at the
- * shoreline and is the *flared* channel's — a plume narrower than the mouth
- * discharging it reads as a jet.
+ * Stream outlet and its plume: a fan of rougher surface that spreads and decays
+ * over `reach`. `mouth` is the half-width at the shoreline and matches the
+ * flared channel, so the plume does not look like a jet.
  */
 const OUTLET = { x: LAND.lake.west, z: riverAt(LAND.lake.west) } as const;
 const PLUME = { reach: 95, mouth: 15, spread: 0.45, tilt: 0.08 } as const;
 
-/** How much of the outlet's current is at this point: 1 in it, 0 clear of it. */
+/** Plume strength at a point: 1 inside the plume, 0 outside. */
 function plumeAt(x: number, z: number): number {
   const along = Math.max(0, x - OUTLET.x);
   const width = PLUME.mouth + along * PLUME.spread;
@@ -60,22 +52,12 @@ function plumeAt(x: number, z: number): number {
 }
 
 /**
- * The lake, east of the site, on the sightline the bridge looks down.
+ * The lake east of the site. Each vertex stores water depth, and Beer's law
+ * over it makes the margin clear and the middle reflective.
  *
- * **Depth is the subject.** Every vertex carries how deep the water is above the
- * terrain beneath it, and Beer's law over that is what makes it a body of water
- * rather than a sheet of paint: the margin is clear over the stream's gravel, the
- * middle is closed and mirrors the sky.
- *
- * Deliberately not the stream's material. The two are seen from opposite
- * geometries — the lake at grazing angles across a hundred metres where Fresnel
- * is near one, the stream from directly above where it is near zero — and one
- * material tuned for both reads as neither.
- *
- * **No planar reflection pass.** A second render from a mirrored camera costs
- * roughly a full frame for a surface that shows almost nothing but sky, and the
- * sky is already in the environment map. The ripples are the normal, not the
- * geometry — see `water.ts`.
+ * Uses its own material: the lake is seen at grazing angles and the stream from
+ * above. Reflections come from the environment map (no planar pass). Ripples
+ * are in the normal only, see `water.ts`.
  */
 export function createLake(): Lake {
   const { lake } = LAND;
@@ -101,20 +83,16 @@ export function createLake(): Lake {
       const z = far + row * CELL;
       positions.push(x, lake.surface, z);
       wet.push(lakeDepth(x, z));
-      // The lake's half of the outlet handover: the stream's share scaled by how
-      // much channel section is here, so the ordinary shoreline keeps its hard
-      // cut and only the outlet is handed over.
+      // Stream share scaled by channel depth, so only the outlet blends into the stream.
       shares.push(streamShare(x, z) * riverDepth(x, z));
       plumes.push(plumeAt(x, z));
-      // Against the *drawn* terrain, not the height function, so the margin is
-      // exactly where the bed rises through the surface on screen.
+      // Measured against the drawn terrain so the margin matches the visible shore.
       depths.push(Math.max(0, lake.surface - surfaceAt(x, z)));
     }
   }
 
-  // Wound so the surface faces **up**: columns advance in +X and rows in +Z, so
-  // taking them as (a, b, a+1) puts the cross product at −Y and `FrontSide`
-  // discards the whole body of water.
+  // Winding keeps the surface facing up. The order (a, b, a+1) would face -Y
+  // and `FrontSide` would cull the whole lake.
   for (let column = 0; column < columns - 1; column += 1) {
     for (let row = 0; row < rows - 1; row += 1) {
       const a = column * rows + row;
@@ -133,8 +111,7 @@ export function createLake(): Lake {
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
 
-  // Mean normal is reported because a flipped winding is invisible — what you
-  // see instead of the lake is the lake bed, which is where a lake should be.
+  // Log the mean normal: a flipped winding just shows the lake bed and is easy to miss.
   const normals = geometry.getAttribute('normal');
   let facing = 0;
   for (let index = 0; index < normals.count; index += 1) facing += normals.getY(index);
@@ -149,10 +126,8 @@ export function createLake(): Lake {
   const ripples = createRippleTexture();
 
   const material = new MeshStandardMaterial({
-    // The colour of the *water*, not of the lake: what reads as the lake's
-    // colour is this laid over its own bed at a thickness varying from nothing
-    // at the beach to five metres in the middle. Green rather than blue — a
-    // Nordic lake carries peat, and the blue arrives from the sky it reflects.
+    // Water colour, blended over the bed by depth (0 to 5 m). Peaty green; the
+    // blue comes from the reflected sky.
     color: 0x1b3a34,
     roughness: 0.07,
     metalness: 0,
@@ -206,15 +181,12 @@ export function createLake(): Lake {
       .replace(
         '#include <normal_fragment_begin>',
         `#include <normal_fragment_begin>
-         // Damped in the shallows: open water is worked by the whole fetch of the
-         // lake and a beach is not.
+         // Ripples are damped in the shallows.
          float open = 0.3 + 0.7 * smoothstep(0.05, 0.9, vDeep);
          vec2 ripple = rippleAt(vRipple, uTime) * open * ${CHOP.toFixed(2)};
          normal = normalize(normal + vec3(ripple.x, 0.0, ripple.y));
 
-         // The outlet's plume, riding on the wave field. Phase is distance from
-         // the mouth, so crests radiate and the wake reads as spreading rather
-         // than as a second set of waves pointing east.
+         // Outlet plume. Phase is distance from the mouth, so crests radiate outward.
          vec2 wake = vRipple - vec2(${OUTLET.x.toFixed(1)}, ${OUTLET.z.toFixed(1)});
          float away = length(wake);
          vec2 push = wake / max(away, 0.001);
@@ -225,32 +197,23 @@ export function createLake(): Lake {
            normal + vec3(push.x, 0.0, push.y) * train * vPlume * ${PLUME.tilt.toFixed(2)}
          );
 
-         // Everything below wants the rippled normal, which does not exist until
-         // this include has run.
+         // The code below needs the rippled normal, so it lives after this include.
 
-         // How much of the water column is in the way, by Beer's law.
+         // Water column opacity (Beer's law).
          float column = 1.0 - exp(-vDeep / ${EXTINCTION.toFixed(3)});
 
-         // Fresnel, so the margin is a window and the far water is a mirror.
-         // Alpha multiplies the reflection on the way out, so lifting it here is
-         // what keeps the sky in the lake at grazing angles.
+         // Fresnel. Alpha scales the reflection, so raising it at grazing angles
+         // keeps the sky visible in the lake.
          float facing = saturate(dot(normal, normalize(vViewPosition)));
          float glance = pow(1.0 - facing, 5.0);
 
-         // The shore, feathered over the last handspan of depth rather than over
-         // metres of open water — a lake edge that fades across its own surface
-         // reads as mist rather than as a bank.
+         // Shore edge, feathered over the last few centimetres of depth.
          if (vWet < 0.02) discard;
          float edge = smoothstep(0.0, 0.05, vDeep) * smoothstep(0.02, 0.09, vWet);
 
-         // Handed over to the stream at the outlet, on the same function the
-         // stream fades in on.
-         //
-         // **Not a plain scale by one minus the share.** Alpha does not add: two
-         // layers at a and b cover 1 - (1-a)(1-b), so complementary weights leave
-         // a gap that widens toward the middle of the band. Solving
-         // 1 - (1-a*s)(1-x) = a for the lake's share gives the divide below,
-         // exact whenever the stream is about as opaque here as the lake is.
+         // Blend into the stream at the outlet. Stacked alpha covers
+         // 1 - (1-a)(1-b), so the lake alpha solves 1 - (1-a*s)(1-x) = a. Exact
+         // when the stream is about as opaque as the lake here.
          float water = saturate(mix(column, 1.0, glance * ${SHEEN.toFixed(2)})) * edge;
          diffuseColor.a = water * (1.0 - vShare) / max(1.0 - water * vShare, 0.02);
          if (diffuseColor.a < 0.01) discard;`,
@@ -258,30 +221,22 @@ export function createLake(): Lake {
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
-         // Water you can see the bottom of is not a mirror: the shallows scatter
-         // off their own bed while open water stays sharp enough to carry sky.
+         // Shallows are rougher; open water stays sharp.
          roughnessFactor = mix(0.42, roughnessFactor, smoothstep(0.05, 1.1, vDeep));
 
-         // Nor is a grazing reflection, though only mildly now the wave field is
-         // broadband and mipped rather than four coherent trains to smear out.
-         //
-         // Read off the geometric view vector, rotated into world space first:
-         // vViewPosition is view space, so its y is screen vertical rather than
-         // up. Left-multiplying by mat3(viewMatrix) applies the transpose.
+         // Slightly rougher at grazing angles. The view vector is rotated to
+         // world space first (vector * mat3(viewMatrix) applies the transpose).
          vec3 toEye = normalize(vViewPosition) * mat3(viewMatrix);
          roughnessFactor = mix(roughnessFactor, 0.24, pow(1.0 - abs(toEye.y), 2.5));
 
-         // A current is not a mirror at all. At the distance every pose sees this
-         // from, an individual crest is a couple of pixels and the only
-         // resolvable thing about the flow is that it is matt.
+         // The plume is matt: at viewing distance its crests are only a few pixels.
          roughnessFactor = mix(roughnessFactor, 0.30, vPlume * 0.55);`,
       );
   };
 
   const object = new Mesh(geometry, material);
   object.name = 'lake';
-  // Water takes light but casts nothing, and a shadow map on a mirror surface is
-  // a hard-edged stain across the reflection.
+  // No shadows: a shadow map on a mirror surface shows as a hard stain.
   object.receiveShadow = false;
   object.castShadow = false;
   object.renderOrder = 1;

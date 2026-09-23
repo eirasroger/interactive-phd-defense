@@ -20,17 +20,13 @@ export interface Budget {
   play(step: number, settle: boolean): gsap.core.Timeline | null;
 }
 
-/** The scale the three reductions are drawn against, with headroom above the worst. */
+/** Full-width loss for the reduction bars, with headroom above the largest. */
 const LOSS_SCALE = 0.06;
 
 /**
- * What the model achieves, and where the declared data stops it.
- *
- * Two columns, one argument. The error budget and the reduction comparison
- * establish that the representation works. The recall column says which
- * pathways it separates, and the reason the other four stay unresolved sits
- * upstream of the model in how manufacturers write end-of-life scenarios up.
- * Read as one recovery class with recycling, those four hold.
+ * Model results. Left: error metrics and the dimensionality reduction
+ * comparison. Right: recall per pathway. Four pathways are not separated
+ * because of how manufacturers declare end-of-life scenarios.
  */
 export function createBudget(): Budget {
   const counters: { readonly node: HTMLElement; readonly to: number; readonly decimals: number }[] =
@@ -59,8 +55,7 @@ export function createBudget(): Budget {
     });
   });
 
-  // The dataset drawn rather than described: one figure for its size, and the
-  // split as a partition of it, sized by the counts themselves.
+  // Dataset size plus a bar split by the train and test counts.
   const splitSegments = (['train', 'test'] as const).map((part) =>
     el('span', { className: 'bd-split-segment', attrs: { 'data-part': part } }),
   );
@@ -365,9 +360,7 @@ export function createBudget(): Budget {
           },
           seconds(DURATION.cinematic * 0.75),
         )
-        // The four the model separates arrive first, and the four it does not
-        // arrive in the same pass on the same rail, so the asymmetry is read
-        // off one list instead of being announced.
+        // Separated and unseparated pathways enter together in one list.
         .from(
           recallRows,
           {

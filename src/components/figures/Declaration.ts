@@ -4,21 +4,21 @@ import { el } from '@/utilities/dom';
 import './declaration.css';
 
 export interface DeclaredModule {
-  /** The EN 15804 module range, as it is printed on the declaration. */
+  /** EN 15804 module range as printed on the EPD. */
   readonly code: string;
   readonly name: string;
-  /** What the module stands on. Revealed with the turn, never before. */
+  /** Data basis of the module. Shown only in the `basis` state. */
   readonly basis: string;
-  /** Above the gate a module rests on primary data; below it, on a scenario. */
+  /** True below the gate (scenario data); false above it (primary data). */
   readonly scenario: boolean;
 }
 
 export interface DeclarationSpec {
   readonly product: string;
   readonly unit: string;
-  /** Names the rule that separates primary data from scenario. */
+  /** Label of the rule between primary-data and scenario modules. */
   readonly gate: string;
-  /** The two verdicts, in the column that delivers them. */
+  /** Verdict text shown under each module code. */
   readonly verdicts: {
     readonly primary: string;
     readonly scenario: string;
@@ -33,9 +33,9 @@ export interface DeclarationSpec {
 
 export const DECLARATION = {
   void: -1,
-  /** The declaration as it presents itself: whole, verified, one number. */
+  /** The EPD as published: modules and one declared value. */
   declared: 0,
-  /** What each of its modules actually rests on. */
+  /** Adds each module's data basis, the gate and the uncertainty bracket. */
   basis: 1,
 } as const;
 
@@ -47,44 +47,25 @@ export interface Declaration {
 }
 
 /*
- * One EPD, and where its numbers come from.
- *
- * The turn is carried by two moves that have to land as one thought. The gate
- * rule cuts the stack, and every module below it empties — same drain, dashes
- * and amber as `ImpactMethod`, because it means the same thing there and here.
- * Then the declared value grows a bracket.
- *
- * The bracket is drawn as an error bar rather than as a filled band, and the
- * distinction is not cosmetic: a tall filled rectangle beside a number reads as
- * a bar whose *length is a quantity*, which is the one thing this mark must not
- * say. Caps on a stem say interval and nothing else.
- *
- * **The value itself never changes.** That is the argument: the number looks
- * identical whether or not its basis holds, so nothing on the face of a
- * declaration tells a designer how much of it was decided for them. A figure
- * that also moved the number would be claiming a magnitude, which is C2's
- * evidence to present and not this scene's.
+ * One EPD and the basis of its modules. In the `basis` state the gate rule
+ * splits the stack, scenario modules empty (same style as `ImpactMethod`), and
+ * the declared value gains an error-bar bracket. The value itself never changes.
  */
 const VIEW_W = 880;
 const VIEW_H = 396;
 
 /*
- * A module is two lines, not four columns.
- *
- * Everything in the row wants to be bigger, and packing code, name, verdict and
- * basis across one 640-unit line caps the basis text at about 12 units before
- * the columns touch. Stacked, each line owns the full width and the type is
- * free: identity on top, what it rests on beneath, with the verdict sitting
- * directly under the module code it judges.
+ * Each module row has two lines: code and name on top, verdict and basis below.
+ * This gives the text the full row width.
  */
 const STACK_W = 640;
 const STACK_TOP = 26;
 const ROW_H = 58;
 const ROW_GAP = 6;
-/** Wider than the others, so the split is legible before it is named. */
+/** Larger than `ROW_GAP` so the gate split is visible. */
 const GATE_GAP = 40;
 
-/** Two columns, read down: code over verdict, name over basis. */
+/** Two text columns: code over verdict, name over basis. */
 const CODE_X = 18;
 const NAME_X = 128;
 const LINE_ONE_DY = 23;
@@ -93,7 +74,7 @@ const LINE_TWO_DY = 46;
 const IDENTITY_Y = 14;
 
 const GATE_RULE_H = 2;
-/** Below the rule: above it the label collides with the row it just cut off. */
+/** Label sits below the rule to avoid the row above. */
 const GATE_LABEL_DY = 14;
 
 const AXIS_X = 706;
@@ -101,16 +82,16 @@ const TICK_X = 686;
 const TICK_W = 40;
 const TICK_H = 3;
 const RANGE_H = 200;
-/** Wider than the tick, so the bracket encloses the point rather than crossing it. */
+/** Wider than the tick so the caps frame it. */
 const RANGE_CAP = 48;
 const VALUE_X = 742;
 const VALUE_UNIT_DY = 28;
 
-/** Solid, and the start of the tween that breaks it up. */
+/** Dash patterns. The solid one is the tween start. */
 const STROKE_SOLID = '40 0';
 const STROKE_DASHED = '6 5';
 
-/** Tokens are the source of truth for colour, and GSAP needs resolved values. */
+/** Resolves a CSS colour token, since GSAP needs concrete values. */
 const token = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -122,7 +103,7 @@ interface Step {
   readonly ease?: string;
 }
 
-/** Stem and two caps, centred on the tick, so it can open from it. */
+/** Error-bar path (stem and two caps) centred on the tick. */
 const bracket = (tickY: number): string => {
   const top = tickY - RANGE_H / 2;
   const bottom = tickY + RANGE_H / 2;
@@ -145,7 +126,7 @@ export function createDeclaration(spec: DeclarationSpec): Declaration {
 
   const stackBottom = rowY(spec.modules.length - 1) + ROW_H;
   const gateY = rowY(gateIndex) - GATE_GAP / 2;
-  /** Centred on the stack, so the bracket has equal room to open both ways. */
+  /** Centred on the stack so the bracket opens evenly up and down. */
   const tickY = (STACK_TOP + stackBottom) / 2;
 
   const modules = spec.modules
@@ -180,8 +161,7 @@ export function createDeclaration(spec: DeclarationSpec): Declaration {
        <rect class="declaration-gate-rule" x="0" y="${gateY - GATE_RULE_H / 2}" width="${STACK_W}" height="${GATE_RULE_H}" rx="1" />
        <text class="declaration-gate-label" x="${STACK_W}" y="${gateY + GATE_LABEL_DY}" text-anchor="end">${spec.gate}</text>
      </g>` +
-    // Bracket before tick, so the point the declaration states stays on top of
-    // the interval it turns out to sit in.
+    // Bracket before tick so the tick draws on top.
     `<g class="declaration-value">
        <text class="declaration-indicator" x="${TICK_X}" y="${IDENTITY_Y}">${spec.indicator.name}</text>
        <line class="declaration-axis" x1="${AXIS_X}" y1="${STACK_TOP}" x2="${AXIS_X}" y2="${stackBottom}" />
@@ -245,7 +225,7 @@ export function createDeclaration(spec: DeclarationSpec): Declaration {
         at: 0.02,
       },
       { node: gateLabel, vars: { opacity: shown ? 1 : 0 }, at: 0.14 },
-      // Last, and slowest. Everything above it is the reason it opens.
+      // Bracket opens last and slowest.
       {
         node: range,
         vars: { opacity: shown ? 1 : 0, scaleY: shown ? 1 : 0, svgOrigin: `${AXIS_X} ${tickY}` },
@@ -255,7 +235,7 @@ export function createDeclaration(spec: DeclarationSpec): Declaration {
     ];
 
     moduleNodes.forEach((node, index) => {
-      // Down the stack, so the emptying reads as one movement rather than four.
+      // Staggered down the stack.
       const cue = 0.16 + index * 0.085;
 
       steps.push({

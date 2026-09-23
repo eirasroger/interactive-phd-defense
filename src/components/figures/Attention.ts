@@ -23,14 +23,7 @@ export interface Attention {
 
 /* ---- The network board ------------------------------------------------------- */
 
-/**
- * One measured board for the whole pass.
- *
- * Every stage, every drop into the context node and every join back onto a rail
- * is a coordinate here, so the drawing cannot disagree with itself. The board is
- * the inside of a model and therefore sits on the dark field, which is the rule
- * C4 set and this station keeps.
- */
+/** SVG board for the model pass. All stage coordinates below are in its units. */
 const BOARD = { width: 732, height: 316 } as const;
 
 const RAILS = MODEL.maxAlternatives;
@@ -39,7 +32,7 @@ const RAIL_STEP = 40;
 const railY = (index: number): number => RAIL_TOP + index * RAIL_STEP;
 const AXIS = railY((RAILS - 1) / 2);
 
-/** Where each stage begins and ends, left to right. */
+/** Horizontal extent of each stage, left to right. */
 const TOKEN_X = 20;
 const INPUT = { start: 34, end: 100 } as const;
 const ENCODER = { start: 116, end: 168 } as const;
@@ -48,7 +41,7 @@ const CONTEXT = { start: 372, end: 478 } as const;
 const HEAD = { start: 500, end: 556 } as const;
 const SCORE = { start: 574, end: 716 } as const;
 
-/** The two stages that hold the whole set are boxes, and both are the same box. */
+/** Vertical bounds shared by the two set-level stage boxes. */
 const BOX_TOP = 64;
 const BOX_BOTTOM = 292;
 const MEAN_X = (CONTEXT.start + CONTEXT.end) / 2;
@@ -59,7 +52,7 @@ const CELL_GAP = 9;
 const HEADER_Y = 18;
 const DETAIL_Y = 32;
 
-/** The three bands of the input vector, in the proportions the vector has. */
+/** The three bands of the input vector, sized by feature count. */
 const INPUT_BANDS = [
   { key: 'attributes', units: FEATURES.attributes * FEATURES.perAttribute },
   { key: 'stakeholder', units: FEATURES.stakeholder },
@@ -73,12 +66,8 @@ const stageNamed = (key: string): (typeof PIPELINE)[number] => {
 };
 
 /**
- * The published ordering, held in arrival order rather than in rank order.
- *
- * The rails are lettered A to E down the board and their scores are the
- * standard structural column, so the strongest score sits on the fourth rail
- * and the weakest on the fifth. A board that drew them sorted would assert the
- * opposite of what the architecture is chosen for.
+ * Standard structural scores in arrival order (rails A to E). Kept unsorted
+ * because the model is order-invariant.
  */
 const arrivalScores = (): readonly { readonly id: ProductId; readonly score: number }[] => {
   const standard = APPLICATIONS.find((entry) => entry.key === 'standard');
@@ -99,19 +88,10 @@ const text = (
 /* ---- The panel ---------------------------------------------------------------- */
 
 /**
- * Beat 3. What a concrete alternative is, and what the network does with a set
- * of them.
- *
- * Two registers side by side. On the left, on the projected white, the case
- * study: eighteen named attributes in five families, each carried as a triplet,
- * plus the two context vectors, adding to the sixty-six features an alternative
- * enters as. On the right, on the dark field, the pass that turns a set of those
- * vectors into an ordering.
- *
- * The movement the beat exists for is the third stage. Attention has already
- * joined every pair by then; the global context is the moment the *set* becomes
- * a thing each candidate is scored against, and it is drawn as a mean that
- * forms below the rails and travels back up into every one of them.
+ * Beat 3. Left: the case-study inputs (18 attributes in five families, each a
+ * triplet, plus two context vectors, 66 features in total). Right: the model
+ * pass that turns a set of those vectors into scores, with the global context
+ * drawn as a mean pooled from every rail and fed back into each.
  */
 export function createAttention(): Attention {
   /* -- Left: what a concrete alternative carries -- */
@@ -156,13 +136,7 @@ export function createAttention(): Attention {
       ],
     });
 
-  /*
-   * Two columns that pack downward, filled so no family is split across the
-   * fold. Laid out as one grid the families flowed across rows instead of down
-   * columns: every family started on the row after the previous one ended, so
-   * the block was twenty-three rows tall instead of twelve and the panel
-   * overflowed by the difference.
-   */
+  /* Two columns filled top to bottom, with no family split across them. */
   const halfway = ATTRIBUTE_FAMILIES.reduce(
     (sum, family) => sum + family.attributes.length + 1,
     0,
@@ -256,11 +230,7 @@ export function createAttention(): Attention {
   stageHead(stageNamed('score').label, 'Sigmoid', midOf(HEAD));
   stageHead('Preference score', 'Zero to one', midOf(SCORE));
 
-  /*
-   * The two stages that operate on the whole set are boxes that enclose it,
-   * which is how Fig. 2 draws them and the only honest way to draw them: an
-   * arrow per alternative would say each one is processed on its own.
-   */
+  /* Set-level stages are boxes enclosing all rails, as in Fig. 2. */
   const attendBox = svg('rect', {
     class: 'at-stage-box',
     x: String(ATTEND.start),
@@ -325,8 +295,7 @@ export function createAttention(): Attention {
     tokens.push(token);
     board.appendChild(token);
 
-    /* The vector in the proportions the vector has, so the twelve context
-       features line up in a column across the whole set. */
+    /* Bands sized by feature count, so the context features line up across rails. */
     const strip = svg('g', { class: 'at-strip' });
     const span = INPUT.end - INPUT.start;
     let cursor = INPUT.start;
@@ -370,13 +339,8 @@ export function createAttention(): Attention {
   }
 
   /*
-   * Attention, drawn as the matrix it is.
-   *
-   * A row per alternative attending, a column per alternative attended to, and
-   * every cell present. Drawn as curves between rails it read as a random
-   * tangle, which is the opposite of what self-attention over a set is: the
-   * relation is complete and it is regular, and a grid says both at once. No
-   * cell carries a weight, because no weight here is measured.
+   * Self-attention as a full matrix: one row per attending alternative, one
+   * column per attended one. Cells carry no weights since none are measured.
    */
   const matrixCells: SVGRectElement[] = [];
   const cellWidth = (ATTEND.end - ATTEND.start - 16 - CELL_GAP * (RAILS - 1)) / RAILS;
@@ -397,10 +361,8 @@ export function createAttention(): Attention {
   }
 
   /*
-   * The global context: one vector formed from the whole set, and handed back
-   * to every member of it. Drawn as a symmetric collapse and expansion on the
-   * axis the rails already share, so the mean sits at the centre of the thing
-   * it is the mean of.
+   * Global context: rails converge to one mean vector on the central axis,
+   * then diverge back to every rail.
    */
   const converge: SVGPathElement[] = [];
   const diverge: SVGPathElement[] = [];
@@ -440,7 +402,7 @@ export function createAttention(): Attention {
   );
   board.appendChild(meanNode);
 
-  /* What comes out, in arrival order. */
+  /* Output scores, in arrival order. */
   for (const [index, entry] of scores.entries()) {
     const y = railY(index);
     board.appendChild(
@@ -574,8 +536,7 @@ export function createAttention(): Attention {
             },
             seconds(DURATION.slow * 0.9),
           )
-          // The set arrives, then each vector is encoded, then every pair is
-          // joined. That is the order the pass runs in.
+          // Animated in pass order: inputs, encoding, then attention.
           .from(
             [...tokens, ...inputStrips],
             {
@@ -617,8 +578,7 @@ export function createAttention(): Attention {
             },
             seconds(DURATION.cinematic * 0.95),
           )
-          // The matrix fills row by row, so it is watched becoming complete
-          // rather than arriving complete.
+          // The matrix fills row by row.
           .from(
             matrixCells,
             {
@@ -631,8 +591,7 @@ export function createAttention(): Attention {
             },
             seconds(DURATION.cinematic * 1.15),
           )
-          /* The beat's own movement. The set collapses to one vector, and that
-             vector is handed back to every member of it. */
+          /* Pool to the mean vector, then feed it back to every rail. */
           .from(
             converge,
             {

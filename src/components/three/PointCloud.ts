@@ -37,8 +37,7 @@ const VERTEX = /* glsl */ `
   varying float vAlpha;
 
   void main() {
-    // Points resolve at slightly different rates, so the formation assembles
-    // as a gradient rather than snapping into place all at once.
+    // Per-point stagger so the formation assembles gradually.
     float stagger = smoothstep(0.0, 1.0, clamp(uProgress * 1.6 - aSeed * 0.6, 0.0, 1.0));
 
     vec3 drift = vec3(
@@ -53,7 +52,7 @@ const VERTEX = /* glsl */ `
     gl_Position = projectionMatrix * mvPosition;
     gl_PointSize = uSize * uPixelRatio * (14.0 / -mvPosition.z);
 
-    // Unresolved points read as dimmer: uncertainty is literally less defined.
+    // Unresolved points are dimmer.
     vAlpha = mix(0.18, 0.72, stagger);
   }
 `;
@@ -71,13 +70,8 @@ const FRAGMENT = /* glsl */ `
 `;
 
 /**
- * An instanced field of points that interpolates between a scattered cloud and
- * a declared formation.
- *
- * The interpolation happens on the GPU, so tens of thousands of points cost
- * one draw call and no per-frame CPU work. This is the visual vocabulary for
- * uncertainty becoming an informed result, so it is a shared primitive rather
- * than something each scene reimplements.
+ * Point field that interpolates on the GPU between a scattered cloud and a
+ * formation. One draw call and no per-frame CPU work.
  */
 export function createPointCloud(options: PointCloudOptions): PointCloud {
   const { count, formation, color, size = 9, scatter = 14 } = options;
@@ -92,7 +86,7 @@ export function createPointCloud(options: PointCloudOptions): PointCloud {
     positions[i * 3 + 1] = y;
     positions[i * 3 + 2] = z;
 
-    // Uniform distribution inside a sphere, so the cloud has no visible seams.
+    // Uniform distribution inside a sphere, flattened vertically.
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(2 * Math.random() - 1);
     const radius = scatter * Math.cbrt(Math.random());

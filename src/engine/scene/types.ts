@@ -13,17 +13,11 @@ export interface SceneContext {
   /** 3D content root. Detached from the world automatically on exit. */
   readonly stage: Group;
   readonly world: World;
-  /**
-   * The posed camera, for tethering DOM to a point in the world. Scenes read
-   * it; moving it is the camera director's business.
-   */
+  /** Read-only use: tethering DOM to world points. The camera director moves it. */
   readonly camera: PerspectiveCamera;
   readonly assets: AssetLoader;
   readonly quality: QualitySettings;
-  /**
-   * Seconds of camera travel before this scene's content appears. The DOM
-   * layer already waits this long, so scene reveals must offset by it too.
-   */
+  /** Seconds of camera travel before content appears. Scene reveals must offset by it. */
   readonly entryDelay: number;
   /** Aborted on exit. */
   readonly signal: AbortSignal;
@@ -31,11 +25,8 @@ export interface SceneContext {
   onFrame(handler: FrameHandler): void;
 
   /**
-   * Register cleanup for resources this scene created.
-   *
-   * Disposal is explicit rather than automatic because loaded models are
-   * cached and shared: a scene that clones a GLB must not dispose the
-   * geometry and materials the cache still owns.
+   * Register cleanup for resources this scene created. Loaded models are cached
+   * and shared, so never dispose geometry or materials owned by the cache.
    */
   onDispose(fn: () => void): void;
 }
@@ -46,10 +37,7 @@ export interface SceneInstance {
 
   enter(context: SceneContext, direction: NavDirection): void;
 
-  /**
-   * Move to `index`. `settle` reconstructs the state without animating, for
-   * beats reached backwards or by jump.
-   */
+  /** Move to `index`. `settle` sets the state without animating (backwards or jump). */
   beat?(index: number, settle: boolean): void;
 
   exit?(direction: NavDirection): void;
@@ -57,11 +45,9 @@ export interface SceneInstance {
 
 /**
  * Whether the 3D world is the subject or the backdrop.
- *
- * `foreground` — the world carries the argument; the camera is in the content.
- * `recessed` — the camera sits in open volume, fog closes and exposure drops,
- * leaving a dim depth field behind a designed 2D composition. The renderer
- * never stops and there is no cut to "a slide".
+ * `foreground`: the camera looks at 3D content.
+ * `recessed`: fog closes and exposure drops, leaving a dim backdrop behind 2D
+ * content. The renderer keeps running.
  */
 export type RenderMode = 'foreground' | 'recessed';
 
@@ -78,43 +64,20 @@ export interface SceneDefinition {
   /** Asset ids that must be resolved before entering. */
   readonly assets?: readonly string[];
   /**
-   * Entering this scene crosses a designed threshold out of the previous zone.
-   *
-   * Declared on the arriving scene rather than the departing one because a
-   * crossing is a property of the boundary, and the boundary is only reached by
-   * going somewhere. Only honoured travelling forwards: a jump back through a
-   * door during questions wants to be a cut, not a set piece replayed at the
-   * presenter.
-   *
-   * Implies its own pacing. `TRANSITION.camera` rate-limits every ordinary move
-   * to 4.5 s, which is right for repositioning between two things the camera is
-   * looking at and far too short for one that has to cover an avenue, open a
-   * pair of doors and settle inside a building.
+   * A designed threshold crossed on entry from the previous zone. Used only when
+   * travelling forwards. Has its own pacing, since `TRANSITION.camera` caps
+   * ordinary moves at 4.5 s.
    */
   readonly crossing?: ZoneCrossing;
   /**
-   * A move whose length is designed rather than paced.
-   *
-   * `TRANSITION.camera` works a duration out from how far a move travels and
-   * how far it turns, and caps it, which is right for every transition that is
-   * repositioning between two things the camera is looking at. A set piece is
-   * not that: the rise out of the corridor is one continuous sixty-metre climb
-   * whose whole job is to be watched, and paced it would be over in the four
-   * and a half seconds the deck allows its longest ordinary hop.
-   *
-   * Honoured travelling forwards only, for the same reason a crossing is: a
-   * presenter jumping back to it during questions wants the shot, not the
-   * performance of arriving at it.
+   * Camera move with a fixed, designed duration that bypasses the
+   * `TRANSITION.camera` cap. Used for set pieces such as the 60 m rise out of
+   * the corridor. Used only when travelling forwards.
    */
   readonly travel?: CameraMoveOptions;
   /**
-   * The air this scene is seen through, derived from its zone's.
-   *
-   * The same mechanism as `recessed`, and deliberately the same shape: a
-   * transform of the zone's own atmosphere rather than a second rig that can
-   * drift away from it. A scene that leaves the volume its zone's fog was sized
-   * for — climbing out of a corridor and looking back down at all of it —
-   * declares what changes and inherits everything else.
+   * Transform of the zone's atmosphere for this scene. For scenes that leave the
+   * volume the zone's fog was sized for.
    */
   readonly air?: (base: Atmosphere) => Atmosphere;
   create(): SceneInstance;

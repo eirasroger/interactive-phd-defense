@@ -2,18 +2,9 @@ import { CATEGORIES, CORPUS } from '@/content/c2';
 import { el } from '@/utilities/dom';
 
 /**
- * The corpus, one cell per product.
- *
- * Eight thousand positioned elements is not something to ask the DOM for, so
- * the field is a canvas. That is also what makes the reveal expressive: cells
- * lay down category by category, largest first, so watching it fill *is*
- * watching the distribution.
- *
- * **Each category starts on a new row and the bands are separated by a blank
- * one.** A continuous scan filled the field evenly and left eleven steps of one
- * hue to carry the boundaries, which they cannot do at four pixels a cell. With
- * a gutter the boundary is geometry, and the tint only has to support an
- * ordering the eye already has.
+ * The corpus drawn on a canvas, one cell per product (about 8,000 cells).
+ * Cells fill category by category, largest first. Each category starts on a
+ * new row, with a blank row between categories so boundaries are visible.
  */
 
 export const COLS = 145;
@@ -55,11 +46,9 @@ const BOUNDARIES: readonly number[] = BANDS.map(
 );
 
 /**
- * One hue, dark to light, which is what a magnitude ordering takes. Eleven
- * categorical hues would be eleven hues nobody can name. The ramp is eased so
- * that the first three ranks, two thirds of the field between them, separate
- * rather than sharing a corner of the scale, and it stops at 68% because a
- * lighter band than that disappears into the projected white.
+ * Single-hue ramp, dark to light by rank. Eased so the first three ranks
+ * separate clearly. Lightness stops at 68% so the lightest band stays visible
+ * on a projector.
  */
 const tint = (rank: number): string => {
   const span = CATEGORIES.length - 1;
@@ -67,14 +56,13 @@ const tint = (rank: number): string => {
 };
 
 /**
- * Ink was tried first and disappears into the darker bands, which is where most
- * of the sample falls. Amber separates from every step of a blue ramp and from
- * itself under all three CVD simulations, and it is the colour the verified
- * readout wears, so the field needs no key of its own for it.
+ * Colour of verified cells. Amber stands out from every step of the blue ramp,
+ * including under colour-vision-deficiency simulation, and matches the verified
+ * readout.
  */
 export const VERIFIED = '#c07a12';
 
-/** Cell positions, precomputed once: the band layout is fixed for the session. */
+/** Cell positions, precomputed once. */
 const POS_X = new Uint16Array(CORPUS.products);
 const POS_Y = new Uint16Array(CORPUS.products);
 
@@ -87,11 +75,8 @@ for (const [rank, band] of BANDS.entries()) {
 }
 
 /**
- * Deterministic sample indices, drawn once and reused for the life of the page.
- *
- * A linear congruential generator was tried first and its low bits cycle, so
- * the sample bunched into one region and read as a block rather than as a draw.
- * `splitmix32` mixes every bit.
+ * Deterministic sample of verified cells, drawn once. Uses `splitmix32` so the
+ * sample spreads evenly across the field.
  */
 const sample = (): readonly number[] => {
   const taken = new Set<number>();
@@ -182,9 +167,9 @@ export function createCorpusField(): CorpusField {
   };
 }
 
-/** Swatch colour for the legend, so the key and the field cannot drift apart. */
+/** Legend swatch colour. Shares `tint` with the field. */
 export const categoryTint = (rank: number): string => tint(rank);
 
-/** Fraction of the field complete once this category's band has been laid down. */
+/** Fill fraction (0 to 1) at the end of this category's band. */
 export const completionAt = (rank: number): number =>
   (BOUNDARIES[rank] ?? CORPUS.products) / CORPUS.products;

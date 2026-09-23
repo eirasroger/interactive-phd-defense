@@ -24,30 +24,22 @@ export interface Reconcile {
 const format = (requirement: Requirement, value: number): string =>
   requirement.unit ? `${value} ${requirement.unit}` : value.toFixed(2);
 
-/** Where a value sits on its indicator's axis, as a percentage of the span. */
+/** Position of a value on its axis, 0 to 100. */
 const position = (requirement: Requirement, value: number): number => {
   const [low, high] = requirement.domain;
   return ((value - low) / (high - low)) * 100;
 };
 
 /**
- * The edge of the admissible region, in the units the edge is written in.
- *
- * A maximum admits everything below it, so its band is pinned to the left of
- * the axis and closes from the right; a minimum is the same statement mirrored.
- * Writing the edge as `right` or `left` rather than a width keeps the pinned
- * side pinned through every tween.
+ * Band inset in percent: `right` for a maximum (band pinned left), `left` for a
+ * minimum. Tweening the inset keeps the pinned side fixed.
  */
 const edgeOf = (requirement: Requirement, value: number): number =>
   requirement.kind === 'max' ? 100 - position(requirement, value) : position(requirement, value);
 
 /**
- * How long the region takes to reach a new edge, and how long a source waits
- * before the next one speaks.
- *
- * The interval has to exceed the travel, because two tweens overlapping on the
- * same edge would fight and the earlier one would land last, snapping the
- * region back to a bound that had already been beaten.
+ * Band travel time and the gap between sources. The interval must exceed the
+ * travel so two tweens never overlap on the same edge.
  */
 const BAND_TRAVEL = seconds(DURATION.slow * 0.8);
 const SOURCE_INTERVAL = seconds(DURATION.slow * 1.3);
@@ -141,15 +133,9 @@ function buildRow(requirement: Requirement, governing: Bound): Row {
 }
 
 /**
- * §2.4's strictest-bound rule, drawn as the region that survives it.
- *
- * The shading is what a product is allowed to be. Each source in turn puts a
- * mark on the axis: a stricter mark drags the edge of the region onto itself,
- * and a looser one lands in the part of the axis the region no longer covers.
- * Both rows of the paper's scenario 1 then read the same way without a legend —
- * the operator's tighter water-to-cement ratio pulls the edge in, the
- * operator's lower cement floor is left standing outside it — which is the
- * whole of "may tighten, may not relax" as one gesture.
+ * The §2.4 strictest-bound rule for scenario 1. Each source adds a mark per
+ * row. A stricter mark moves the admissible band's edge onto it, and a looser
+ * one lands outside the band and dims.
  */
 export function createReconcile(): Reconcile {
   const rows = REQUIREMENTS.flatMap((requirement) => {
@@ -224,10 +210,7 @@ export function createReconcile(): Reconcile {
           '>-0.2',
         );
 
-      // Staged across the rows rather than down them. Every axis draws at once,
-      // then every regulatory bound lands at once, then every operator bound.
-      // Read row by row the panel takes three times as long and the comparison
-      // the figure exists for is never on screen at the same moment.
+      // Staged by source across all rows: axes first, then each source's bounds together.
       const stages = Math.max(...rows.map((row) => row.marks.length));
 
       for (const [order, row] of rows.entries()) {
@@ -287,8 +270,7 @@ export function createReconcile(): Reconcile {
           // Marks are held in authority order, so a row's first bound is index 0.
           const opens = stage === 0;
 
-          // One tween owns the band and the next cannot start until it has
-          // finished; see §31h. A bound that does not tighten moves nothing.
+          // Only one band tween runs at a time (§31h). A looser bound leaves the band alone.
           if (opens) {
             line.to(
               row.band,
@@ -317,7 +299,7 @@ export function createReconcile(): Reconcile {
           }
         }
 
-        // Whatever the region no longer covers recedes, whichever source set it.
+        // Dim every placed mark that does not govern.
         line.call(
           () => {
             for (const row of rows) {

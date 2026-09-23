@@ -19,11 +19,8 @@ interface Row {
 }
 
 /**
- * One input, and what the embedding does with it.
- *
- * Read left to right: what the declaration says, the material terms it comes
- * out beside, and the outcome those terms carry. The middle column is the whole
- * mechanism, and the third is the reason anybody should care about it.
+ * One table row: the declared input, its nearest material terms in the
+ * embedding, and the predicted pathway.
  */
 function transferRow(transfer: Transfer): Row {
   const declared = el('div', {
@@ -34,8 +31,8 @@ function transferRow(transfer: Transfer): Row {
     ],
   });
 
-  // Fig. 3 reports five neighbours per probe and the paper names only some of
-  // them, so the row ends on a mark that says the list continues.
+  // The paper (Fig. 3) names only some of the five neighbours per probe, so
+  // the row ends with "and others".
   const neighbours = el('div', {
     className: 'sm-cell sm-neighbours',
     children: [
@@ -65,14 +62,8 @@ function transferRow(transfer: Transfer): Row {
 }
 
 /**
- * Why the embedding is the part that makes this usable.
- *
- * A declaration names a material in whatever words its author chose, and new
- * products keep arriving, so a model that matches strings is a model that stops
- * working on the second document. Placing a term by meaning is what lets an
- * input the model has never seen inherit the outcome of the materials it
- * resembles, and that inheritance is what the beat draws: two inputs with no
- * exact match, the terms each one lands beside, and the pathway that follows.
+ * Semantic generalisation figure: two inputs with no exact match, the terms
+ * each lands near in the embedding, and the pathway they inherit.
  */
 export function createSemantic(): Semantic {
   const heads = TRANSFER_STEPS.map((step, index) =>
@@ -101,8 +92,7 @@ export function createSemantic(): Semantic {
     children: [header, ...rows.map((row) => row.element)],
   });
 
-  // The caption above the frame already carries `TRANSFER_CLAIM.label`, so the
-  // panel states only the thing the caption has no room for: why it matters.
+  // The caption already shows `TRANSFER_CLAIM.label`, so only the body goes here.
   const body = el('p', { className: 'sm-body', text: TRANSFER_CLAIM.body });
 
   const index = el('p', { className: 'c4-index', text: 'Semantic generalisation' });
@@ -168,8 +158,7 @@ export function createSemantic(): Semantic {
             },
             seconds(DURATION.normal),
           )
-          // Each row is read across before the next one starts, because the
-          // argument is the crossing and not the list.
+          // Staggered so each row plays across before the next one starts.
           .from(
             cells.filter((_, position) => position % 3 === 0),
             {

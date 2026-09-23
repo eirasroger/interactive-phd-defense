@@ -11,10 +11,8 @@
 
 /* ---- What the method needs -------------------------------------------- */
 /*
- * An input is drawn as two rects, not one: a fill that can drain and a frame
- * that stays. The second beat empties the first and dissolves the second's
- * stroke into dashes — both of which interpolate, which a change of class
- * does not.
+ * Each input is two rects: a fill and a frame. The second beat tweens the fill
+ * out and the frame stroke to dashes.
  */
 
 .method-input-fill {
@@ -26,20 +24,17 @@
   fill: none;
   stroke: var(--c-border-strong);
   stroke-width: 1.25;
-  /* Gap zero is a solid line, and the start of a tween to a dashed one. */
+  /* Gap zero draws a solid line that can tween to a dashed one. */
   stroke-dasharray: 40 0;
   /*
-   * An absence that is still open, which is what `standing.css` uses the same
-   * travelling pattern for. It needs no knowledge of the beat: while the frame
-   * is solid a dash offset moves nothing, so the shimmer appears by itself the
-   * moment GSAP dissolves the stroke into `6 5`, and only on the rows that
-   * dissolve. Far slower than the feeds, so the two read as separate events
-   * rather than as one texture.
+   * Marks a missing input, as in `standing.css`. The offset only shows once
+   * GSAP sets the dashes to `6 5`. Slower than the feeds so the two motions
+   * stay distinct.
    */
   animation: method-open 11s linear infinite;
 }
 
-/* One period of the dashed state. Invisible against a solid stroke. */
+/* One period of the `6 5` dash pattern. */
 @keyframes method-open {
   from {
     stroke-dashoffset: 0;
@@ -71,18 +66,10 @@
 }
 
 /*
- * The route, and what travels it.
- *
- * Two paths on one curve. Drawing the flow as a travelling dash pattern rather
- * than as a moving object keeps it independent of path length: the five feeds
- * are different lengths and a single offset cycle of one dash period loops
- * seamlessly on all of them. Keyframes rather than a timeline, for the reason
- * `backbone.css` gives — the presenter stands on this slide for half a minute
- * and there is no beat that owns the motion.
- *
- * The second beat dims a dead feed by its group, so the flow stops with the
- * line it belongs to and the two surviving streams are the only ones still
- * arriving at the method.
+ * Feeds: a static line plus a travelling dash on the same curve. One dash
+ * period loops seamlessly on any path length. CSS keyframes, as in
+ * `backbone.css`, since the motion runs for the whole slide. The second beat
+ * dims dead feeds by group.
  */
 .method-feed-line {
   fill: none;
@@ -101,7 +88,7 @@
   animation-delay: calc(var(--feed, 0) * -0.86s);
 }
 
-/* One period, so the loop has no seam. Toward the method, against the path. */
+/* One period, so the loop is seamless. Flows toward the method. */
 @keyframes method-carry {
   from {
     stroke-dashoffset: 34;
@@ -116,8 +103,7 @@
 }
 
 /* ---- The methods ------------------------------------------------------- */
-/* LCA carries the accent; the two that complete LCSA are drawn as the same
-   object at lower weight, because that is what they are. */
+/* LCA gets the accent. The two methods that complete LCSA use a lighter weight. */
 
 .method-band rect {
   fill: color-mix(in srgb, var(--c-circular) 40%, transparent);
@@ -161,10 +147,8 @@
 }
 
 /*
- * Reduced motion keeps the drawing and drops the loops.
- *
- * The flow is held at a phase where every feed shows its carry, so the figure
- * still reads as five streams into a method rather than as five bare curves.
+ * Reduced motion stops the loops. The flow is held at a phase where every
+ * feed shows a dash.
  */
 @media (prefers-reduced-motion: reduce) {
   .method-feed-flow {

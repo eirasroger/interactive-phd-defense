@@ -15,31 +15,21 @@ import { createBakedPart, findParts } from './building';
 import { ENTRANCE, VESTIBULE, VESTIBULE_BACK } from './site';
 
 /**
- * How long the leaves take to clear the opening.
- *
- * Slower than the move that carries the camera through them, deliberately. A
- * public entrance takes about this long and the ear knows it; a door that
- * snaps open reads as a lid, and one that takes four seconds reads as a set
- * piece. The travel is only 2.1 m, so the *duration* is doing all the work of
- * making it look powered rather than thrown.
+ * Seconds for the leaves to open. Slower than the camera move through them, to
+ * match a real powered door over the 2.1 m travel.
  */
 const TRAVEL_SECONDS = 2.0;
 
 /**
- * Which leaf leads.
- *
- * Nothing mechanical requires the pair to be asynchronous and real doors are
- * not. This is 90 ms, which is under the threshold at which the two read as
- * separate events and over the one at which they read as a single mirrored
- * object — and a perfect mirror is the tell that turns a door into an
- * animation.
+ * Delay in seconds before the second leaf moves. Small enough to look like one
+ * event, large enough to avoid a perfectly mirrored motion.
  */
 const LEAF_STAGGER = 0.09;
 
-/** Warm, and matched to `WASH_COLOR` in the Blender script. */
+/** Must match `WASH_COLOR` in the Blender script. */
 const WASH_COLOR = 0xffe0b8;
 
-/** Cool, matched to `GLOW_COLOR`. Two temperatures in one frame say two spaces. */
+/** Must match `GLOW_COLOR` in the Blender script. */
 const GLOW_COLOR = 0xb8ccff;
 
 export interface Entrance {
@@ -51,41 +41,24 @@ export interface Entrance {
 }
 
 /**
- * The sliding leaves, and the light in the room behind them.
+ * The sliding door leaves and the vestibule lights.
  *
- * **The leaves are their own asset because the building is one joined mesh.**
- * `join_all` welds every part of an export into a single object, so a door left
- * in the building's own geometry is unreachable however carefully it was named
- * — which is what `docs/blender/exterior_building.md` claimed the runtime could
- * do for as long as it was not true.
- *
- * **The lights are here because emissive geometry is not a light.** The wash
- * slots and the recess strip are modelled and exported, and they illuminate
- * nothing in three.js; in Cycles they are what lights the whole room. Without
- * these three the vestibule is hemisphere ambient times a near-black occlusion
- * bake, which is a flat grey box — and the flatness would be most visible in
- * exactly the frame the rebuild exists for.
- *
- * Three point lights rather than two area lights, and that is a frame-budget
- * call rather than a quality one. A `RectAreaLight` is the right instrument for
- * a 7.8 m ceiling slot, but three.js compiles its LTC path into *every*
- * standard material in the scene — the terrain, the water, four hundred
- * woodland impostors — to light one room that is off screen for most of the
- * act. Points are local, and their falloff is most of what the wash is for.
+ * The leaves are a separate asset because `join_all` merges the building into
+ * one mesh. The point lights stand in for the emissive slots, which light the
+ * room in Cycles but emit nothing in three.js. Point lights are used because a
+ * `RectAreaLight` adds its LTC code to every standard material in the scene.
  */
 export function createEntrance(gltf: GLTF): Entrance {
   const object = new Group();
   object.name = 'entrance';
 
-  // Sorted by name rather than trusting export order: `door_left` and
-  // `door_right` have to be told apart, and which way each slides is the whole
-  // behaviour. `findParts` asserts the count, so a leaf lost in a re-export is
-  // a message rather than a door that opens one way.
+  // Sorted by name so `door_left` comes first; export order is unreliable.
+  // `findParts` throws if a leaf is missing.
   const parts = findParts(gltf, 2).sort((a, b) => a.name.localeCompare(b.name));
   const leaves = parts.map((part) => createBakedPart(part));
   for (const leaf of leaves) object.add(leaf.object);
 
-  // Sorted, so index 0 is `door_left` and travels −x.
+  // Index 0 is `door_left` and travels -x.
   const travel = [-ENTRANCE.sidelight, ENTRANCE.sidelight];
 
   const lights = createVestibuleLights();
@@ -107,9 +80,7 @@ export function createEntrance(gltf: GLTF): Entrance {
       if (target === fraction) return;
       fraction = target;
 
-      // Scaled, so a viewer who has asked for reduced motion gets doors that
-      // are simply open rather than doors that slide at the same speed while
-      // everything around them has stopped.
+      // Scaled so reduced motion opens the doors instantly.
       const duration = scaled(travelSeconds);
 
       leaves.forEach((leaf, index) => {
@@ -124,9 +95,6 @@ export function createEntrance(gltf: GLTF): Entrance {
         gsap.to(leaf.object.position, {
           x,
           duration,
-          // Powered, not thrown: a slider accelerates hard, runs, and is
-          // brought up short against its stop by the operator rather than by
-          // easing out of its own accord.
           ease: 'power2.inOut',
           delay: scaled(index * LEAF_STAGGER),
         });
@@ -166,11 +134,8 @@ function createRecessPlug(): Mesh {
 }
 
 /**
- * Two warm sources under the ceiling slots, and one cool one deep in the recess.
- *
- * Placed at the slots rather than at the room's centre, because what has to
- * read is light *coming from somewhere* — a lamp in the middle of a box lights
- * every wall equally, which is the same flatness as no lamp at all.
+ * Two warm lights under the ceiling slots and one cool light deep in the recess.
+ * Placed at the slots so the walls light unevenly.
  */
 function createVestibuleLights(): Group {
   const group = new Group();
@@ -180,19 +145,15 @@ function createVestibuleLights(): Group {
   const ceiling = VESTIBULE.height - 0.15;
   const inset = VESTIBULE.width / 2 - VESTIBULE.washInset;
 
-  // Read against the exterior's own exposure, not against a dark room: for the
-  // whole approach and most of the way through the doors the atmosphere is
-  // still the forecourt's, so a level set to look right in isolation blows out
-  // in the frame that actually matters.
+  // Intensity tuned under the exterior exposure, which stays active until the
+  // camera is through the doors.
   for (const side of [-1, 1]) {
     const wash = new PointLight(new Color(WASH_COLOR), 22, 15, 2);
     wash.position.set(side * inset, ceiling, centre);
     group.add(wash);
   }
 
-  // Under the concealed strip at the far end, not at the recess mouth. It is
-  // the gradient down the recess's own walls that reads as distance; a light at
-  // the mouth would light the near end and flatten the very thing it is for.
+  // At the far end of the recess, so the walls brighten with depth.
   const glow = new PointLight(new Color(GLOW_COLOR), 5, 9, 2);
   glow.position.set(
     0,

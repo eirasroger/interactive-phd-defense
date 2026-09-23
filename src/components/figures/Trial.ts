@@ -59,9 +59,8 @@ export interface Trial {
 }
 
 /**
- * One panel for the whole case study: the model stays on screen and the column
- * beside it becomes the ranking. The chips and the rows are the same five
- * products, so the rows travel from where the chips were standing.
+ * Case study panel. The model image stays on screen while the side column turns
+ * from candidate chips into the ranking. Rows animate from their chip positions.
  */
 export function createTrial(spec: TrialSpec): Trial {
   const image = el('img', {
@@ -178,10 +177,7 @@ export function createTrial(spec: TrialSpec): Trial {
 
   const allRows = (): Row[] => groups.flatMap((group) => [...group.byKey.values()]);
 
-  /**
-   * The step showing before this one. A defence gets questioned, so every step
-   * is reachable from either side and has to animate from wherever it is.
-   */
+  /** Step currently shown. Steps can be reached forwards or backwards. */
   let shown = -1;
 
   const writeState = (step: number): void => {
@@ -241,8 +237,7 @@ export function createTrial(spec: TrialSpec): Trial {
 
       const timeline = gsap.timeline();
 
-      // A step never assumes the step before it finished: a fast click can drop
-      // the tween that was raising these, and the model must stay on screen.
+      // Force the panel visible in case a fast click killed the previous fade-in.
       gsap.set(element, { opacity: 1 });
       gsap.set(plate, { opacity: 1, scale: 1 });
 
@@ -285,9 +280,8 @@ export function createTrial(spec: TrialSpec): Trial {
             );
           }
 
-          // Position 0 explicitly. The legend flights were queued first, so an
-          // appended tween lands after them and the panel stays invisible for
-          // as long as they run.
+          // Explicit position 0, so the fade-in runs alongside the legend
+          // animations queued above.
           return timeline
             .from(
               element,

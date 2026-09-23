@@ -6,10 +6,7 @@ export interface LoadingScreen {
   set(loading: boolean, progress: number): void;
 }
 
-/**
- * Shown only when assets are genuinely missing. Neighbouring scenes are
- * prefetched, so during a normal talk this should never appear.
- */
+/** Shown only when assets are still loading. Neighbouring scenes are prefetched, so it is rare. */
 export function createLoadingScreen(): LoadingScreen {
   const bar = el('span', { className: 'loading-fill' });
   const track = el('div', { className: 'loading-track', children: [bar] });
@@ -36,7 +33,7 @@ export interface DiagnosticsOverlay {
   set(fps: number, visible: boolean): void;
 }
 
-/** Toggled with `d`. Present so performance can be checked on the day. */
+/** FPS readout, toggled with `d`. */
 export function createDiagnosticsOverlay(): DiagnosticsOverlay {
   const element = el('div', { className: 'diagnostics', attrs: { hidden: '' } });
 
@@ -50,16 +47,8 @@ export function createDiagnosticsOverlay(): DiagnosticsOverlay {
 }
 
 /**
- * Portrait guard.
- *
- * The stage is a fixed 16:9 surface scaled to fit, so a portrait handset scales
- * it by width — about 0.2 — and paints the whole talk into a 390x219 band with
- * body text under 5px. Landscape is the only orientation in which a phone can
- * show this deck at all, so ask for it rather than rendering something illegible
- * and calling it responsive.
- *
- * Visibility is left to CSS: it is a media query, and routing it through JS
- * would mean duplicating the query and keeping the two in step.
+ * Asks portrait phones to rotate. The fixed 16:9 stage is unreadable in
+ * portrait. Visibility is handled by a CSS media query.
  */
 export function createOrientationNotice(): HTMLElement {
   return el('div', {
@@ -74,10 +63,7 @@ export interface ContextNotice {
   set(lost: boolean): void;
 }
 
-/**
- * A lost WebGL context would otherwise show a blank canvas with no
- * explanation. The browser usually restores it within a second or two.
- */
+/** Shown while the WebGL context is lost. The browser usually restores it within seconds. */
 export function createContextNotice(): ContextNotice {
   const element = el('div', {
     className: 'context-notice',

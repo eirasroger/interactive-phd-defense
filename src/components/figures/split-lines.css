@@ -1,10 +1,6 @@
 /*
- * One mask per rendered line.
- *
- * The padding/margin pair is the whole trick: a mask cut to the line box shaves
- * the descender off any line ending in a `g`, `p` or `y`, and at 84px on a
- * projector that is visible. The box is grown by a fraction of an em and the
- * layout is given the same fraction back, so nothing moves and nothing clips.
+ * One mask per rendered line. The padding and matching negative margin extend
+ * the mask below the line box so descenders are not clipped, without shifting layout.
  */
 .split-line {
   display: block;
@@ -18,7 +14,7 @@
   will-change: transform;
 }
 
-/* Only ever in the document for the length of one measurement. */
+/* Temporary element, present only during a measurement. */
 .split-probe {
   display: inline;
 }

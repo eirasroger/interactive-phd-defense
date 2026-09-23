@@ -20,13 +20,9 @@ export interface Paradox {
 }
 
 /**
- * Circular origin against end-of-life recovery, one category at a time.
- *
- * A loop diagram was drawn here first and taken out. Circular origin is a mean
- * over the products that declare an origin and the end-of-life shares are means
- * over the products that declare a pathway, so a single flow between them
- * asserts arithmetic the tables cannot carry. A slope reads each axis against
- * itself, which is a comparison the data supports.
+ * Slope chart of circular origin against end-of-life recycling, per category.
+ * The two axes are means over different product sets, so each axis is read
+ * on its own scale.
  */
 export function createParadox(): Paradox {
   const axes = ['left', 'right'].map((side) =>
@@ -178,8 +174,7 @@ export function createParadox(): Paradox {
           seconds(DURATION.quick),
         );
 
-      // Each line drawn from its origin end, so the fall is watched happening.
-      // Insulation is first because it is the one the argument turns on.
+      // Each line draws from its origin end. Insulation comes first.
       for (const [index, stroke] of lines.entries()) {
         const at = seconds(DURATION.normal + STAGGER * 3.5 * index);
         const length = Math.hypot(
@@ -222,7 +217,7 @@ export function createParadox(): Paradox {
           );
       }
 
-      // The explanation arrives after the divergence it explains.
+      // Blockers appear after the lines.
       line.from(
         why.children,
         {

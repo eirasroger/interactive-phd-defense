@@ -14,14 +14,9 @@ export interface AssetEntry {
 export type ProgressHandler = (loaded: number, total: number) => void;
 
 /**
- * Loads and caches models and textures.
- *
- * Every asset is fetched at most once and kept for the lifetime of the
- * presentation: total payload is small enough to hold in memory, and a scene
- * revisited during questions must appear instantly rather than reload.
- *
- * The Draco decoder is emitted into the bundle by Vite and fetched lazily on
- * first compressed model, so nothing is loaded from the network at runtime.
+ * Loads and caches models and textures. Each asset is fetched once and kept
+ * for the whole presentation, so revisited scenes appear instantly. The Draco
+ * decoder ships in the bundle and loads on the first compressed model.
  */
 export class AssetLoader {
   private readonly manager = new LoadingManager();
@@ -33,10 +28,8 @@ export class AssetLoader {
   private readonly cache = new Map<string, Promise<GLTF | Texture>>();
 
   constructor() {
-    // No setDecoderPath: three declares its decoder URLs with
-    // `new URL(..., import.meta.url)`, which Vite rewrites at build time to
-    // hashed, base-correct asset paths. Overriding it would mean shipping and
-    // maintaining a second copy of the decoder for no gain.
+    // No setDecoderPath needed: Vite rewrites three's
+    // `new URL(..., import.meta.url)` decoder URLs to bundled asset paths.
     this.draco = new DRACOLoader(this.manager);
 
     this.gltf = new GLTFLoader(this.manager);
@@ -68,7 +61,7 @@ export class AssetLoader {
     );
   }
 
-  /** Warms the cache without blocking. Failures are deliberately swallowed. */
+  /** Warms the cache without blocking. Errors are ignored. */
   prefetch(ids: readonly string[]): void {
     for (const id of ids) {
       void this.request(id).catch(() => undefined);

@@ -1,20 +1,12 @@
 /**
- * C2 — empirical characterisation. Data of record.
- *
- * Every quantity is the published paper. Table 1 carries the circularity
- * distributions, Table 3 the product-stage impacts by category, and the
- * per-category figures are the ones stated in section 3.3. Nothing here is
- * interpolated: where the paper publishes a figure for one category and stays
- * silent for another, the silent one is absent.
- *
- * `assertPublished()` runs at module load. The category counts have to sum to
- * the corpus, and the verification sample has to fall out of Cochran's formula
- * at the stated parameters.
+ * C2 data: empirical characterisation. All values come from the published paper
+ * (Table 1, Table 3, section 3.3). Values the paper does not publish are omitted.
+ * `assertPublished()` checks the category counts and Cochran sample at load.
  */
 
 export const CORPUS = {
   products: 8463,
-  /** Manually verified, item by item, against the source declaration. */
+  /** Products checked by hand against the source declaration. */
   verified: 368,
   errors: 0,
   confidence: 0.95,
@@ -24,14 +16,7 @@ export const CORPUS = {
   source: 'The International EPD System · Type III · EN 15804+A2 · PCR 2019:14',
 } as const;
 
-/**
- * Why the work could not wait for the infrastructure.
- *
- * Digital product passports would supply structured product data directly.
- * Construction products are at the back of that queue, and selection decisions
- * are being taken across the whole of the interim. Every date is the paper's
- * own section 1.
- */
+/** Digital product passport rollout dates, from section 1 of the paper. */
 export const TIMELINE = [
   { year: 2019, label: 'EN 15804+A2', note: 'Common standard for Type III declarations' },
   { year: 2024, label: 'ESPR adopted', note: 'Digital product passports mandated' },
@@ -43,10 +28,10 @@ export const TIMELINE = [
   { year: 2030, label: 'Construction products', note: 'Full rollout projected' },
 ] as const;
 
-/** The span the contribution exists to cover. */
+/** Years before construction products get passports. */
 export const INTERIM = { from: 2026, to: 2030 } as const;
 
-/** What the evaluation framework requires of every candidate. */
+/** Data the evaluation framework needs for each candidate. */
 export const DEMANDS = [
   'Material composition',
   'Environmental impact',
@@ -61,7 +46,7 @@ export interface Category {
   readonly count: number;
 }
 
-/** Fig. 3, in the order the tree map ranks them. */
+/** Fig. 3, in tree map order. */
 export const CATEGORIES: readonly Category[] = [
   { key: 'structural', label: 'Structural systems', count: 2499 },
   { key: 'coating', label: 'Coating and cladding', count: 1597 },
@@ -77,11 +62,8 @@ export const CATEGORIES: readonly Category[] = [
 ];
 
 /**
- * What a pathway is worth, which is what colours it.
- *
- * `recovery` returns the material to use, whether as itself or as feedstock.
- * `energy` keeps the calories and destroys the material. `loss` keeps nothing.
- * `origin` is upstream and belongs to none of them.
+ * Pathway value class, used for colour. `recovery` returns material to use,
+ * `energy` burns it for energy, `loss` keeps nothing, `origin` is upstream.
  */
 export type Worth = 'origin' | 'recovery' | 'energy' | 'loss';
 
@@ -89,12 +71,12 @@ export interface Pathway {
   readonly key: string;
   readonly label: string;
   readonly worth: Worth;
-  /** Products whose declaration mentions this metric at all. */
+  /** Products whose declaration reports this metric. */
   readonly n: number;
   readonly mean: number;
   readonly median: number;
   readonly max: number;
-  /** Recovery that is something other than recycling. */
+  /** Recovery other than recycling. */
   readonly beyondRecycling?: boolean;
 }
 
@@ -198,25 +180,24 @@ export const PATHWAYS: readonly Pathway[] = [
   },
 ];
 
-/** Everything that returns material to use, recycling included. */
+/** Sum of mean shares for all recovery pathways, recycling included. */
 export const RECOVERED = PATHWAYS.filter((pathway) => pathway.worth === 'recovery').reduce(
   (sum, pathway) => sum + pathway.mean,
   0,
 );
 
-/** The part of that which is anything other than recycling. */
+/** Sum of mean shares for recovery pathways other than recycling. */
 export const BEYOND_RECYCLING = PATHWAYS.filter((pathway) => pathway.beyondRecycling).reduce(
   (sum, pathway) => sum + pathway.mean,
   0,
 );
 
-/** Section 3.3.2. Zero is easy, two is impossible. */
+/** Disassembly score, section 3.3.2. 0 is easy, 2 is impossible. */
 export const DISMANTLE = { mean: 1.5, median: 2, best: 0, worst: 2 } as const;
 
 /**
- * Circular origin against what is recovered at end of life, for the three
- * categories where the paper publishes both. The distance between the pair is
- * the decoupling, and how far it opens is a property of the category.
+ * Circular origin and end-of-life recycling (%) for the three categories where
+ * the paper publishes both. The gap between them is the decoupling.
  */
 export const DECOUPLED = [
   { key: 'insulation', label: 'Thermal and acoustic insulation', origin: 46.0, recycling: 4.3 },
@@ -224,7 +205,7 @@ export const DECOUPLED = [
   { key: 'coating', label: 'Coating and cladding', origin: 8.6, recycling: 9.6 },
 ] as const;
 
-/** Why the returning material stops returning. Both explanations are the paper's. */
+/** The paper's two reasons recycled material is not recovered again. */
 export const BLOCKERS = [
   {
     key: 'degradation',
@@ -241,7 +222,7 @@ export const BLOCKERS = [
 export interface Stage {
   readonly key: string;
   readonly label: string;
-  /** Share of total lifecycle burden. Section 3.4 puts A1 to A3 at 80% to 98%. */
+  /** Share of total lifecycle burden (%). Section 3.4 puts A1-A3 at 80-98%. */
   readonly share: number;
   readonly group: 'product' | 'construction' | 'endoflife';
 }
@@ -256,10 +237,10 @@ export const STAGES: readonly Stage[] = [
   { key: 'C4', label: 'Disposal', share: 1.1, group: 'endoflife' },
 ];
 
-/** The band the paper actually publishes for the product stage. */
+/** Published product stage range (%). */
 export const PRODUCT_BAND = { low: 80, high: 98 } as const;
 
-/** Stage D, and the asymmetry that is the finding. */
+/** Module D offsets (%) for environmental and biodiversity burden. */
 export const OFFSETS = [
   {
     key: 'environmental',
@@ -276,8 +257,8 @@ export const OFFSETS = [
 ] as const;
 
 /**
- * Table 3, product stage GWP in kg CO2e per kg. Mean against median is the
- * point: the distance between them is the spread inside the category.
+ * Table 3, product stage GWP in kg CO2e per kg. The mean-median gap shows the
+ * spread within each category.
  */
 export const GWP_BY_CATEGORY = [
   { key: 'pavements', label: 'Pavements', mean: 1.2, median: 0.16 },
@@ -286,12 +267,8 @@ export const GWP_BY_CATEGORY = [
 ] as const;
 
 /**
- * How the same outcome gets written, and the label it has to resolve to.
- *
- * The wording is what makes the extraction a language problem: a declaration
- * saying "recycled" may mean manufacturing scrap returned to the line, a part
- * taken off and refitted, or genuine reprocessing into new feedstock. A schema
- * that keeps the manufacturer's word keeps the manufacturer's ambiguity.
+ * Example declaration wordings and the pathway label each maps to. The same
+ * word can mean different outcomes, so extraction needs a language model.
  */
 export const WORDINGS = [
   { text: 'Production offcuts returned to the mixer', label: 'Recycling' },
@@ -308,14 +285,8 @@ export interface SchemaGroup {
 }
 
 /**
- * What every product resolves to, whatever shape its declaration arrived in.
- *
- * Biodiversity indicators sit inside the environmental group: eutrophication,
- * acidification and abiotic depletion are environmental impact categories, and
- * GWP is read by both. Performance is its own group, because several product
- * categories disclose it in full — concrete carries cement content,
- * characteristic strength and aggregate size — and its source is the
- * Declaration of Performance, not the EPD.
+ * Output schema for every product. Biodiversity indicators are part of the
+ * environmental group. Performance comes from the Declaration of Performance.
  */
 export const SCHEMA: readonly SchemaGroup[] = [
   {
@@ -345,27 +316,21 @@ export const SCHEMA: readonly SchemaGroup[] = [
   },
 ];
 
-/** Every impact field is carried per lifecycle module, which is why they add up. */
+/** Lifecycle modules. Each impact field is stored per module. */
 export const MODULES = 'A1–A3 · A4 · A5 · C1 · C2 · C3 · C4 · D';
 
 export interface Highlight {
-  /** Position on the page, as a fraction of its width and height. */
+  /** Position and width as fractions of page size (0 to 1). */
   readonly x: number;
   readonly y: number;
   readonly w: number;
-  /** Which schema group it resolves into. */
+  /** Schema group key. */
   readonly group: string;
-  /** Where in the document it sits. */
+  /** Location in the document. */
   readonly locus: string;
 }
 
-/**
- * Where each group of indicators sits on a declaration.
- *
- * Four different kinds of location, which is the extraction problem: the
- * document is laid out for a human reader and nothing in it marks which lines
- * carry the quantities.
- */
+/** Where each schema group appears on a sample declaration page. */
 export const HIGHLIGHTS: readonly Highlight[] = [
   { x: 0.1, y: 0.11, w: 0.44, group: 'identity', locus: 'Cover page' },
   { x: 0.1, y: 0.3, w: 0.62, group: 'composition', locus: 'Table' },
@@ -380,7 +345,7 @@ export const EXTRACTOR = {
   steps: ['Acquire · Selenium', 'Flatten · PyMuPDF', 'Structure · LLM'],
 } as const;
 
-/** Cochran (1963), at the confidence and precision the paper declares. */
+/** Cochran (1963) sample size with finite population correction. */
 export function sampleSize(population: number, confidence: number, precision: number): number {
   if (confidence !== 0.95) throw new Error(`C2: no z-score on file for ${confidence}.`);
   const first = (1.96 * 1.96 * 0.25) / (precision * precision);

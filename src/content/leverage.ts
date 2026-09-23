@@ -1,19 +1,9 @@
 import type { LeverageSpec } from '@/components/figures/Leverage';
 
 /**
- * Scene 3 — why the early design stage is the one being targeted.
- *
- * **The heading is the cost claim, and the escalation in claim 02 is its
- * evidence.** What the curve is for in this act is not that early design is a
- * good place to influence things; it is that a decision left standing gets more
- * expensive to undo at every stage after it — a substitution on a drawing,
- * rework once detailed, demolition and replacement once built. Environmental
- * impact and cost both inherit that, and both are named in the claims rather
- * than in the title.
- *
- * **The claims are three lines, and they were three paragraphs.** The curve
- * carries the mechanism and the column states the result. A slide that prints
- * both is a slide the committee reads instead of listening to.
+ * Scene 3: why the thesis targets early design. The heading states the cost
+ * claim and claim 02 gives the escalation. The curve shows the mechanism, so
+ * the claims stay to one line each.
  */
 export const LEVERAGE = {
   eyebrow: 'Motivation · Research context',
@@ -39,6 +29,6 @@ export const LEVERAGE = {
     window: 'Where construction products are specified',
   } satisfies LeverageSpec,
 
-  /** Carried by the composition's own strip, so the figure does not repeat it. */
+  /** Shown in the slide's attribution strip. The figure omits it. */
   source: 'After MacLeamy · Construction Users Roundtable, 2004',
 } as const;

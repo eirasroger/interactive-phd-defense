@@ -9,12 +9,8 @@ export interface SlideSpec {
   readonly heading: string;
   readonly accent?: Accent;
   /**
-   * Statements share one cell instead of stacking down the column.
-   *
-   * For a slide whose beats replace the claim rather than add to it. Accrual is
-   * the default because most slides build; a slide that swaps needs every
-   * statement in the same place, or the one on screen moves down the column as
-   * later beats reserve room they are not using yet.
+   * All statements share one cell. Use when each beat replaces the previous
+   * claim, so the visible statement keeps its position.
    */
   readonly swap?: boolean;
 }
@@ -22,17 +18,13 @@ export interface SlideSpec {
 export interface Statement {
   readonly element: HTMLElement;
   play(settle?: boolean): gsap.core.Timeline;
-  /**
-   * Takes it back off. Instant, and only for beats reached backwards — a
-   * statement that fades out on the way back is a statement being made twice.
-   */
+  /** Hides the statement instantly. Used when stepping backwards. */
   hide(): void;
 }
 
 /**
- * The evidence column: panels sharing one cell, one visible at a time. The
- * outgoing panel leaves upward and the incoming arrives from below, so a swap
- * never reflows the composition.
+ * Evidence column: panels share one cell, one visible at a time. Outgoing
+ * panels exit upward and incoming ones enter from below, with no reflow.
  */
 export interface EvidenceStack {
   readonly element: HTMLElement;
@@ -44,14 +36,11 @@ export interface Slide {
   readonly element: HTMLElement;
   readonly evidence: EvidenceStack;
   revealHead(settle?: boolean): gsap.core.Timeline;
-  /** A short claim under the heading, led by an accent rule. Beat material. */
+  /** A short claim under the heading, led by an accent rule. */
   addStatement(text: string, accent?: Accent): Statement;
 }
 
-/**
- * The standard two-column composition: claim on the left, what supports it on
- * the right. Scenes compose this rather than laying themselves out.
- */
+/** Standard two-column layout: claim on the left, evidence on the right. */
 export function createSlide(spec: SlideSpec): Slide {
   const accent = spec.accent ?? 'circular';
 
@@ -100,9 +89,8 @@ export function createSlide(spec: SlideSpec): Slide {
         return timeline;
       }
 
-      // `overwrite` is required: two quick clicks leave the previous beat's
-      // fade-in still running when this one's fade-out ends, and the panel
-      // that just left comes back.
+      // `overwrite` stops a still-running fade-in from bringing back a panel
+      // on quick clicks.
       if (outgoing) {
         timeline.to(outgoing, {
           opacity: 0,

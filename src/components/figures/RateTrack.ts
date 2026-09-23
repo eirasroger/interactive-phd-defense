@@ -10,51 +10,37 @@ export interface RateMark {
 }
 
 export interface RateTrackSpec {
-  /** Top of the scale. Choose it so the target sits inside the frame, not on it. */
+  /** Top of the scale. Set it above the target so the target sits inside the frame. */
   readonly max: number;
   readonly unit?: string;
   readonly current: RateMark;
   readonly target: RateMark;
   /** Headline centred over the shortfall. */
   readonly delta?: string;
-  /**
-   * Optional, because the composition around it may already name the measure.
-   * A figure printing its own title under the label that names it is the sort
-   * of duplication a committee reads instead of listening.
-   */
+  /** Omit when the surrounding card already names the measure. */
   readonly title?: string;
   readonly source?: string;
 }
 
 export interface RateTrack {
   readonly element: HTMLElement;
-  /**
-   * The scale, empty.
-   *
-   * The frame a beat arrives into should already be the one the audience is
-   * looking at, so the rail is drawn and the marks it carries are not. Without
-   * this the composition has to reserve the height and leave it blank, which is
-   * a hole in a card rather than a figure waiting to be filled.
-   */
+  /** Draws the empty scale: rail and captions, no values. */
   prime(settle?: boolean): gsap.core.Timeline;
-  /** The measurement, against the target it has to reach. */
+  /** Shows the measurement against the target. */
   play(settle?: boolean): gsap.core.Timeline;
 }
 
 const percent = (value: number, max: number): string => `${(value / max) * 100}%`;
 
 /**
- * Where a measure stands against where policy requires it to stand.
- *
- * The distance between the two marks is the argument, so it is drawn as
- * occupied space: achieved rate solid, shortfall hatched, target a hard edge.
+ * A measured rate against its policy target. Achieved rate is solid, the
+ * shortfall hatched, the target a hard tick.
  */
 export function createRateTrack(spec: RateTrackSpec): RateTrack {
   const { max, current, target } = spec;
   const unit = spec.unit ?? '';
 
-  // Widths are inline, not tween targets: `from` reads the computed value as
-  // its destination, and an absolutely positioned span with no width is zero.
+  // Widths are set inline so tweens have a real end value to read.
   const fill = el('span', {
     className: 'rate-fill',
     attrs: { style: `width: ${percent(current.value, max)}` },
@@ -84,14 +70,7 @@ export function createRateTrack(spec: RateTrackSpec): RateTrack {
   const currentReadout = readout(current, 'current');
   const targetReadout = readout(target, 'target');
 
-  /*
-   * The scale's own furniture, apart from the measurement it carries.
-   *
-   * A caption naming which end of the axis is which is part of the scale; the
-   * number standing over it is the reading. `prime` shows the first and holds
-   * the second, so the empty figure is a labelled axis rather than a bare line
-   * with a hundred pixels of nothing above it.
-   */
+  // Captions belong to the scale and show on `prime`. Values show on `play`.
   const captions = [currentReadout, targetReadout].map(
     (node) => node.querySelector<HTMLElement>('.rate-readout-caption')!,
   );
@@ -107,8 +86,7 @@ export function createRateTrack(spec: RateTrackSpec): RateTrack {
       })
     : null;
 
-  // Readouts sit inside the track so they are positioned against the bar they
-  // annotate rather than against the panel.
+  // Readouts sit inside the track so they are positioned against the bar.
   const track = el('div', {
     className: 'rate-track',
     children: [
@@ -132,13 +110,8 @@ export function createRateTrack(spec: RateTrackSpec): RateTrack {
   });
 
   /*
-   * What arrives on the measurement, and what was already on the axis.
-   *
-   * `fill` is in neither: its width is the measurement, so settling writes that
-   * width back rather than clearing what the tween left. And the two groups are
-   * separated because they take different properties — the shortfall opens by
-   * `scaleX`, everything else rises by `y`, and priming them together left the
-   * readouts at `scaleX: 0` and invisible.
+   * Marks that appear on `play`. `fill` and `shortfall` are handled separately:
+   * fill animates width, shortfall animates `scaleX`, marks animate `y`.
    */
   const marks = [tick, ...values, delta].filter((node): node is HTMLElement => node !== null);
 
@@ -200,9 +173,7 @@ export function createRateTrack(spec: RateTrackSpec): RateTrack {
         return timeline;
       }
 
-      // In the order the claim is made: this is where we are, this is where we
-      // must be, that space between is the problem. The scale itself is already
-      // on screen — `prime` drew it when the card arrived.
+      // Order: current value, target, then the shortfall between them.
       timeline
         .fromTo(
           fill,

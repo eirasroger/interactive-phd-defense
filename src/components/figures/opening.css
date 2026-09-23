@@ -28,8 +28,8 @@
 
 /* ---- The queue ---------------------------------------------------------- */
 
-/* The band label hangs three rem above the rail, so the index above it needs
-   the clearance rather than the default rhythm. */
+/* The band label sits 3rem above the rail, so the index above needs extra
+   clearance. */
 .op-timeline {
   display: grid;
   gap: var(--s-12);
@@ -48,8 +48,7 @@
   background-color: color-mix(in srgb, var(--c-base) 22%, transparent);
 }
 
-/* The years that matter are the two bounding this, so it is drawn as occupied
-   space rather than as an annotation between them. */
+/* Hatched band filling the span between its two bounding years. */
 .op-band {
   position: absolute;
   top: -1.25rem;
@@ -125,7 +124,7 @@
   background-color: transparent;
 }
 
-/* The last mark would run off the frame, so it hangs back from its own tick. */
+/* The last mark sits left of its tick so it stays inside the frame. */
 .op-mark:last-child {
   width: 11rem;
   transform: translateX(-100%);
@@ -137,7 +136,7 @@
   right: 0;
 }
 
-/* ---- What exists, and why it is unreadable ------------------------------ */
+/* ---- Cards -------------------------------------------------------------- */
 
 .op-cards {
   display: grid;

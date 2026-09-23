@@ -1,38 +1,26 @@
 import { CanvasTexture, LinearMipmapLinearFilter, RepeatWrapping, type Texture } from 'three';
 
 /**
- * The surface detail both water bodies share.
- *
- * A handful of analytic wave trains is a *lattice*: four sinusoids at fixed
- * headings repeat across two hundred and fifty metres of lake and read as woven
- * cloth. A tiling gradient map sampled at two incommensurable scales is
- * broadband instead, and brings what sinusoids cannot have — **mipmaps**. Below
- * a pixel the hardware averages the field toward flat, which is what the surface
- * integrates to anyway, so the far field stops moireing with no distance fade.
+ * Shared ripple detail for both water bodies: a tiling gradient map sampled at
+ * two scales. Mipmaps average it to flat in the distance, which avoids moire.
  */
 
 /**
- * Texture size, the lattices it wraps on, and how fast the spectrum falls.
- *
- * `GAIN` decides how the water reads. Slope is amplitude times frequency, so
- * halving amplitude per octave leaves every octave contributing the same slope —
- * which draws whitecaps. At 0.4 the longest terms carry the field.
+ * Texture size, octave cell counts and per-octave amplitude falloff. At 0.5
+ * every octave adds equal slope (whitecaps); 0.4 lets the long waves dominate.
  */
 const SIZE = 256;
 const GAIN = 0.4;
 const OCTAVES = [4, 8, 16, 32] as const;
 
-/** Metres one tile of each layer covers, and how the two are weighted. */
+/** Tile size in metres per layer, and the coarse layer's weight (0 to 1). */
 export const RIPPLE = { coarse: 14.2, fine: 4.6, blend: 0.75 } as const;
 
 let cached: HTMLCanvasElement | null = null;
 
 /**
- * A seamless gradient map of the wave field, built once.
- *
- * The two horizontal components of the surface gradient rather than an encoded
- * normal: callers perturb an up-facing normal by them, so a third channel would
- * only restate what the first two say.
+ * Seamless gradient map of the wave field, built once and cached. R and G hold
+ * the x and z slope; callers use them to tilt an up-facing normal.
  */
 function rippleCanvas(): HTMLCanvasElement {
   if (cached) return cached;
@@ -57,9 +45,8 @@ function rippleCanvas(): HTMLCanvasElement {
     }
   }
 
-  // Central differences over the wrapped field, normalised to their own extreme
-  // so the encoding never clips. What the field is worth as slope is the
-  // caller's to say; here it only has to be a shape.
+  // Wrapped central differences, normalised to the peak so encoding never
+  // clips. Callers set the slope strength.
   const gradient = new Float32Array(SIZE * SIZE * 2);
   let peak = 1e-6;
   for (let y = 0; y < SIZE; y += 1) {
@@ -85,14 +72,13 @@ function rippleCanvas(): HTMLCanvasElement {
   return canvas;
 }
 
-/** The gradient map as a texture. One per material, so each owns its disposal. */
+/** Gradient map texture. Create one per material so each can dispose its own. */
 export function createRippleTexture(): Texture {
   const texture = new CanvasTexture(rippleCanvas());
   texture.name = 'water-ripple';
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
-  // Isotropic on purpose. Anisotropy keeps detail alive at grazing angles, and a
-  // grazing angle is exactly where a sub-pixel ripple aliases into corduroy.
+  // No anisotropy: it keeps ripples sharp at grazing angles, where they alias.
   texture.anisotropy = 1;
   texture.minFilter = LinearMipmapLinearFilter;
   texture.generateMipmaps = true;
@@ -100,9 +86,9 @@ export function createRippleTexture(): Texture {
 }
 
 /**
- * `rippleAt(worldXZ, time)` — the wave field's slope, in the units a unit normal
- * is perturbed by. The two layers drift on different headings, so their beat
- * never settles into a pattern.
+ * `rippleAt(worldXZ, time)` returns the wave slope used to perturb a unit
+ * normal. The two layers drift in different directions to avoid a visible
+ * repeat.
  */
 export const RIPPLE_GLSL = `
 uniform sampler2D uRipple;
@@ -122,7 +108,7 @@ function wrap(index: number): number {
   return (index + SIZE) % SIZE;
 }
 
-/** Value noise on a lattice that repeats every `cells`, so the map tiles. */
+/** Value noise that repeats every `cells`, so the map tiles. */
 function periodic(x: number, y: number, cells: number): number {
   const xi = Math.floor(x);
   const yi = Math.floor(y);

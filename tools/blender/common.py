@@ -30,7 +30,7 @@ DETAIL_AXES = ((1, 2), (0, 2), (0, 1))
 LUMA = (0.2126, 0.7152, 0.0722)
 
 def use_scene(name: str):
-    """Own the scene rather than inheriting whatever the file was last used for."""
+    """Switch to this script's own scene, created if missing."""
     scene = bpy.data.scenes.get(name) or bpy.data.scenes.new(name)
     if bpy.context.window:
         bpy.context.window.scene = scene
@@ -81,7 +81,7 @@ def add_box(target, name: str, size, location, rotation=None):
     return obj
 
 def add_span(target, name: str, x, y, z, rotation=None):
-    """A box given as three (low, high) intervals rather than a size and a centre."""
+    """A box from three (low, high) intervals."""
     size = (x[1] - x[0], y[1] - y[0], z[1] - z[0])
     centre = ((x[0] + x[1]) / 2.0, (y[0] + y[1]) / 2.0, (z[0] + z[1]) / 2.0)
     return add_box(target, name, size, centre, rotation)
@@ -318,9 +318,7 @@ class Surfaces:
                 self.project(obj)
 
 def unwrap_occlusion(obj, size: int = 4096) -> None:
-    """Smart-project into an atlas of `size`. The UV gutter is derived from
-    BAKE_MARGIN rather than fixed, or it encodes an atlas size it never sees.
-    """
+    """Smart-project into an atlas of `size`; UV gutter scales with BAKE_MARGIN."""
     mesh = obj.data
     layer = mesh.uv_layers.get(OCCLUSION_UV) or mesh.uv_layers.new(name=OCCLUSION_UV)
     mesh.uv_layers.active = layer
@@ -399,7 +397,7 @@ def bake_image(name: str, size: int, hdr: bool = False):
     return bpy.data.images.new(name, size, size, float_buffer=hdr)
 
 def report_levels(tag: str, name: str, image) -> None:
-    """What an occlusion bake is worth checking for."""
+    """Print occlusion bake levels."""
     import numpy
 
     pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
@@ -449,7 +447,7 @@ def atlas_size(area: float, texels: int, smallest: int, largest: int) -> int:
 LIGHT_PERCENTILES = (50.0, 75.0, 90.0, 99.0)
 
 def report_light(tag: str, name: str, image) -> dict[float, float]:
-    """Percentiles of a radiance bake. Grade against p75, not the max: §46."""
+    """Percentiles of a radiance bake. Grade against p75 (§46)."""
     import numpy
 
     pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
@@ -504,7 +502,7 @@ def bake_lightmap(surfaces: Surfaces, obj, name: str, size: int, samples: int,
 
 def bake_surface(surfaces: Surfaces, obj, name: str, size: int,
                  samples: int, distance: float):
-    """Bake what real-time light cannot reach, and only that."""
+    """Ambient occlusion into glTF's occlusion channel."""
     surfaces.project(obj)
     unwrap_occlusion(obj, size)
     isolate_materials(obj)
@@ -583,26 +581,19 @@ def asset_template(name: str) -> list:
     whole = [obj for obj in loaded.objects if obj and obj.type == 'MESH' and obj.parent is None]
     whole = whole or [obj for obj in loaded.objects if obj and obj.type == 'MESH']
 
-    # Biggest first. A Poly Haven plant blend holds the whole plant *and* its
-    # parts and LOD rungs in arbitrary order, so picking a template by index is
-    # a coin toss between a full shrub and one sprig — and the sprig scaled to
-    # the same height is a bare twig. Order the list and `variant=0` is always
-    # the fullest plant there is.
+    # Largest first so variant 0 is the whole plant (blends also hold parts and LODs).
     whole.sort(key=lambda obj: -len(obj.data.polygons))
     _TEMPLATES[name] = whole
     return whole
 
 def place_asset(target, name: str, location, rotation, height: float,
                 variant: int = 0):
-    """Placed at a height in metres, never at a multiple of its own size."""
+    """Place a copy scaled to `height` in metres."""
     templates = asset_template(name)
     if not templates:
         return None
 
-    # A template that is a *part* of a plant — one leaf cluster, a bare stem —
-    # measures a few centimetres, and scaling it to a metre of finished height
-    # multiplies it by thirty. `learnings.md` §7f: normalising size is exactly
-    # what hides how big the source is, so the source has to be reported.
+    # Skip plant fragments; report source size (`learnings.md` §7f).
     source = templates[variant % len(templates)]
     native = source.dimensions.z
     if native < 0.25:
@@ -633,7 +624,7 @@ def add_sun(target, vector: Vector, energy: float, color, angle: float = 0.02) -
     target.objects.link(lamp)
 
 def set_sky(name: str, color, strength: float) -> None:
-    """A fresh world datablock, never the one the file was last used with."""
+    """Assign a fresh world datablock."""
     world = bpy.data.worlds.new(name)
     bpy.context.scene.world = world
     world.use_nodes = True
@@ -681,7 +672,7 @@ def configure_cycles(samples: int = 64, exposure: float = 0.0,
 
 def render(tag: str, target, name: str, pose, samples: int = 48,
            exposure: float = 0.0, view: str = 'Standard') -> Path:
-    """Render to a file and read the file — the viewport screenshot is not a render."""
+    """Render the preview camera to a PNG in RENDERS."""
     add_camera(target, pose)
     configure_cycles(samples, exposure, view)
 

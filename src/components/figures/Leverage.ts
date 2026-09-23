@@ -11,31 +11,17 @@ export interface LeverageSpec {
   readonly ability: string;
   readonly cost: string;
   readonly window: string;
-  /**
-   * Attribution, where the figure carries its own.
-   *
-   * Optional because the composition around it now has an attribution strip of
-   * its own, and a source printed twice in one frame is a proofreading error
-   * the committee gets to find.
-   */
+  /** Attribution. Omit when the surrounding composition already prints one. */
   readonly source?: string;
 }
 
 export const MACLEAMY = {
   void: -1,
-  /** Ability to impact the project, at its highest and falling. */
+  /** Ability to impact the project, falling over time. */
   ability: 0,
-  /** The cost of design changes rising against it. */
+  /** Cost of design changes, rising over time. */
   cost: 1,
-  /**
-   * The span the thesis works in, bracketed under the first two phases.
-   *
-   * Its own state rather than a rider on `cost`, because it is the only mark on
-   * the figure that is a claim about this work rather than about the published
-   * curve. Landing it with the second curve made it one more thing arriving in
-   * a busy frame; on its own click it is the conclusion the drawing was built
-   * to deliver.
-   */
+  /** Bracket under the early phases where the thesis works. Its own beat. */
   window: 2,
 } as const;
 
@@ -47,75 +33,40 @@ export interface Leverage {
 }
 
 /*
- * The MacLeamy curve: ability to impact the project against the cost of design
- * changes, across the design phases.
- *
- * **Both quantities rise upward from one baseline.** They are opposed in the
- * argument, so the temptation is to oppose them in the drawing and hang the
- * cost below the line. That inverts the claim on sight: a mass growing downward
- * reads as a quantity falling, which is the opposite of what cost does. Up is
- * more, for both, and the story is carried by which one owns which end of the
- * programme.
- *
- * The two curves are **authored, not plotted**. The relationship is published
- * and attributed in `spec.source`; what has never had a dataset behind it is
- * the shape, and a numeric axis would be a claim neither the original nor this
- * drawing can support. What it does support is the form: the ability is spent
- * early, the price arrives late, and construction products are specified inside
- * the window at the front where both are still in the project's favour.
+ * MacLeamy curve: ability to impact the project and cost of design changes
+ * across the design phases. Both rise upward from one baseline. The curves are
+ * hand-drawn shapes with no numeric axis, since the source has no dataset.
  */
-/*
- * 880 x 480, and the height is the deliberate half.
- *
- * The card this stands in is 1096 wide on a fixed surface, so the drawing's
- * aspect ratio is what decides how tall the card is. At 880 x 380 it rendered
- * 473px high and the composition finished halfway down a 952px frame, with the
- * whole bottom band — baseline, two rows of phase names, bracket, bracket label
- * — packed into ninety of those units. Everything below the axis was legible
- * and nothing in it had any air. Taller costs nothing and buys both.
- */
+/* The aspect ratio sets the card height. The extra height gives the labels
+   below the axis room. */
 const VIEW_W = 880;
 const VIEW_H = 480;
 
 const PLOT_L = 16;
 const PLOT_R = 864;
 const PLOT_T = 78;
-/** The baseline both areas stand on. */
+/** Shared baseline of both areas. */
 const PLOT_B = 356;
-/** Where each curve meets its low end, held clear of the baseline itself. */
+/** Low end of each curve, just above the baseline. */
 const PLOT_FLOOR = 348;
 
-/* Both names sit on one line above the plot, at the end where their own curve
-   is highest — the ability peaks on the left, its cost on the right. Labelling
-   either at its low end puts the text on the line. */
+/* Each curve name sits above the plot at the end where that curve is highest. */
 const NAME_Y = 46;
-/* Phase names are the industry's own and several are long enough that
-   neighbours touch on one line. They alternate between two rows instead of
-   being abbreviated or set smaller: only every second name shares a row, and
-   the gap between those is twice the phase step. */
+/* Phase names alternate between two rows so long neighbours do not touch. */
 const PHASE_Y = 386;
 const PHASE_DROP = 20;
-/*
- * The bracket sits in its own band, below both rows of phase names.
- *
- * It used to clear the lower row by fourteen units, which is not an overlap and
- * still reads as one: a rule running a few pixels under a line of type is
- * underlining it. Twenty-six units and its ticks rise into empty space.
- */
+/* The bracket sits in its own band below both rows of phase names. */
 const BRACKET_Y = 444;
 const BRACKET_TICK = 8;
 const WINDOW_LABEL_Y = 470;
 
-/*
- * The ability holds briefly, falls hard through the middle phases, then runs
- * out along a long tail. Cost is the other hand: near flat while nothing is
- * committed, then steep once everything is.
- */
+/* Ability holds, drops through the middle phases, then tails off. Cost stays
+   flat early, then climbs steeply. */
 const ABILITY_CURVE = `C180,83 430,337 ${PLOT_R},${PLOT_FLOOR}`;
 const COST_CURVE = `C520,342 760,171 ${PLOT_R},81`;
 
-/* The edge is the curve alone and takes the stroke; the fill drops it to the
-   baseline. Two paths, so neither area is outlined down its straight sides. */
+/* Edge is the stroked curve only. Fill closes it to the baseline, so the
+   straight sides get no outline. */
 const ABILITY_EDGE = `M${PLOT_L},${PLOT_T} ${ABILITY_CURVE}`;
 const COST_EDGE = `M${PLOT_L},${PLOT_FLOOR} ${COST_CURVE}`;
 
@@ -155,8 +106,7 @@ export function createLeverage(spec: LeverageSpec): Leverage {
     `<g class="leverage-phases">${phases}</g>` +
     `<text class="leverage-name" data-series="ability" x="${PLOT_L}" y="${NAME_Y}">${spec.ability}</text>` +
     `<text class="leverage-name" data-series="cost" x="${PLOT_R}" y="${NAME_Y}" text-anchor="end">${spec.cost}</text>` +
-    // A bracket under the phases rather than a tinted band over them: a wash
-    // laid across a filled area muddies both, and the span is what has to read.
+    // Bracket under the phases keeps the filled areas clean.
     `<g class="leverage-window">
        <path class="leverage-window-edge" d="M${windowRight},${PLOT_T - 14} L${windowRight},${BRACKET_Y}" />
        <path class="leverage-window-bracket" d="M${PLOT_L},${BRACKET_Y - BRACKET_TICK} L${PLOT_L},${BRACKET_Y} L${windowRight},${BRACKET_Y} L${windowRight},${BRACKET_Y - BRACKET_TICK}" />
@@ -181,16 +131,9 @@ export function createLeverage(spec: LeverageSpec): Leverage {
   const axis = svg.querySelector<SVGLineElement>('.leverage-axis')!;
   const phaseAxis = svg.querySelector<SVGGElement>('.leverage-phases')!;
 
-  // Path length is only knowable once laid out, and the figure is built before
-  // it is appended. A dash as long as the path turns offset into "how much is
-  // still to draw".
-  //
-  // **The gap is longer than the dash, and the retracted offset overshoots.** A
-  // single-value dasharray makes the gap equal the dash, which puts the start of
-  // the *next* dash exactly on the path's end point: the undrawn curve leaks a
-  // sub-pixel sliver there, and `stroke-linecap: round` serves it as a dot in
-  // full series colour hanging over the plot. Padding both sides moves every
-  // dash boundary clear of the path by more than any rounding the tween writes.
+  // Path length is measured lazily, after the figure is in the DOM. The gap is
+  // longer than the dash and the retracted offset overshoots, so no round-cap
+  // dot leaks at the path end.
   const DASH_GAP = 10;
   const DASH_CLEAR = 4;
 
@@ -214,8 +157,7 @@ export function createLeverage(spec: LeverageSpec): Leverage {
     return [
       { node: axis, vars: { opacity: open ? 1 : 0 } },
       { node: phaseAxis, vars: { opacity: open ? 1 : 0 }, at: 0.1 },
-      // The edge draws itself across the phases and the area fills in behind
-      // it, so the shape is watched arriving rather than switched on.
+      // Edge draws across the phases, then the area fills in behind it.
       {
         node: ability.edge,
         vars: { strokeDashoffset: open ? 0 : retracted.get(ability.edge)! },
@@ -230,8 +172,7 @@ export function createLeverage(spec: LeverageSpec): Leverage {
       },
       { node: cost.fill, vars: { opacity: priced ? 1 : 0 }, at: 0.4 },
       { node: cost.name, vars: { opacity: priced ? 1 : 0 }, at: 0.55 },
-      // Last, and it is the point of the figure: the window sits where the
-      // ability is still high and the price still low, and it closes first.
+      // Window last: where ability is still high and cost still low.
       { node: windowGroup, vars: { opacity: bracketed ? 1 : 0 }, at: 0.15 },
     ];
   };

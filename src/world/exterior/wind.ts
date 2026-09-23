@@ -15,13 +15,7 @@ export interface Wind {
   dispose(): void;
 }
 
-/**
- * Which way the wind crosses the site, and how fast a gust front travels.
- *
- * A single direction for the whole park: real wind is coherent over far more
- * than a hundred metres, and plants leaning independently is the thing that
- * reads as "each of these is animated" rather than as weather.
- */
+/** Wind direction on the ground plane, shared by the whole park. */
 const DIRECTION = new Vector2(0.82, 0.57).normalize();
 
 /** Radians of gust phase per metre travelled downwind. */
@@ -39,14 +33,8 @@ interface Band {
 }
 
 /**
- * Three bands, deliberately not one.
- *
- * Amplitude is a fraction of each plant's height rather than metres, so it stays
- * correct across a 0.3 m grass tuft and a 10 m pine without either being tuned.
- *
- * The speeds matter as much: grass ripples visibly faster than a canopy rolls,
- * and one rate for every layer is the tell that separates procedural foliage
- * from filmed foliage.
+ * Motion bands by plant size. Amplitudes are fractions of plant height, so one
+ * value fits a 0.3 m tuft and a 10 m pine. Grass moves faster than canopy.
  */
 const GROUND: Band = { name: 'ground', sway: 0.15, flutter: 0.03, speed: 1.9, rank: 0 };
 const SHRUB: Band = { name: 'shrub', sway: 0.08, flutter: 0.022, speed: 1.15, rank: 1 };
@@ -67,57 +55,33 @@ const CHUNK = /* glsl */ `
     vec2 windAxisZ = vec2(0.0, 1.0);
   #endif
 
-  // Subtracting distance downwind makes a gust travel across the site instead
-  // of every plant pulsing on the same clock. This is most of what sells it:
-  // a front crossing a meadow is instantly recognisable, and a field breathing
-  // in unison is instantly not.
+  // Phase shifts with distance downwind, so gusts travel across the site.
   float windPhase = uWindTime * uWindSpeed - dot(windAt.xz, uWindDirection) * ${WAVE.toFixed(4)};
   float windSeed = dot(windAt.xz, vec2(0.137, 0.219));
 
-  // Two incommensurable frequencies, so the loop never lands on itself.
+  // Two incommensurable frequencies, so the motion never visibly repeats.
   float windSway = sin(windPhase + windSeed) * 0.72
                  + sin(windPhase * 1.71 + windSeed * 2.3) * 0.28;
   float windGust = 0.62 + 0.38 * sin(windPhase * 0.21 + windSeed * 0.11);
 
-  // aWind.y is height squared over plant height — the lever arm of a stem
-  // anchored at the base. It carries the stiffness curve and the plant's scale
-  // together, which is what lets one dimensionless uniform drive every bucket
-  // of a species whose primitives have wildly different bounding boxes.
+  // aWind.y is height squared over plant height (the lever arm). It holds both
+  // stiffness and scale, so one uniform works for every primitive of a species.
   float windThrow = windSway * windGust * uWindSway * aWind.y;
 
-  // The wind blows one way across the park, so its direction is taken into
-  // each instance's own frame. Skip this and every yaw-rotated plant leans a
-  // different way — the field looks stirred rather than blown.
+  // Wind direction in the instance's own frame, so yaw-rotated plants all lean the same way.
   transformed.xz += vec2(dot(uWindDirection, windAxisX), dot(uWindDirection, windAxisZ)) * windThrow;
-  // Bending shortens a stem. Without it the canopy stretches off the trunk at
-  // the extremes of the sway, which on a tree is the whole illusion gone.
+  // Bending shortens the stem, which keeps the canopy on the trunk.
   transformed.y -= abs(windThrow) * aWind.x * 0.28;
 
-  // Sway alone swings the canopy as one mass, which is a tree bending in wind
-  // but is not leaves moving in it — and leaves are what the eye actually reads
-  // at this distance. Flutter runs an order of magnitude faster, is seeded per
-  // vertex so neighbouring cards are never in step, and pushes along the normal
-  // so each leaf turns rather than slides.
+  // Leaf flutter: faster than sway, seeded per vertex, pushed along the normal.
   float windFlutter = sin(uWindTime * uWindSpeed * 5.3 + dot(position, vec3(3.1, 2.3, 4.7)));
   transformed += normal * windFlutter * windGust * uWindFlutter * aWind.y;
 `;
 
 /**
- * Moves the planting, which is most of what separates a live site from a dead one.
- *
- * Nothing on this site moved. A static plant reads as scenery however good it
- * is, and thirteen hundred static plants read as thirteen hundred props — the
- * density was never going to fix that on its own, because stillness is not a
- * quantity problem.
- *
- * The sway is a vertex-shader displacement on geometry that is already on the
- * GPU, so the whole park costs one uniform update per frame and no CPU work at
- * all. It is applied through `onBeforeCompile` rather than a custom material so
- * the foliage keeps standard lighting, shadows and fog.
- *
- * **The shadow pass is patched to match.** Foliage casts shadows here, and a
- * swaying canopy over a shadow that holds still is worse than no motion at
- * all — the eye catches the disagreement immediately even at distance.
+ * Animates foliage with a vertex-shader sway. Costs one uniform update per
+ * frame. Patched through `onBeforeCompile` so standard lighting, shadows and
+ * fog still apply. The shadow pass gets the same patch so shadows move too.
  */
 export function applyWind(meshes: readonly InstancedMesh[]): Wind {
   const time = { value: 0 };
@@ -127,9 +91,7 @@ export function applyWind(meshes: readonly InstancedMesh[]): Wind {
   const shadows = new Map<Material, MeshDepthMaterial>();
   const depths: MeshDepthMaterial[] = [];
 
-  // Band first, across every bucket, because a material is shared between
-  // buckets and the band has to be one answer per material rather than
-  // whichever bucket happened to be visited last.
+  // Materials are shared between buckets, so pick one band per material (the tallest) first.
   for (const mesh of meshes) {
     const band = bandFor(worldHeight(mesh));
     const existing = bands.get(mesh.material as Material);
@@ -149,17 +111,9 @@ export function applyWind(meshes: readonly InstancedMesh[]): Wind {
       patched.add(material);
     }
 
-    // Shadows are cast from a depth material three.js builds itself, which
-    // knows nothing about the displacement above. Foliage is alpha-cut, so the
-    // map and its threshold have to come across as well or every canopy casts
-    // the shadow of a solid quad.
-    //
-    // **One per source material, not one per mesh.** The depth material depends
-    // only on the map, the threshold and the band, all of which come from the
-    // material — so a mesh is not the thing that distinguishes them. It became
-    // worth saying once the fields were split into cells: the planting alone
-    // went from 83 meshes to 193, and a depth material per mesh is that many
-    // uniform uploads in the shadow pass to describe two dozen distinct states.
+    // Custom depth material so shadows sway too. It copies the alpha map and
+    // threshold so leaf cards cast cut-out shadows. One per source material,
+    // since everything it depends on comes from the material.
     let depth = shadows.get(material);
     if (!depth) {
       depth = new MeshDepthMaterial({
@@ -211,23 +165,15 @@ function patch(
       .replace('#include <begin_vertex>', `#include <begin_vertex>\n${CHUNK}`);
   };
 
-  // Two materials patched for different bands must not share a compiled
-  // program, or whichever compiled first silently supplies the other's speed.
+  // Separate program per band, so bands never share compiled uniforms.
   material.customProgramCacheKey = () => `wind:${band.name}`;
   material.needsUpdate = true;
 }
 
 /**
- * Bakes the stiffness curve into the geometry, once.
- *
- * `x` is height up the plant, 0 to 1. `y` is that height squared over the
- * plant's height — the lever arm, which is what the displacement scales by.
- *
- * Both are written against the height of the *plant*, taken from
- * `instancing.ts`, never the primitive's own bounding box. A tree exports as
- * bark, twig, dead branches and trunk, and normalising each against itself
- * would give the twig mesh full throw at the height where the bark mesh has
- * none. The canopy would shear off the trunk on every gust.
+ * Writes the `aWind` attribute once. `x` is height up the plant (0 to 1), `y`
+ * is that squared times plant height (the lever arm). Both use the whole
+ * plant's height from `instancing.ts` so all primitives of a tree bend together.
  */
 function writeWindAttribute(mesh: InstancedMesh): void {
   const { geometry } = mesh;
@@ -248,7 +194,7 @@ function writeWindAttribute(mesh: InstancedMesh): void {
 
 const SCRATCH = new Matrix4();
 
-/** The plant's height in metres, which is local height times instance scale. */
+/** Plant height in metres: local height times instance scale. */
 function worldHeight(mesh: InstancedMesh): number {
   if (mesh.count === 0) return 0;
   mesh.getMatrixAt(0, SCRATCH);

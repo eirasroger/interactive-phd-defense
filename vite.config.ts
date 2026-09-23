@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
-  // Relative base keeps the build valid both on a GitHub Pages project
-  // subpath and when opened directly from disk for an offline defense.
+  // Relative base so the build works on a GitHub Pages subpath and when
+  // opened from disk offline.
   base: './',
 
   assetsInclude: ['**/*.glb'],

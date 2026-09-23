@@ -361,7 +361,7 @@ PANEL = {
 }
 
 def build_panelling(parts: Parts, target, cells: list[Cell]) -> None:
-    """Oak boarding on the quiet flank, opposite where the contribution lives."""
+    """Oak boarding on the wall opposite the contribution."""
     for cell in cells:
         for face in faces(cell):
             if not face.panelled:
@@ -392,7 +392,7 @@ def bays(low: float, high: float, pitch: float) -> list[float]:
     return [low + step * (index + 1) for index in range(count)]
 
 def build_ceiling_light(parts: Parts, target, cells: list[Cell]) -> None:
-    """Recessed linear light, one rank per bay. On the shell, so the rise keeps it."""
+    """Recessed light strips, one row per bay. Part of the shell so they stay when lids lift."""
     for cell in cells:
         rooms = [(cell.centre - cell.half, cell.centre + cell.half, cell.y0, cell.y1)]
         for wing in cell.wings:
@@ -549,8 +549,7 @@ def build_asset() -> None:
     ceiling = [common.join_all(cover.all(), f"lid_{index:02d}_{key}")
                for index, (key, cover) in enumerate(covers)]
 
-    # Shell and joinery take separate atlases: packing is per-island, and the
-    # joinery is thousands of small ones that would crowd out the galleries.
+    # Separate atlas: joinery's many small UV islands would crowd out the shell.
     fittings = common.join_all(parts.all(), "corridor_fittings")
 
     gain = common.bake_lightmap(palette, shell, "shell", SHELL_SIZE, BAKE_SAMPLES)

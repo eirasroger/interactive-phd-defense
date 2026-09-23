@@ -25,28 +25,18 @@ export interface Converge {
 /* ---- The board ------------------------------------------------------------- */
 
 /**
- * One measured board, and every mark on the beat placed against it.
- *
- * The first build laid this out as five CSS grid columns, each of which had to
- * guess where the others resolved. The outflow left the middle of the card, the
- * strands stopped short of the edge they were flowing into, and the card's
- * centre missed the centre of the column feeding it. Geometry that has to agree
- * across four independent boxes will not agree.
- *
- * So the SVG owns the geometry and the HTML anchors to it: `atBoard` places a
- * label at a board coordinate as a percentage, and the frame carries the board's
- * aspect ratio, so text and drawing scale together and land on the same points
- * at any stage size.
+ * Board size in SVG units. The SVG owns all geometry and HTML labels are placed
+ * on it with `atBoard` as percentages, so text and drawing scale together.
  */
 const BOARD = { width: 1420, height: 424 } as const;
 
-/** Column boundaries. The readout is the widest, because it is the product. */
+/** Column boundaries. The readout column is the widest. */
 const LEDGER_END = 252;
 const CARD_LEFT = 556;
 const CARD_RIGHT = 900;
 const READOUT_LEFT = 1010;
 
-/** The four contributions, and the axis their centre defines. */
+/** Rows for the four contributions. `AXIS` is their vertical centre. */
 const ROW_STEP = 70;
 const ROW_FIRST = 92;
 const AXIS = ROW_FIRST + (ROW_STEP * (UPSTREAM.length - 1)) / 2;
@@ -62,7 +52,7 @@ const CARD_HEIGHT = 178;
 const CARD_TOP = AXIS - CARD_HEIGHT / 2;
 const CARD_BOTTOM = CARD_TOP + CARD_HEIGHT;
 
-/** The context ports, and the label blocks that hang under them. */
+/** Context ports on the card's bottom edge, and the labels under them. */
 const CONTEXT_SPAN = 172;
 const CONTEXT_WIDTH = 168;
 const contextX = (index: number): number =>
@@ -71,7 +61,7 @@ const RISER_BOTTOM = CARD_BOTTOM + 34;
 const CONTEXT_TOP = RISER_BOTTOM + 4;
 const CONTEXT_INDEX_Y = 388;
 
-/** The readout, five rows of equal height sharing the card's axis. */
+/** Readout rows, equal height, centred on the card's axis. */
 const OUT_STEP = 46;
 const outY = (index: number): number =>
   AXIS + (index - (PRODUCTS.length - 1) / 2) * OUT_STEP;
@@ -80,7 +70,7 @@ const READOUT_HEIGHT = OUT_STEP * PRODUCTS.length;
 
 const HEAD_TOP = 4;
 
-/** A board coordinate as a percentage, so HTML text lands on SVG geometry. */
+/** Board coordinate as CSS percentages, for placing HTML on the SVG. */
 const atBoard = (x: number, y: number): string =>
   `left: ${((x / BOARD.width) * 100).toFixed(3)}%; top: ${((y / BOARD.height) * 100).toFixed(3)}%`;
 
@@ -90,19 +80,15 @@ const spanBoard = (width: number): string =>
 const boxBoard = (x: number, y: number, width: number, height: number): string =>
   `${atBoard(x, y)}; ${spanBoard(width)}; height: ${((height / BOARD.height) * 100).toFixed(3)}%`;
 
-/* ---- The evidence, drawn as a flow ------------------------------------------ */
+/* ---- Evidence flow ----------------------------------------------------------- */
 
-/** Half the thickness of a contribution where it leaves, and where it arrives. */
+/** Half-thickness of a ribbon at its source and at the card. */
 const RIBBON_ORIGIN = 15;
 const RIBBON_ENTRY = 8;
 
 /**
- * Product evidence, drawn as a band rather than a count of lines.
- *
- * A profile carries many indicators and how many depends on the product
- * category, so the drawing has to say *many* without saying a number. A band
- * has width, which is the honest reading: the model takes a wide profile in,
- * and the width itself is not a claim this station makes.
+ * Product evidence as a filled band. The indicator count varies by product
+ * category, so the band shows "many" without implying a number.
  */
 const ribbonPath = (index: number): string => {
   const start = sourceY(index);
@@ -121,7 +107,7 @@ const ribbonPath = (index: number): string => {
   );
 };
 
-/** The band's own centre line, so the flow has a direction inside its width. */
+/** Centre line of the band, to show flow direction. */
 const filamentPath = (index: number): string => {
   const start = sourceY(index);
   const end = portY(index);
@@ -133,11 +119,8 @@ const filamentPath = (index: number): string => {
 };
 
 /**
- * The single output, resolving into an ordered set of scores.
- *
- * Every leader leaves the same port on the card's right edge, which is the
- * reading the beat needs: one pass of the model returns the whole ordering at
- * once, and no candidate is scored on its own.
+ * All output leaders leave one port on the card's right edge: one model pass
+ * returns the whole ranking at once.
  */
 const OUT_PORT_SPREAD = 3.2;
 
@@ -151,15 +134,11 @@ const leaderPath = (index: number): string => {
   );
 };
 
-/* ---- What the model returns -------------------------------------------------- */
+/* ---- Model output ------------------------------------------------------------ */
 
 /**
- * The ordering the station produces, taken from the published case.
- *
- * Bar lengths are the standard structural column of Fig. 8, so the shape is a
- * measurement even though no score is printed on the opening beat. The values
- * themselves belong to the beats that report them; what is printed here is the
- * rank, which the ordering already states.
+ * Products sorted by the standard structural scores of Fig. 8. Bars use these
+ * scores; only the rank is printed.
  */
 const ranked = (): readonly { readonly id: ProductId; readonly score: number }[] => {
   const standard = APPLICATIONS.find((entry) => entry.key === 'standard');
@@ -169,16 +148,11 @@ const ranked = (): readonly { readonly id: ProductId; readonly score: number }[]
   );
 };
 
-/* ---- The panel ----------------------------------------------------------------- */
+/* ---- Panel --------------------------------------------------------------------- */
 
 /**
- * The station's establishing shot.
- *
- * The paper's overview figure drawn at scale. Four contributions deliver
- * evidence from the corridor, the decision's own context plugs in from
- * underneath, and one pass of the model returns an ordering to the right.
- * Everything the beat has to say is in that shape, so the writing stays at
- * label size and the composition carries the argument.
+ * C5 overview: four contributions flow in from the left, context plugs in from
+ * below, and the model returns a ranking on the right.
  */
 export function createConverge(): Converge {
   /* -- The drawing -- */
@@ -196,11 +170,8 @@ export function createConverge(): Converge {
     x1: String(LEDGER_END),
     x2: String(CARD_LEFT),
   });
-  // `stop-color` comes from the sheet, not from `currentColor`. A stop resolves
-  // `currentColor` against its own inherited `color`, and a `<stop>` inherits
-  // down the `<defs>` subtree, where the panel's `color` is the ink the text is
-  // set in. The gradient came out the grey of body copy with nothing to show it
-  // had missed the accent.
+  // `stop-color` is set in the stylesheet. `currentColor` on a `<stop>` resolves
+  // to the panel's text colour.
   for (const [offset, opacity] of [
     ['0', '0'],
     ['0.18', '0.12'],
@@ -212,8 +183,7 @@ export function createConverge(): Converge {
   }
   defs.appendChild(flowGradient);
 
-  // The travelling highlight's profile. Soft at both ends, so the sweep reads
-  // as light moving through the band and never as an edge crossing it.
+  // Sweep highlight profile, faded at both ends so it has no hard edge.
   const sweepGradient = svg('linearGradient', { id: 'cv-sweep-profile' });
   for (const [offset, opacity] of [
     ['0', '0'],
@@ -270,7 +240,7 @@ export function createConverge(): Converge {
   flow.appendChild(sweep);
   board.appendChild(flow);
 
-  /* Ports. Drawn after the flow so an entry reads as a fitting on the card. */
+  /* Ports, drawn after the flow so they sit on top. */
   const entryPorts = UPSTREAM.map((_, index) =>
     svg('rect', {
       class: 'cv-port',
@@ -337,12 +307,9 @@ export function createConverge(): Converge {
   board.appendChild(outGroup);
 
   /*
-   * Drawn as a rectangle that grows, because GSAP's `transformOrigin` cannot be
-   * trusted on SVG geometry. Chrome resolves `transform-box` to the view box, so
-   * `'center center'` is the centre of the *board* rather than of the element,
-   * and a `scaleY: 1` that should be identity emits `matrix(1,0,0,1,0,-105)`.
-   * An attribute reveal is written in the same units the mark is, so it cannot
-   * disagree with it. Same reason the risers below animate `y2`.
+   * Revealed by animating `height`. GSAP `transformOrigin` on SVG geometry
+   * resolves against the view box in Chrome. The risers animate `y2` for the
+   * same reason.
    */
   const spine = svg('rect', {
     class: 'cv-spine',
@@ -354,7 +321,7 @@ export function createConverge(): Converge {
   });
   board.appendChild(spine);
 
-  /* -- What the corridor delivers -- */
+  /* -- Upstream sources -- */
 
   const sources = UPSTREAM.map((entry) =>
     el('div', {
@@ -381,7 +348,7 @@ export function createConverge(): Converge {
     children: sources,
   });
 
-  /* -- The model -- */
+  /* -- Model card -- */
 
   const stageName = el('p', { className: 'cv-stage-name', text: STAGE.name });
   const stageLine = el('p', { className: 'cv-stage-line', text: STAGE.line });
@@ -395,7 +362,7 @@ export function createConverge(): Converge {
     ],
   });
 
-  /* -- The context, plugging in from underneath -- */
+  /* -- Context inputs, below the card -- */
 
   const contexts = CONTEXT_INPUTS.map((entry, index) =>
     el('div', {
@@ -411,7 +378,7 @@ export function createConverge(): Converge {
     }),
   );
 
-  /* -- The readout -- */
+  /* -- Readout -- */
 
   const bars: HTMLElement[] = [];
   const tokens: HTMLElement[] = [];
@@ -486,7 +453,7 @@ export function createConverge(): Converge {
     children: [board, ledger, card, ...contexts, readout, upstreamIndex, outIndex, contextIndex, outNote],
   });
 
-  /* -- What follows -- */
+  /* -- Claim and next steps -- */
 
   const claim = el('p', { className: 'cv-claim', text: APPROACH.claim });
   const moves = APPROACH.moves.map((text, index) =>
@@ -556,8 +523,7 @@ export function createConverge(): Converge {
             },
             0,
           )
-          // The corridor speaks first, then the evidence travels, then the model
-          // it travels into. That is the order of the argument.
+          // Order: sources, then flow, then the model card.
           .from(
             sources,
             {
@@ -590,8 +556,7 @@ export function createConverge(): Converge {
             },
             seconds(DURATION.slow * 0.95),
           )
-          // The stage is named as the card settles, which is the moment the
-          // beat exists for.
+          // Stage name appears as the card settles.
           .from(
             [stageName, stageLine],
             {
@@ -603,8 +568,7 @@ export function createConverge(): Converge {
             },
             seconds(DURATION.cinematic * 0.9),
           )
-          // The fittings light as the flow reaches them, so the band arrives
-          // somewhere rather than stopping at a boundary.
+          // Entry ports light up as the flow reaches them.
           .from(
             entryPorts,
             {
@@ -615,8 +579,7 @@ export function createConverge(): Converge {
             },
             seconds(DURATION.cinematic * 1.05),
           )
-          // Context arrives from underneath, which is the one direction nothing
-          // else on the wall uses.
+          // Context enters from below.
           .fromTo(
             risers,
             { attr: { y2: RISER_BOTTOM } },

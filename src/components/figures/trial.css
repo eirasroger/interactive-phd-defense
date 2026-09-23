@@ -15,7 +15,7 @@
   color: var(--ink);
 }
 
-/* The export carries wide white margins; the plate crops back into them. */
+/* The exported image has wide white margins; the plate scales up to crop them. */
 .trial-plate {
   position: relative;
   flex: none;
@@ -58,7 +58,7 @@
   min-width: 0;
 }
 
-/* ---- Step 0: the two elements put up for test ------------------------- */
+/* ---- Step 0: the two test scenarios ----------------------------------- */
 
 .trial-scenarios {
   display: grid;
@@ -143,7 +143,7 @@
   --scenario: #1d5fab;
 }
 
-/* ---- Steps 1 and 2: the ranking ---------------------------------------- */
+/* ---- Steps 1 and 2: ranking -------------------------------------------- */
 
 .trial-ranking {
   display: grid;

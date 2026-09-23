@@ -30,18 +30,15 @@ export interface Bankside {
   dispose(): void;
 }
 
-/** How far clear of built ground a stem has to be, in metres. */
+/** Min distance from built ground to a stem, in metres. */
 const STEM = 0.05;
 
-/** How deep a plant's base may sit below the water surface it stands in. */
+/** Max depth of a plant's base below the water surface. */
 const WADE = -0.3;
 
 /**
- * What grows where, as name prefixes into the planting asset.
- *
- * The reeds are `grass_medium_01`'s tall variants rather than a reed asset,
- * because there is no reed asset and at 1.2 m a tall grass clump is exactly what
- * the photograph's bank is: rough tussock, not cattail.
+ * Species per zone, as name prefixes in the planting asset. There is no reed
+ * asset, so tall grass variants stand in for reeds.
  */
 const SPECIES = {
   reed: ['grass_medium_01_tall', 'grass_medium_01_geonodes_tall', 'grass_medium_02'],
@@ -52,21 +49,11 @@ const SPECIES = {
 } as const;
 
 /**
- * The bank vegetation, the path verges and the boulders.
+ * River bank plants, path verges and boulders. The bank planting is what makes
+ * the water read as a stream (see `river_besides_pathway`).
  *
- * **This is what makes the river a river.** The channel had been narrowed,
- * darkened, meandered and re-shaded across two sessions chasing a complaint that
- * it read as a flat dark stripe, and the shader was never the problem: in
- * `river_besides_pathway` the water *is* a flat dark stripe, glimpsed between
- * masses of tussock and willow with pale boulders breaking the waterline. Take
- * the banks away and no water shader on earth reads as a stream.
- *
- * Placed here rather than in Blender, which is the change of contract task #21
- * describes. Blender exports one template of each species at origin; this puts
- * every instance on the ground from the same centrelines the paving and the
- * terrain use. Nothing can drift, the bank follows the meander for free, and the
- * 26 MB of duplicated transforms in the asset stops being the way density is
- * bought.
+ * Blender exports one template per species. This places every instance using
+ * the same centrelines as the paving and terrain, so the bank follows the river.
  */
 export function createBankside(source: Object3D): Bankside {
   const object = new Group();
@@ -88,21 +75,11 @@ export function createBankside(source: Object3D): Bankside {
   const scale = new Vector3();
   const seat = new Vector3();
 
-  /**
-   * Place one plant, sized in **metres of finished height** rather than as a
-   * multiple of whatever the asset happens to measure.
-   *
-   * The templates come out of Poly Haven at their own scales, so a bare factor
-   * means a different size for every species. Normalising through the bounding
-   * box is what lets a reed bed be specified as 1.6 m tall and be 1.6 m tall.
-   */
   let refused = 0;
 
+  /** Places one plant, sized by its final height in metres. */
   const plant = (group: keyof typeof SPECIES, x: number, z: number, metres: number): void => {
-    // Never on built ground. Measured at the stem rather than over the
-    // footprint, because a verge shrub is planted hard against the gutter on
-    // purpose and its foliage is meant to lean over it — refusing it by its own
-    // spread would delete precisely the row that gives the walk its edge.
+    // Checked at the stem only, so verge shrubs can lean over the gutter.
     if (offBuilt(x, z) <= STEM) {
       refused += 1;
       return;
@@ -110,9 +87,7 @@ export function createBankside(source: Object3D): Bankside {
 
     const spread = Math.min(metres * 0.4, 0.9);
     const y = seatAt(x, z, spread);
-    // Reeds stand in the shallows and that is the point; nothing stands out in
-    // open water. The line is drawn at ankle depth in the water's own terms
-    // rather than at an absolute level, because the stream falls along its run.
+    // Allow shallow water only, measured from the local water level.
     if (freeboardAt(x, z, y) < WADE) {
       refused += 1;
       return;
@@ -146,9 +121,7 @@ export function createBankside(source: Object3D): Bankside {
     const template = templates.get(key!)?.[Number(index)];
     if (!template) continue;
 
-    // Split by position. The banks run the length of the site, so as one mesh
-    // per species the whole stream was drawn whenever any stretch of it was in
-    // shot — see `chunking.ts`.
+    // Split into cells so they can be culled. See `chunking.ts`.
     const chunked = chunkInstances(
       { geometry: template.geometry, material: template.material, matrices: list },
       key!,
@@ -184,12 +157,8 @@ export function createBankside(source: Object3D): Bankside {
 type Plant = (group: keyof typeof SPECIES, x: number, z: number, size: number) => void;
 
 /**
- * Both banks of the stream, from the waterline to the top of the swale.
- *
- * Density is graded across the section rather than uniform, and that grading is
- * the whole read: tallest and thickest right at the water where it is wettest,
- * thinning to rough grass at the bank top. A bank planted evenly reads as a
- * green stripe; one that thickens toward the water reads as a watercourse.
+ * Both river banks, from the waterline to the bank top. Plants are densest and
+ * tallest at the water, thinning to rough grass at the top.
  */
 function scatterBanks(random: () => number, plant: Plant): void {
   const { lake } = LAND;
@@ -198,22 +167,12 @@ function scatterBanks(random: () => number, plant: Plant): void {
     const centre = riverAt(x);
     const slope = riverSlope(x);
     const across = 1 / Math.hypot(1, slope);
-    // Read from the channel rather than from `LAND`, so the mouth's flare
-    // carries the reeds out with it instead of leaving them standing in the
-    // middle of the widened water to be refused.
+    // Follows the channel's width, including the outlet flare.
     const top = bankReach(x);
 
     for (const side of [-1, 1]) {
       for (let i = 0; i < 4; i += 1) {
-        // Biased toward the water: squaring the sample puts most of the mass in
-        // the wet third of the section.
-        //
-        // The inner bound is the *waterline*, not the bed's half-width. The bed
-        // is flat only out to `halfWidth` and then climbs, and it climbs a good
-        // way before it breaks the surface — so a scatter starting at the bed's
-        // edge put nearly half its plants out in open water, where they are
-        // refused, and the density that was meant to be thickest at the water
-        // was thinnest there instead.
+        // Starts at the waterline and is biased toward it.
         const shore = channelHalf(x) * 1.6;
         const t = random() ** 1.7;
         const offset = side * (shore + t * (top - shore));
@@ -222,8 +181,7 @@ function scatterBanks(random: () => number, plant: Plant): void {
         const px = x - offset * slope * across + jitter;
         const pz = centre + offset * across;
 
-        // Heights straight off the photograph: waist-to-chest tussock at the
-        // water, thinning to knee-high rough grass at the bank top.
+        // Chest-high at the water, knee-high at the bank top.
         const wet = 1 - t;
         const group = wet > 0.55 ? 'reed' : wet > 0.25 ? 'rough' : 'bank';
         plant(group, px, pz, 0.55 + wet * 1.15);
@@ -232,21 +190,11 @@ function scatterBanks(random: () => number, plant: Plant): void {
   }
 }
 
-/**
- * Shrub ribbons along the path edges, outside the cobble gutter.
- *
- * In the reference photography every path has one, and it is doing something
- * a lawn cannot: it gives the walk a wall at knee-to-waist height, so the paving
- * reads as a route through planting rather than as a strip laid on a field.
- */
+/** Shrub strips along the path edges, outside the gutter. */
 function scatterVerges(random: () => number, plant: Plant): void {
   const gutter = 1.0;
 
-  // Standing on the paving is refused by `plant` itself now, against the whole
-  // path network rather than against whichever route this loop happens to run
-  // beside. What is left at the call site is the one thing the network cannot
-  // know: a junction has to stay open, so the verge holds well back from where
-  // the avenue meets the promenade.
+  // `plant` keeps shrubs off paving. Here we also keep junctions open.
   for (let z = AVENUE.from - 2; z < 80; z += 0.85) {
     for (const side of [-1, 1]) {
       const x = side * (AVENUE.halfWidth + gutter + random() * 2.6);
@@ -273,13 +221,7 @@ function scatterVerges(random: () => number, plant: Plant): void {
   }
 }
 
-/**
- * Granite boulders, along the waterline and scattered through the swale.
- *
- * They do two jobs. They furnish the bank the way the photograph's do, and they
- * break the waterline, which is otherwise the clean mathematical curve where a
- * 2.5 m terrain grid meets a swept ribbon.
- */
+/** Boulders along the waterline. They break up its otherwise perfect curve. */
 function boulders(random: () => number): StoneField {
   const { lake } = LAND;
 
@@ -291,8 +233,7 @@ function boulders(random: () => number): StoneField {
       const across = 1 / Math.hypot(1, slope);
 
       const side = random() < 0.5 ? -1 : 1;
-      // Straddling the waterline — half in, half out, which is the only
-      // placement that actually breaks the edge rather than sitting beside it.
+      // Half in, half out of the water.
       const offset = side * channelHalf(x) * (0.55 + random() * 0.95);
       const px = x - offset * slope * across + (random() - 0.5) * 1.4;
       const pz = centre + offset * across;
@@ -303,13 +244,8 @@ function boulders(random: () => number): StoneField {
 }
 
 /**
- * One usable template per species variant, keyed by node-name prefix.
- *
- * The geometry is **rebaked to the origin with its world rotation and scale**.
- * A GLB node's geometry is in local space and its real size lives in the parent
- * chain's transform, so taking the geometry alone gives a plant at whatever
- * scale the authoring tool used. Dropping only the translation keeps size and
- * orientation and discards the placement, which is what this module replaces.
+ * Templates per species, keyed by node-name prefix. Geometry keeps its world
+ * rotation and scale but is moved to the origin.
  */
 function collect(source: Object3D): Map<string, Template[]> {
   const candidates = new Map<string, Mesh[]>();
@@ -327,15 +263,7 @@ function collect(source: Object3D): Map<string, Template[]> {
   const world = new Matrix4();
 
   for (const [key, meshes] of candidates) {
-    // Three variants of each is plenty; past that every extra template is
-    // another draw call buying a difference nobody can see.
-    //
-    // **The cheapest three, not the first three.** Poly Haven ships a shrub as
-    // nine variants of the same plant whose triangle counts run from 700 to
-    // 23 000, in no particular order — so taking whichever three the traversal
-    // reached first was a coin toss between a 700-triangle bank and a
-    // 23 000-triangle one for a plant that is 30 cm tall and seen at twenty
-    // metres. Nothing about that choice is visible; all of it is payable.
+    // Keep the three cheapest variants. Triangle counts vary a lot between them.
     const chosen = [...meshes]
       .map((mesh) => ({ mesh, cost: triangles(mesh) }))
       .filter((entry) => entry.cost > 0)
@@ -374,6 +302,6 @@ function triangles(mesh: Mesh): number {
 interface Template {
   readonly geometry: BufferGeometry;
   readonly material: Material;
-  /** Natural height of the asset, so instances can be sized in metres. */
+  /** Asset height, so instances can be sized in metres. */
   readonly height: number;
 }

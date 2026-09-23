@@ -5,10 +5,7 @@ import './candidate-set.css';
 
 export interface Criterion {
   readonly label: string;
-  /**
-   * One value per candidate, in column order. A criterion with no values is one
-   * the stage cannot answer, and the figure exists to say which those are.
-   */
+  /** One value per candidate, in column order. Omit for a criterion that cannot be answered. */
   readonly values?: readonly string[];
 }
 
@@ -22,15 +19,15 @@ export interface CandidateSetSpec {
     readonly note: string;
   };
   readonly criteria: readonly Criterion[];
-  /** Named under the rows that stay empty. */
+  /** Note shown under the empty rows. */
   readonly withheld: string;
 }
 
 export const SET = {
   void: -1,
-  /** The threshold everyone clears, and everything past it that ought to sort them. */
+  /** Gate and criteria rows, all empty. */
   criteria: 0,
-  /** What can actually be filled in, and what cannot. */
+  /** Answerable rows fill in; the rest drain and turn amber. */
   evidence: 1,
 } as const;
 
@@ -42,28 +39,10 @@ export interface CandidateSet {
 }
 
 /*
- * Four candidates for one bay, and what is known about each.
- *
- * **Criteria are rows and candidates are columns**, which is the transpose of
- * the obvious arrangement and the reason the figure works. The claim is about
- * criteria: one is met by everyone, two can be answered, four cannot. Read down
- * a column that is a list of facts about a product; read down the *label*
- * column it is the argument, and the four empty rows sit together as one block
- * of absence instead of being scattered across four narrow headers.
- *
- * **Compliance is drawn above a gate, not as a first criterion.** It is a
- * threshold rather than a comparison: every product on the market has cleared
- * it, so it separates none of them, and putting it in the same stack would
- * invite it to be read as one more column that happens to be full.
- *
- * The drain, the dashes and the amber are `ImpactMethod`'s and `Declaration`'s,
- * unchanged, because they mean the same thing in all three: this is missing,
- * and its absence is the argument. By the third appearance the audience reads
- * it without being told, which is the whole return on keeping one language.
- *
- * What is new here is the direction. Both of those figures show something whole
- * and empty it; this one starts empty and fills two rows of six. The claim is
- * not that evidence was taken away, it is that it never arrives.
+ * Four candidates and what is known about each. Criteria are rows and
+ * candidates are columns, so the unanswerable rows group into one block.
+ * Compliance sits above a separate gate because every candidate passes it.
+ * The drain, dashes and amber for missing data match `ImpactMethod` and `Declaration`.
  */
 const VIEW_W = 880;
 const VIEW_H = 392;
@@ -88,20 +67,17 @@ const NOTE_RULE_H = 2;
 const NOTE_RULE_Y = 356;
 const NOTE_Y = 378;
 
-/** Solid, and the start of the tween that breaks it up. */
+/** Solid stroke, written as a dash pattern so it can tween to dashed. */
 const STROKE_SOLID = '40 0';
 const STROKE_DASHED = '6 5';
 
-/**
- * The key a column shares with the label anchored to its panel in the world.
- * Exported so the two cannot drift into different numbering.
- */
+/** Column number, shared with the matching panel label in the world. */
 export const columnKey = (index: number): string => String(index + 1).padStart(2, '0');
 
 const cellX = (index: number): number => LABEL_W + index * (CELL_W + CELL_GAP);
 const rowY = (index: number): number => CRITERIA_TOP + index * ROW_PITCH;
 
-/** Tokens are the source of truth for colour, and GSAP needs resolved values. */
+/** Resolves a CSS colour token, since GSAP needs literal values. */
 const token = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -131,10 +107,7 @@ export function createCandidateSet(spec: CandidateSetSpec): CandidateSet {
     }
   }
 
-  // Numbers, not names. The candidates are named on the objects themselves, so
-  // repeating the names here would be the same four strings twice in one frame
-  // — and the columns cannot be aligned to the panels, which is what a shared
-  // key solves instead.
+  // Headers are numbers that match the panel labels in the world, which already show the names.
   const headers = spec.candidates
     .map(
       (_, index) =>
@@ -233,7 +206,7 @@ export function createCandidateSet(spec: CandidateSetSpec): CandidateSet {
     ];
 
     rowNodes.forEach((row, index) => {
-      // Down the stack, so the split reads as one movement rather than six.
+      // Staggered down the stack.
       const cue = 0.1 + index * 0.07;
 
       steps.push({

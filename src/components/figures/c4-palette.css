@@ -1,26 +1,18 @@
 /*
- * C4's own chromatic identity, and its own ground.
- *
- * The violet is the one C2's closing wall already gave to the card that points
- * here, so the station opens in the colour the argument arrived in. It sits
- * clear of C3's indigo authority ramp and of C1's four indicator families.
- *
- * The station's signature is a second ground. Everything outside the model is
- * drawn on the white the corridor projects; the inside of the model is drawn on
- * a dark field. The two registers say which side of the boundary a composition
- * is on before a word of it is read, which is the one thing a schematic of a
- * network otherwise has to caption.
+ * C4 palette. Violet matches the C4 card on C2's closing wall and stays clear
+ * of C3's indigo and C1's family colours. Content outside the model sits on
+ * white; the model's interior sits on the dark `.c4-field`.
  */
 .c4 {
   --c4-accent: #6d4bb0;
   --c4-accent-soft: #9a7fd4;
 
-  /* Where a value came from. The pair is read at every beat and by C5 after. */
+  /* Value provenance. Also used by C5. */
   --c4-declared: #3f4a5b;
   --c4-inferred: #6d4bb0;
   --c4-absent: #a9aeb8;
 
-  /* Outcomes, borrowed from C2 so a pathway keeps its colour across stations. */
+  /* Outcome colours, shared with C2. */
   --c4-recovery: #4f8f3f;
   --c4-energy: #c07a12;
   --c4-loss: #8f5324;
@@ -41,10 +33,8 @@
 }
 
 /*
- * The field: the ground the model's interior is drawn on.
- *
- * Its ink tokens carry the same names as the white ground's, so a component
- * built for one reads correctly inside the other without a second stylesheet.
+ * Dark ground for the model's interior. Redefines the same ink tokens, so
+ * components work on either ground unchanged.
  */
 .c4-field {
   --ink: #f0ecf8;
@@ -73,11 +63,7 @@
     0 24px 60px color-mix(in srgb, var(--c-base) 22%, transparent);
 }
 
-/*
- * The field's own texture: a faint lattice, so a region with points scattered
- * across it reads as a space with coordinates in it and an empty region still
- * reads as part of the same space.
- */
+/* Faint grid texture on the field. */
 .c4-field::before {
   content: '';
   position: absolute;
@@ -92,7 +78,7 @@
   mask-image: radial-gradient(ellipse 80% 80% at 50% 45%, #000 30%, transparent 100%);
 }
 
-/* Provenance, wherever a value is drawn. */
+/* Sets `--provenance` from the element's data attribute. */
 [data-provenance='declared'] {
   --provenance: var(--c4-declared);
 }
@@ -103,13 +89,7 @@
   --provenance: var(--c4-absent);
 }
 
-/*
- * A cell that has no value.
- *
- * The hatch is the load-bearing half of the encoding: an absent cell has to be
- * recognisable in one glance across a grid, and at that size a colour on its
- * own is a shade of grey next to another shade of grey.
- */
+/* Hatch for a cell with no value. Colour alone is too subtle at cell size. */
 .c4-hatch {
   background-image: repeating-linear-gradient(
     -45deg,
@@ -118,7 +98,7 @@
   );
 }
 
-/* The uppercase locator every C4 panel opens with. */
+/* Uppercase label at the top of each C4 panel. */
 .c4-index {
   font-family: var(--font-label);
   font-size: 0.6875rem;
@@ -132,12 +112,12 @@
   color: var(--c4-accent-soft);
 }
 
-/* A quantity, wherever one is set at reading size. */
+/* Numeric figure at reading size. */
 .c4-figure {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
   font-weight: var(--fw-light);
   letter-spacing: var(--ls-title);
-  /* Not 1: a light-weight numeral needs more than its em box and clips at 1. */
+  /* Light numerals clip at a line-height of 1. */
   line-height: 1.12;
 }

@@ -1,19 +1,9 @@
 import type { WebGLRenderer } from 'three';
 
 /**
- * Attributes long frames to what the renderer did during them.
- *
- * "It freezes every now and then" is not something an fps average can answer:
- * an average of sixty over three seconds is the same number whether every frame
- * took 16 ms or one took 400 and the rest took 10. What is wanted is the
- * outliers and, for each, what changed on that frame — because a stall with a
- * program compiled in it, a stall with textures uploaded in it and a stall with
- * neither are three different bugs with three different fixes.
- *
- * `renderer.info` is already counting exactly that. Sampling its deltas around
- * a long frame turns "something is slow" into a line naming the cause.
- *
- * Dev only: `main.ts` gates the import, so Vite drops it from the build.
+ * Logs frames over the threshold with the likely cause: shader compiles,
+ * texture uploads or new geometries, from `renderer.info` deltas.
+ * Dev only; `main.ts` gates the import so Vite drops it from the build.
  */
 export interface LongFrame {
   readonly at: number;

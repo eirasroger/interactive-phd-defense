@@ -9,7 +9,7 @@
   overflow: visible;
 }
 
-/* ---- What the declaration says it is ----------------------------------- */
+/* ---- Product and unit --------------------------------------------------- */
 
 .declaration-product,
 .declaration-unit {
@@ -29,9 +29,8 @@
 
 /* ---- The modules -------------------------------------------------------- */
 /*
- * A module is two rects, not one: a fill that can drain and a frame that stays.
- * The turn empties the first and dissolves the second's stroke into dashes,
- * both of which interpolate, which a change of class does not.
+ * Each module is a fill rect and a frame rect. The turn fades the fill and
+ * tweens the frame stroke to dashes, both of which can be interpolated.
  */
 
 .declaration-module-fill {
@@ -43,7 +42,7 @@
   fill: none;
   stroke: var(--c-border-strong);
   stroke-width: 1.25;
-  /* Gap zero is a solid line, and the start of a tween to a dashed one. */
+  /* Zero gap draws a solid line, and is the start value for the dash tween. */
   stroke-dasharray: 40 0;
 }
 
@@ -63,8 +62,7 @@
   text-transform: uppercase;
 }
 
-/* The verdict is the only word in the figure that states the argument, so it
-   is the only one carrying accent colour. */
+/* The verdict is the only accent-coloured text in the figure. */
 .declaration-module-verdict {
   fill: var(--c-circular);
   font-family: var(--font-label);
@@ -78,8 +76,7 @@
   fill: var(--c-emphasis);
 }
 
-/* Muted, not faint: the module's own name recedes when it turns out to be a
-   scenario, and what it rests on is the thing that has to be readable instead. */
+/* Muted so the basis stays readable when a module turns out to be a scenario. */
 .declaration-module-basis {
   fill: var(--c-text-muted);
   font-family: var(--font-label);
@@ -102,12 +99,10 @@
 }
 
 /* ---- The declared value ------------------------------------------------- */
-/* The tick is what the declaration states. The bracket is what it rests on,
-   opening from the tick in both directions so the point is seen becoming an
-   interval rather than being replaced by one. */
+/* The tick is the declared value. The bracket opens from the tick in both
+   directions to show the underlying range. */
 
-/* Capped at 12: the indicator name is the longest label in the figure and at
-   13 it runs past the right edge of the view box. */
+/* Max 12px: at 13px this label overflows the right edge of the view box. */
 .declaration-indicator {
   fill: var(--c-text-muted);
   font-family: var(--font-label);
@@ -122,9 +117,8 @@
   stroke-width: 1.25;
 }
 
-/* `non-scaling-stroke` is what makes the open tween work: the mark is revealed
-   by scaling its geometry vertically, and without this the caps would thin to
-   nothing on the way out and thicken back as it lands. */
+/* `non-scaling-stroke` keeps stroke width constant while the open tween
+   scales the geometry vertically. */
 .declaration-range {
   fill: none;
   stroke: var(--c-emphasis);

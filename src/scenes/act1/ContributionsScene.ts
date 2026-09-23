@@ -11,20 +11,9 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 import { el } from '@/utilities/dom';
 
 /**
- * Scene 11 — the four objectives answered, and the shape the answers make.
- *
- * Two beats. The five papers as published, then the pipeline they are.
- *
- * **They are shown together, not one at a time.** A defence by compendium is
- * five papers that add up to one argument, and revealing them serially makes
- * five announcements out of a single claim. Together they can be counted at a
- * glance, and the frame that follows is the same five objects rearranged — which
- * is the whole point, and is invisible if the audience never saw them as a set.
- *
- * **The plan beat must not be merged into the first.** The papers and the shape
- * they make are two thoughts, and the second is the one the next scene walks
- * into — the same reason `world_design.md` §4 keeps the Overlook's rise and
- * unfold on separate triggers.
+ * Scene 11: the five papers, then the same five rearranged as a pipeline.
+ * The papers appear together as one set. The plan is a separate beat because
+ * the next scene continues from it (see `world_design.md` §4).
  */
 const BEATS = 2;
 
@@ -36,13 +25,8 @@ export class ContributionsScene implements SceneInstance {
   private map: ContributionMap | null = null;
   private coda: HTMLElement | null = null;
   /**
-   * The head block only.
-   *
-   * **The cards are deliberately not in here.** Their `y` is their position in
-   * the field, not an entrance offset, so a settle that writes `y: 0` across
-   * everything the entry touched would drop all five onto the field's ceiling —
-   * and in the plan state, on top of each other. They settle on their own
-   * properties, below.
+   * Head block only. The cards use `y` for layout, so settling them with
+   * `y: 0` would stack them. They settle separately in `beat`.
    */
   private head: HTMLElement[] = [];
 
@@ -70,14 +54,11 @@ export class ContributionsScene implements SceneInstance {
       el('div', { className: 'contributions-composition', children: [headBlock, map.element] }),
     );
 
-    // No line measuring here, unlike the compositions either side of it: the
-    // page carries every long string on this scene, so nothing in the DOM needs
-    // splitting into rendered lines and nothing rewraps when the webfont lands.
+    // No line measuring needed: the long strings live on the page.
     map.show(PAPERS, true);
     gsap.set(coda, { opacity: 0 });
 
-    // Opacity and scale only. Anything positional would fight the layout the
-    // figure just wrote.
+    // Frames animate opacity and scale only, to keep the figure's layout.
     const entry = gsap.timeline({ delay: context.entryDelay + 0.15 });
     entry
       .from([eyebrow, heading], {
@@ -105,19 +86,15 @@ export class ContributionsScene implements SceneInstance {
     const map = this.map;
     if (!map) return;
 
-    // The deck calls this for beat 0 immediately after `enter`, which kills the
-    // entry timeline while its `from` tweens are still at their start values —
-    // an invisible composition. Settling is what puts them back, and each group
-    // is settled on the properties its own entrance used.
+    // Beat 0 runs right after `enter` and kills the entry mid-tween, so each
+    // group is reset on the properties its entrance animated.
     this.motion?.kill();
     gsap.set(this.head, { opacity: 1, y: 0 });
     gsap.set(map.frames, { opacity: 1, scale: 1 });
 
     const timeline = gsap.timeline().add(map.show(stateOf(index), settle), 0);
 
-    // The heading's second half arrives with the plan it describes, and leaves
-    // again on the way back — the sentence has to match the frame in both
-    // directions.
+    // The coda shows with the plan and hides when stepping back.
     if (this.coda) {
       const shown = stateOf(index) === PLAN;
       if (settle) gsap.set(this.coda, { opacity: shown ? 1 : 0 });

@@ -7,17 +7,17 @@ import './objective-map.css';
 
 export interface GapChip {
   readonly key: string;
-  /** Two or three words. The full wording was on screen one scene ago. */
+  /** Two or three words. The previous scene shows the full wording. */
   readonly label: string;
 }
 
 export interface Objective {
   readonly key: string;
-  /** The thesis's own objective statement, verbatim. */
+  /** The thesis objective statement, verbatim. */
   readonly title: string;
   /** The mark drawn in the card's foot. See `objectiveIcons.ts`. */
   readonly icon: ObjectiveIcon;
-  /** Indices into `gaps` — the *Motivated by Gaps …* line, as data. */
+  /** Indices into `gaps` for the gaps that motivate this objective. */
   readonly absorbs: readonly number[];
 }
 
@@ -28,40 +28,26 @@ export interface ObjectiveMapSpec {
 
 export interface ObjectiveMap {
   readonly element: HTMLElement;
-  /** The gap chips and objective cards, for the scene's own entrance stagger. */
+  /** Gap chips and objective cards, for the scene's entrance stagger. */
   readonly frames: readonly HTMLElement[];
   /**
-   * Splits the statements into their rendered lines. Must be called once the
-   * cards are in the document, and again if the webfont resolves after that.
+   * Splits the statements into rendered lines. Call once the cards are in the
+   * document, and again after the webfont loads.
    */
   measure(): void;
-  /** `-1` for the six gaps alone, then the index of the objective being made. */
+  /** `-1` shows the six gaps alone; otherwise the index of the active objective. */
   show(active: number, settle?: boolean): gsap.core.Timeline;
 }
 
 /*
- * Six gaps along the top, four objectives under them.
- *
- * **The gaps never leave.** They are the row the whole scene is read against, so
- * the fold from six to four is something the audience watches happen rather than
- * a claim they are asked to accept. An earlier pass drew curved connectors from
- * each gap down to its objective; with two gaps feeding O1 and two feeding O4
- * that is four crossing bezier paths over a live 3D world, and it read as
- * decoration. Lighting the gaps an objective is motivated by says the same thing
- * with nothing added to the frame.
- *
- * The three states are `GapCards`', unchanged, because the two scenes are one
- * movement and a second visual language between them would say they are not.
+ * Six gaps along the top, four objectives under them. The gaps stay on screen,
+ * and each objective lights the gaps that motivate it. The three states match
+ * `GapCards`, since the two scenes are one sequence.
  */
 
 /**
- * The choreography, in seconds from the start of a beat.
- *
- * **A beat is a hand-off, and it runs cause before effect.** The gaps light
- * first, because they are what motivates the objective; the card forms after
- * them; the mark assembles last, once there is something for it to belong to.
- * Everything starting at t=0 — which is what this was — collapses that argument
- * into one flash.
+ * Cue times in seconds from the start of a beat. Gaps light first, then the
+ * card forms, then the mark draws.
  */
 const CUE = {
   release: 0,
@@ -88,25 +74,23 @@ const SPAN = {
   dot: 0.5,
 } as const;
 
-/** One ease for everything was the other half of the softness. */
 const MOVE = {
   release: 'power2.out',
   arrive: 'power3.out',
   rule: 'power4.out',
   type: EASE.enter,
-  /** A line drawn by an instrument: it starts and stops, it does not fling. */
   draw: EASE.standard,
-  /** The only overshoot in the deck, and it lasts 200ms on a 2px dot. */
+  /** The only overshoot in the deck. */
   dot: 'back.out(2.2)',
 } as const;
 
 /** Delay between the lines of one statement, and between the strokes of a mark. */
 const LINE_STEP = 0.07;
 const STROKE_STEP = 0.055;
-/** Delay between the two gap chips of a pair, so they arrive as two facts. */
+/** Delay between the gap chips claimed by one objective. */
 const CHIP_STEP = 0.08;
 
-/** Tokens are the source of truth for colour, and GSAP needs resolved values. */
+/** Resolves a CSS colour token, since GSAP needs concrete values. */
 const token = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -141,12 +125,11 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
     keySettled: token('--c-text'),
     labelPending: token('--c-text-faint'),
     labelSettled: token('--c-text-muted'),
-    /* The mark is drawn in `currentColor`, so the card tweens one property and
-       every stroke, dash and dot in it follows. */
+    /* The mark uses `currentColor`, so tweening `color` recolours all of it. */
     markSettled: token('--c-text-muted'),
   };
 
-  // ---- The six, along the top -------------------------------------------- //
+  // ---- Gap chips ------------------------------------------------------------ //
 
   const chips = spec.gaps.map((gap) => {
     const key = el('span', { className: 'gap-chip-key', text: gap.key });
@@ -160,7 +143,7 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
     children: chips.map((chip) => chip.element),
   });
 
-  // ---- The four, under them ---------------------------------------------- //
+  // ---- Objective cards ------------------------------------------------------ //
 
   const cards = spec.items.map((item) => {
     const rule = el('span', { className: 'objective-rule' });
@@ -176,13 +159,10 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
       children: [glow, rule, key, title, mark],
     });
 
-    // Drawn on rather than faded in. Each stroke carries its own length, so the
-    // retracted state is per-element and cannot be one shared value.
+    // Strokes are drawn on, each with its own dash length.
     const strokes = Array.from(mark.querySelectorAll<SVGGeometryElement>('.icon-stroke')).map(
       (node) => {
-        // `getTotalLength` is defined for every geometry element, but a browser
-        // that disagrees should degrade to a mark that fades rather than to a
-        // scene that throws on entry.
+        // If `getTotalLength` throws, the stroke just fades in with the mark.
         let length = 0;
         try {
           length = node.getTotalLength();
@@ -199,7 +179,7 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
     const dashes = Array.from(mark.querySelectorAll<SVGGeometryElement>('.icon-dash'));
     const dots = Array.from(mark.querySelectorAll<SVGCircleElement>('.icon-dot'));
 
-    // Replaced by the measured lines; until then the whole statement is one.
+    // `lines` is replaced by the measured lines in `measure()`.
     return {
       element,
       rule,
@@ -235,8 +215,7 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
       const taken = phase !== 'pending';
 
       const quick = !lit;
-      // Where this chip sits among the ones its objective is claiming, so a
-      // pair arrives as two facts rather than as one wider box lighting up.
+      // Position among the chips its objective claims, for the stagger.
       const order = spec.items[owner]?.absorbs.indexOf(index) ?? 0;
       const at = quick ? CUE.release : CUE.chip + order * CHIP_STEP;
       const span = quick ? SPAN.release : SPAN.chip;
@@ -247,10 +226,8 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
           node: chip.element,
           vars: {
             borderColor: lit ? colours.accent : taken ? colours.edgeLit : colours.edge,
-            // The unclaimed gaps recede rather than disappear: they are still
-            // six, and the count is what the scene is about. Not below 0.6 —
-            // the world behind them is lit park, and a chip at 0.44 stops being
-            // dim and starts being unreadable.
+            // Unclaimed gaps dim but stay visible. 0.6 is the floor for
+            // legibility over the lit park.
             opacity: lit ? 1 : taken ? 0.82 : 0.6,
             scale: lit ? 1.03 : 1,
             y: lit ? -3 : 0,
@@ -281,9 +258,7 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
       const shown = phase !== 'pending';
       const lit = phase === 'active';
 
-      // Anything not being handed the accent moves at once and quickly. Running
-      // a release through the arrival choreography would take a second and a
-      // half to undo what the next card is spending a second and a half doing.
+      // Cards losing or lacking the accent change at once, with a short ease.
       const quick = !lit;
       const at = (cue: number): number => (quick ? CUE.release : cue);
       const span = (length: number): number => (quick ? SPAN.release : length);
@@ -295,8 +270,6 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
           vars: {
             borderColor: shown ? colours.edgeLit : colours.edge,
             scale: lit ? 1.018 : 1,
-            // Rising rather than only growing. Four pixels is nothing to name
-            // and everything to feel.
             y: lit ? -4 : 0,
             opacity: phase === 'settled' ? 0.88 : 1,
           },
@@ -327,8 +300,7 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
         },
         {
           node: card.lines,
-          // Past 100%: a line clearing its own mask by a margin arrives with
-          // travel behind it rather than appearing to start at the edge.
+          // Past 100% so each line starts fully clear of its mask.
           vars: { yPercent: shown ? 0 : 112 },
           at: at(CUE.title),
           duration: span(SPAN.title),
@@ -339,15 +311,10 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
           node: card.mark,
           vars: {
             color: lit ? colours.accent : colours.markSettled,
-            // The container carries the reveal, not the dash draw. Relying on
-            // `strokeDashoffset` to hide a pending mark makes the whole thing
-            // depend on `getTotalLength` returning a usable number for a rect
-            // and a polygon — and when it returns 0, four icons sit fully drawn
-            // on four cards that have not been reached yet.
+            // Container opacity hides pending marks, since `getTotalLength`
+            // can return 0 and leave the dash offset at 0 (fully drawn).
             opacity: shown ? 1 : 0,
-            // Assembling rather than appearing. Anchored bottom-left in CSS, so
-            // it grows out of the corner it is pinned to and its baseline never
-            // moves.
+            // Origin is bottom-left in CSS, so the baseline stays fixed.
             scale: shown ? 1 : 0.92,
           },
           at: at(CUE.mark),
@@ -356,12 +323,8 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
         },
       );
 
-      // Stroke by stroke, in the order the mark should be read: scaffolding
-      // first, then the form that stands on it.
-      //
-      // Only `strokeDashoffset` moves here. Tweening opacity as well would
-      // override `icon-faint`, and the scaffolding would come up to full weight
-      // and compete with what it holds.
+      // Strokes draw in document order, scaffolding first. Only
+      // `strokeDashoffset` is tweened; tweening opacity would override `icon-faint`.
       card.strokes.forEach((stroke, order) => {
         steps.push({
           node: stroke.node,
@@ -386,7 +349,6 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
           vars: { scale: shown ? 1 : 0, opacity: shown ? 1 : 0 },
           at: settled,
           duration: span(SPAN.dot),
-          // The one overshoot in the deck, and it lasts 200ms on a 2px dot.
           ease: quick ? MOVE.release : MOVE.dot,
           stagger: lit ? 0.03 : 0,
         },
@@ -407,7 +369,7 @@ export function createObjectiveMap(spec: ObjectiveMapSpec): ObjectiveMap {
         const lines = splitLines(card.title, card.source);
         if (lines.length > 0) card.lines = lines;
       }
-      // The freshly built lines carry none of the state the old block had.
+      // New line elements have no tween state, so reapply the current one.
       api.show(current, true);
     },
 

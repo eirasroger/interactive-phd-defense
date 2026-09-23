@@ -7,7 +7,7 @@ import './contents.css';
 export interface Contents {
   readonly element: HTMLElement;
   reveal(settle?: boolean): gsap.core.Timeline;
-  /** Holds the list at its start state, so the entry's delay shows nothing. */
+  /** Hides the list at its start state until `reveal` runs. */
   prime(): void;
 }
 

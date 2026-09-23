@@ -4,11 +4,11 @@ import { el } from '@/utilities/dom';
 import './takeaway.css';
 
 export interface TakeawayCard {
-  /** Any CSS colour. The card's rule, its accents and its figure all read it. */
+  /** Any CSS colour. Used by the card's rule, accents and figure. */
   readonly tint: string;
   readonly name: string;
   readonly body: string;
-  /** Whatever carries the card's evidence. The builders below cover most of it. */
+  /** The card's evidence, usually built with the helpers below. */
   readonly figure: readonly HTMLElement[];
 }
 
@@ -18,7 +18,7 @@ export interface Takeaway {
   play(step: number, settle: boolean): gsap.core.Timeline | null;
 }
 
-/** A pair of readings, the second overturning or qualifying the first. */
+/** Two readings, where the second revises the first. */
 export const verdict = (from: string, to: string, lead: boolean): HTMLElement =>
   el('div', {
     className: 'take-verdict',
@@ -29,7 +29,7 @@ export const verdict = (from: string, to: string, lead: boolean): HTMLElement =>
     ],
   });
 
-/** Bars whose lengths are the argument, usually because they are nearly equal. */
+/** Labelled bars. Widths are percentages. */
 export const pair = (rows: readonly (readonly [string, number])[]): HTMLElement =>
   el('div', {
     className: 'take-pair',
@@ -54,7 +54,7 @@ export const handoff = (mark: string, text: string): HTMLElement =>
     ],
   });
 
-/** A short enumeration, where the items are the evidence and need no chart. */
+/** A short bulleted list. */
 export const stack = (items: readonly string[]): HTMLElement =>
   el('div', {
     className: 'take-stack',
@@ -69,12 +69,7 @@ export const stack = (items: readonly string[]): HTMLElement =>
     ),
   });
 
-/**
- * One input resolving into two independent outputs.
- *
- * Drawn as a fork because the claim is that the branches do not track each
- * other: a single arrow would say the opposite.
- */
+/** One input splitting into independent outputs, drawn as a fork. */
 export const fork = (
   source: string,
   branches: readonly string[],
@@ -93,11 +88,8 @@ export const fork = (
   });
 
 /**
- * Several declared wordings collapsing into the one label they have to become.
- *
- * The left column is what manufacturers write and the right is what the schema
- * has to store. The convergence is the point: it is a modelling decision, taken
- * here, that everything downstream then depends on.
+ * Several declared wordings mapped to one schema label. Left column is the
+ * manufacturer text, right column the stored label.
  */
 export const aggregate = (
   rows: readonly { readonly text: string; readonly label: string }[],
@@ -120,12 +112,7 @@ export const aggregate = (
   });
 };
 
-/**
- * Two quantities that should track each other and do not.
- *
- * Drawn as a fall rather than as two bars: the reading is the drop between
- * them, and two bars make the eye compare lengths instead of following one.
- */
+/** Two percentages joined by a slope line to show the drop between them. */
 export const slope = (
   from: readonly [string, number],
   to: readonly [string, number],
@@ -156,7 +143,7 @@ export const slope = (
   });
 };
 
-/** A median against its own mean, so the spread inside a group is visible. */
+/** Median and mean per group on one rail, showing the skew within each group. */
 export const spread = (
   rows: readonly { readonly label: string; readonly median: number; readonly mean: number }[],
   max: number,
@@ -197,11 +184,8 @@ export const spread = (
   });
 
 /**
- * What a contribution settles, in three cards.
- *
- * The closing beat of every station, so it is one component rather than one per
- * paper: the cards, their rhythm and their reveal are the deck's, and only the
- * readings inside them belong to the contribution.
+ * Takeaway cards for the closing beat of each station. Shared by all
+ * contributions; only the card content differs.
  */
 export function createTakeaway(cards: readonly TakeawayCard[]): Takeaway {
   const cardNodes = cards.map((card) =>

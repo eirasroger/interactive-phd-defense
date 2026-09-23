@@ -1,13 +1,6 @@
 /*
- * Beat 3. What a concrete alternative is, and what the network does with a set.
- *
- * Two registers side by side, and the division is the deck's rule: everything
- * outside a model is drawn on the white the corridor projects, everything
- * inside one on the dark field. The case study is a ledger on the left; the
- * pass that consumes it is a board on the right.
- *
- * The board owns its own geometry in `Attention.ts`. Nothing here positions a
- * mark; this sheet decides tone, weight and the rhythm of the ledger.
+ * Beat 3. Input ledger on the left (white ground), network board on the right
+ * (dark field). Board geometry lives in `Attention.ts`; this sheet sets styling.
  */
 .at {
   display: grid;
@@ -31,11 +24,7 @@
   align-content: start;
 }
 
-/*
- * Two columns, because eighteen rows in one is a column of type and not a
- * ledger. Families are kept whole: a family split across the fold reads as two
- * groups, which is the one thing the grouping exists to prevent.
- */
+/* Two columns. Each family stays whole within one column. */
 .at-families {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -76,7 +65,7 @@
   color: var(--c5-accent);
 }
 
-/* The standard the family is derived from, which is what makes it concrete. */
+/* The standard the family is derived from. */
 .at-family-source {
   font-family: var(--font-label);
   font-size: 0.625rem;
@@ -104,7 +93,7 @@
   color: var(--ink-muted);
 }
 
-/* Value, presence, relevance. Three cells because the encoding is three wide. */
+/* One cell each for value, presence and relevance. */
 .at-triplet {
   display: flex;
   gap: 2px;
@@ -125,9 +114,8 @@
 /* ---- The two context vectors ---------------------------------------------------- */
 
 /*
- * Drawn apart from the attribute rows and in their own tones, because they are
- * the only part of the vector that describes the decision rather than the
- * product. The tones are the ones beat 1 introduced.
+ * Separate from the attribute rows because they describe the decision. Colours
+ * match beat 1.
  */
 .at-context-row {
   display: grid;
@@ -201,16 +189,14 @@
   border-radius: 16px;
 }
 
-/* Early fusion, stated once. The strips show the twelve context features on
-   every rail but cannot say they hold the same twelve values. */
+/* Note that all rails share the same twelve context values (early fusion). */
 .at-shared {
   font-size: 0.8125rem;
   line-height: var(--lh-snug);
   color: var(--ink-faint);
 }
 
-/* The board's ratio is a contract: SVG geometry and the labels set inside it
-   share one coordinate system, so the frame may never letterbox. */
+/* Must match `BOARD` in `Attention.ts` so labels and geometry align. */
 .at-board-frame {
   width: 100%;
   aspect-ratio: 732 / 316;
@@ -258,8 +244,7 @@
   fill: var(--ink);
 }
 
-/* The vector, in the proportions the vector has: fifty-four of sixty-six is the
-   product, and the remaining twelve are the decision. */
+/* Input vector bands: 54 of 66 features are attributes, 12 are context. */
 .at-band[data-key='attributes'] {
   fill: color-mix(in srgb, #5cc0d4 42%, transparent);
 }
@@ -279,12 +264,8 @@
 }
 
 /*
- * Attention, drawn as the matrix it is.
- *
- * A row per alternative attending and a column per alternative attended to,
- * every cell present. Drawn as curves running between the rails it read as a
- * random tangle, which says the opposite of what self-attention over a set is:
- * the relation is complete, and it is regular.
+ * Attention matrix: one row per attending alternative, one column per attended
+ * alternative, every cell present.
  */
 .at-cell-mark {
   fill: color-mix(in srgb, #5cc0d4 26%, transparent);
@@ -292,14 +273,12 @@
   transform-origin: center;
 }
 
-/* The diagonal is an alternative against itself, which the operation includes
-   and the drawing should not pretend it leaves out. */
+/* Diagonal: each alternative also attends to itself. */
 .at-cell-mark[data-self='true'] {
   fill: color-mix(in srgb, #5cc0d4 48%, transparent);
 }
 
-/* The two stages that hold the whole set at once. Both are enclosures, because
-   an arrow per alternative would say each is handled on its own. */
+/* Boxes for the two stages that process the whole set at once. */
 .at-stage-box {
   fill: color-mix(in srgb, #5cc0d4 5%, transparent);
   stroke: color-mix(in srgb, #5cc0d4 30%, transparent);
@@ -309,9 +288,8 @@
 /* ---- The global context ----------------------------------------------------------- */
 
 /*
- * One vector formed from the whole set and handed back to every member of it,
- * drawn as a collapse and an expansion on the axis the rails already share, so
- * the mean sits at the centre of the thing it is the mean of.
+ * Mean-pooled vector of the whole set, broadcast back to every member. Drawn
+ * as a collapse to the centre and an expansion back out.
  */
 .at-pool {
   fill: none;
@@ -344,9 +322,8 @@
   fill: color-mix(in srgb, #e6f2f4 10%, transparent);
 }
 
-/* Widths are the standard structural column of Fig. 8 and the rails are in
-   arrival order, so the strongest score sits fourth. Sorting them here would
-   contradict the property the board exists to show. */
+/* Widths come from the standard structural column of Fig. 8. Rails stay in
+   arrival order (unsorted) because the model is order-invariant. */
 .at-score-fill {
   fill: color-mix(in srgb, #5cc0d4 45%, transparent);
   transform-box: fill-box;

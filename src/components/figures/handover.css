@@ -1,6 +1,6 @@
 /*
- * What the station produces, weighted by what it is for. One tall card for the
- * candidate set, two stacked beside it for the account of how it was reached.
+ * C3 output. A tall card for the candidate set, and two stacked cards beside it
+ * for the decision log and rule sets.
  */
 .hv {
   display: grid;
@@ -54,7 +54,7 @@
   color: var(--ink-muted);
 }
 
-/* ---- The set that survived ---------------------------------------------- */
+/* ---- Candidate set ------------------------------------------------------ */
 
 .hv-candidates {
   grid-template-rows: auto auto auto minmax(0, 1fr);
@@ -84,10 +84,7 @@
   color: var(--ink-faint);
 }
 
-/*
- * The products anchor the foot of the card, under the count that describes
- * them, so the air in the card falls in one place rather than in two.
- */
+/* Pinned to the bottom of the card so the spare space collects in one gap. */
 .hv-survivors {
   align-self: end;
   display: grid;
@@ -124,7 +121,7 @@
   color: var(--ink-faint);
 }
 
-/* ---- The record the engine writes --------------------------------------- */
+/* ---- Decision log ------------------------------------------------------- */
 
 .hv-log-card {
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -202,7 +199,7 @@
   text-align: right;
 }
 
-/* ---- What a jurisdiction costs ------------------------------------------ */
+/* ---- Jurisdiction rule sets --------------------------------------------- */
 
 .hv-rulesets {
   display: flex;
@@ -221,7 +218,7 @@
   text-align: center;
 }
 
-/* The slot the next jurisdiction takes, drawn as a slot rather than as a card. */
+/* Empty dashed slot for the next jurisdiction. */
 .hv-ruleset[data-open='true'] {
   background-color: transparent;
   box-shadow: none;

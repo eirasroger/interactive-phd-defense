@@ -17,13 +17,9 @@ export interface Opening {
 }
 
 /**
- * Why the contribution exists.
- *
- * The objective is decision support for product selection, and the decision has
- * to be made now. Digital product passports would supply structured data
- * directly; construction products are last in that queue. What exists in the
- * meantime is a published, verified body of declarations in a format nothing
- * can read at scale.
+ * Motivation for C2. Digital product passports reach construction products
+ * last. Until then the available data is verified declarations in PDFs that
+ * cannot be read at scale.
  */
 export function createOpening(): Opening {
   const marks = TIMELINE.map((entry) =>
@@ -144,8 +140,7 @@ export function createOpening(): Opening {
 
       const line = gsap.timeline();
 
-      // The dates first and the interim after them, because the shaded span
-      // means nothing until the two years bounding it are on screen.
+      // Year marks first, then the interim band between them.
       line
         .from(element, { opacity: 0, duration: seconds(DURATION.normal), ease: EASE.enter }, 0)
         .from(

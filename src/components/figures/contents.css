@@ -1,20 +1,8 @@
-/*
- * The contents.
- *
- * A column on the left, the site on the right. That is the act's own rule — the
- * text side is where the scrim is anchored, so the aerial keeps its value in the
- * half of the frame nothing is read in.
- */
+/* Contents slide: text column on the left, over the scrim; the site on the right. */
 
 /*
- * The halo, because this type is set on the lit site rather than on a card.
- *
- * The act's scrim is anchored to the text side and is already transparent by
- * two thirds of the frame, which is what keeps the aerial worth looking at; the
- * cost is that the far end of the longest section title sits over open park. A
- * veil heavy enough to carry it would take the picture with it, so the contrast
- * goes on the glyphs — `tokens.css` keeps the three-layer version the title
- * cards use, and this is the same case.
+ * Long titles extend past the scrim onto the lit park, so the glyphs carry a
+ * halo (`--ink-halo` in `tokens.css`).
  */
 .contents-composition {
   display: grid;
@@ -31,17 +19,13 @@
   list-style: none;
 }
 
-/*
- * Numbered, ruled, and nothing else. Separation is geometry rather than a mark,
- * which is what the claims runs elsewhere in the deck already do.
- */
+/* Numbered rows separated by hairline rules. */
 .contents-item {
   display: grid;
   grid-template-columns: 3.25rem minmax(0, 1fr);
   align-items: baseline;
   padding-block: var(--s-4);
-  /* Light, not dark. A `--c-border` hairline is invisible over a sunlit park,
-     which is the ground half of this rule is drawn on. */
+  /* Light rule, so it stays visible over the sunlit park. */
   border-block-start: 1px solid color-mix(in srgb, var(--c-text) 16%, transparent);
 }
 
@@ -68,7 +52,7 @@
   color: var(--c-text);
 }
 
-/* ---- The five, under the fourth ------------------------------------------ */
+/* ---- Stations C1-C5, under the fourth item ------------------------------- */
 
 .contents-stations {
   display: grid;

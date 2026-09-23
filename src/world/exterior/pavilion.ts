@@ -23,25 +23,10 @@ export interface Pavilion {
 const PLINTH = 0.34;
 
 /**
- * The park pavilion at the lake end of the riverside walk.
- *
- * It exists to give the walk somewhere to go. A hundred and forty metres of
- * paving that starts nowhere and ends nowhere reads as an unfinished drawing
- * however well it is detailed, and no amount of planting along it fixes that —
- * a route needs a reason, not decoration.
- *
- * `park_additional_small_building_idea` is the model, and it is deliberately a
- * modest one: a single-storey box in horizontal timber louvres with a thin pale
- * fascia and a roof that rakes across the plan. Every Nordic park of this kind
- * has one — a café, a boat store, a public convenience — and none of them is
- * architecture anybody is asked to look at. That is exactly the register this
- * wants. The building the talk is *about* stands at the other end of the site,
- * and a second one competing with it would be a mistake.
- *
- * Built rather than exported, for the same reason the paving and the bridge
- * are: its position and its bearing are the riverside walk's, and the walk
- * follows a meandering river. An exported mesh would be in the wrong place the
- * day the water moves.
+ * The park pavilion at the lake end of the riverside walk, so the walk has a
+ * destination. A modest single-storey box in timber louvres with a raked roof,
+ * based on `park_additional_small_building_idea`. Built in code because its
+ * position and bearing follow the river path.
  */
 export function createPavilion(): Pavilion {
   const object = new Group();
@@ -54,13 +39,9 @@ export function createPavilion(): Pavilion {
   object.rotation.y = -yaw;
 
   /**
-   * Level and depth of the plinth, from the ground under the actual footprint.
-   *
-   * A plant is seated on the lowest ground it covers, but over seventeen metres
-   * the ground here falls more than a metre and dropping the building to its low
-   * corner buries its own base. A building takes the level of its high side and
-   * digs the rest out: the plinth top is the highest ground under it and the
-   * plinth reaches down past the lowest.
+   * Plinth level and depth from the ground under the footprint. The top sits
+   * at the highest ground and the plinth reaches below the lowest, since the
+   * ground falls over a metre across the building.
    */
   const under: number[] = [];
   for (const along of [-0.5, 0, 0.5]) {
@@ -76,37 +57,23 @@ export function createPavilion(): Pavilion {
   object.position.set(cx, base, cz);
 
   const materials = {
-    // Warm and dark, not orange. The louvres in the photograph are a stained
-    // softwood weathered toward brown; at full terracotta this would be the
-    // most saturated object on the site, and the clay paving already has that
-    // job.
-    timber: new MeshStandardMaterial({ color: 0x7d5038, roughness: 0.78, metalness: 0 }),
-    // The wall behind the screen. Darker than the boards, because what makes a
-    // louvred screen read as one is the shadow line between them — but not
-    // black: at 0x231f1b the gaps punched through as hard stripes and the
-    // building read as a grille. A shaded wall still catches sky.
-    shadow: new MeshStandardMaterial({ color: 0x3b332b, roughness: 0.95, metalness: 0 }),
-    // The roof edge, which is what the photograph leads with and the one thing
-    // that still reads at fifty metres once the louvres have gone to a texture.
-    //
-    // A long way off white. This zone's key is set from an 0.078-albedo brick
-    // facade, so a surface at the photograph's own value clips to a flat white
-    // slab with no edge and no form. Pale *relative to the timber under it* is
-    // the job, and that is a ratio rather than a value.
-    fascia: new MeshStandardMaterial({ color: 0x74736d, roughness: 0.55, metalness: 0.1 }),
-    // Lighter than the wall it is set into, or the opening is indistinguishable
-    // from the shadow behind the screen and the whole detail is wasted.
-    glass: new MeshStandardMaterial({
+    // Weathered stained softwood. Kept dark so it stays less saturated than the clay paving.
+    timber:new MeshStandardMaterial({ color: 0x7d5038, roughness: 0.78, metalness: 0 }),
+    // Wall behind the screen. Darker than the boards to show the gaps, but light
+    // enough to avoid hard stripes.
+    shadow:new MeshStandardMaterial({ color: 0x3b332b, roughness: 0.95, metalness: 0 }),
+    // Roof edge, the part still visible at 50 m. Pale relative to the timber.
+    // True white would clip, since the zone's exposure is keyed to a 0.078-albedo brick facade.
+    fascia:new MeshStandardMaterial({ color: 0x74736d, roughness: 0.55, metalness: 0.1 }),
+    // Lighter than the wall so the opening stands out from the shadow behind the screen.
+    glass:new MeshStandardMaterial({
       color: 0x46545e,
       roughness: 0.06,
       metalness: 0.1,
       envMapIntensity: 1.6,
     }),
-    // The ground falls a metre across this footprint, so on the downhill side
-    // the base is a metre of exposed concrete whatever is done about it — which
-    // is what a real building here would have. At 0x77736c that metre was the
-    // palest thing in the frame and the pavilion read as a shed on a podium.
-    plinth: new MeshStandardMaterial({ color: 0x4e4a44, roughness: 0.93, metalness: 0 }),
+    // Up to a metre of plinth is exposed on the downhill side. Kept dark so it stays unobtrusive.
+    plinth:new MeshStandardMaterial({ color: 0x4e4a44, roughness: 0.93, metalness: 0 }),
   };
 
   const geometries: BufferGeometry[] = [];
@@ -124,25 +91,14 @@ export function createPavilion(): Pavilion {
   const halfWidth = width / 2;
   const halfDepth = depth / 2;
 
-  // A base, so the building sits on the ground rather than growing out of it.
-  // Barely proud of the walls: at half a metre all round it read as a podium,
-  // which is a monument's move and this is a park shed.
+  // Plinth, 8 cm proud of the walls on each side.
   add(new BoxGeometry(width + 0.16, PLINTH + dig, depth + 0.16), materials.plinth, (PLINTH - dig) / 2);
 
-  // The wall the screen hangs off, with its head raked across the plan. That
-  // slope is most of the building's character in the reference and it is what
-  // stops a box this simple reading as a shed.
+  // Wall behind the screen, with its top raked across the plan.
   add(raked(width, depth, rake, height, 0, false), materials.shadow, PLINTH);
 
-  // Two glazed bays on the elevation the walk passes, set behind the screen.
-  // One glazed bay, at the low end, and one is the point.
-  //
-  // Two of them punched the screen into three rags of boarding: at forty metres
-  // the courses are a couple of pixels each, so a course interrupted twice
-  // reads as a broken line rather than as a window, and the elevation came out
-  // as static. The photograph has an unbroken screen with a single dark opening
-  // near one end, and that is not a stylistic choice — it is the only thing at
-  // this scale that survives being small.
+  // One glazed bay near the low end of the front elevation. At 40 m each board
+  // course is a couple of pixels, so a single opening keeps the screen legible.
   const openings = [
     {
       at: -width * 0.28,
@@ -164,15 +120,9 @@ export function createPavilion(): Pavilion {
     geometries.push(glass.geometry);
   }
 
-  // The louvre screen: horizontal boards on all four elevations, stopping under
-  // whatever height the raked head has reached at that point along the wall, so
-  // the coursing dies into the roof line instead of being cut off square.
-  //
-  // Instanced, because there are several hundred and they are the entire read
-  // of the building. Modelled with depth rather than painted on, for the same
-  // reason the bridge's boards are: what the eye is seeing is the shadow each
-  // board drops on the one below, and a texture of that points the wrong way
-  // for half the day.
+  // Louvre screen: instanced horizontal boards on all four elevations, stopping
+  // under the raked roof line. Modelled with depth so the shadow between boards
+  // follows the sun.
   const board = new BoxGeometry(1, louvre - reveal, 0.06);
   const seats: { position: Vector3; scale: Vector3; yaw: number }[] = [];
 
@@ -183,9 +133,7 @@ export function createPavilion(): Pavilion {
     { yaw: -Math.PI / 2, span: depth, out: halfWidth, head: () => 0, front: false },
   ];
 
-  // Boards are laid in segments across each elevation. That is what lets one
-  // instanced course follow a sloping head: a segment stops where the wall
-  // under the rake has run out, and the course frays away rather than ending.
+  // Each course is split into segments so it can stop under the sloping roof line.
   const SEGMENTS = 14;
 
   for (const elevation of elevations) {
@@ -232,19 +180,15 @@ export function createPavilion(): Pavilion {
     screen.setMatrixAt(index, matrix.compose(seat.position, rotation, seat.scale));
   });
   screen.instanceMatrix.needsUpdate = true;
-  // The screen takes the roof's shadow but casts none of its own. A board
-  // stands 3 cm proud and the zone's shadow map covers sixty metres, so its
-  // cast shadow is a texel wide — what it actually produced was acne, breaking
-  // every course into a dashed line and turning the elevation to static. The
-  // shadow that matters between boards is the reveal, and that is modelled.
+  // Receives shadow only. A 3 cm board casts a texel-wide shadow on a 60 m
+  // shadow map, which only produces acne.
   screen.castShadow = false;
   screen.receiveShadow = true;
   object.add(screen);
   instanced.push(screen);
   geometries.push(board);
 
-  // The roof, oversailing on every side. Thin and pale, and its underside rakes
-  // with its top so the oversail reads as a slab rather than as a wedge.
+  // Roof, overhanging on every side. Its underside follows the rake so it forms a thin slab.
   add(raked(width + 1.2, depth + 1.2, rake, height + 0.2, height, true), materials.fascia, PLINTH);
 
   console.info(`[exterior] pavilion: ${seats.length} louvre boards at (${cx}, ${cz}).`);
@@ -260,13 +204,8 @@ export function createPavilion(): Pavilion {
 }
 
 /**
- * A box whose head is a plane raked across its width.
- *
- * `follow` decides whether the underside rakes with the head — which is the
- * difference between a wedge of wall standing on level ground and a slab of
- * roof lying on top of it. Two shapes, one construction, because they have to
- * agree about the slope and there is no way for them to disagree if the slope
- * is a single argument.
+ * A box whose top slopes across its width by `rake`. With `follow`, the
+ * underside slopes too (roof slab); without it, the base is level (wall).
  */
 function raked(
   width: number,

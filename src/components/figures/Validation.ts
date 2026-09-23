@@ -35,7 +35,7 @@ const text = (content: string, className: string, attrs: Record<string, string>)
 
 const decimal = (value: number): string => value.toFixed(2);
 
-/** One tone per product, held across every figure on the beat. */
+/** Per-product colour, shared by every figure on the beat. */
 const productTone = (id: ProductId): string => `--product: var(--c5-p${id.toLowerCase()})`;
 
 /* ---- Block one: the panel against the model ----------------------------------- */
@@ -50,12 +50,8 @@ const atScore = (value: number, span: { start: number; end: number }): number =>
   span.start + (span.end - span.start) * Math.min(Math.max(value, 0), 1);
 
 /**
- * Table 3, drawn as two intervals per product.
- *
- * Both sides carry a width: the panel's is δ(1 − c) on its reported confidence,
- * the model's is its own mean absolute error. The claim is containment, so both
- * are drawn to one axis and the model's band sits inside the panel's. Drawing
- * the model as a point would assert a precision the paper does not report.
+ * Table 3 as two intervals per product on one axis. Panel width is δ(1 − c)
+ * from its reported confidence. Model width is its mean absolute error.
  */
 const panelBoard = (): { readonly board: SVGSVGElement; readonly bands: SVGRectElement[] } => {
   const board = svg('svg', {
@@ -155,13 +151,7 @@ const WHO_BOARD = { width: 760, height: 104 } as const;
 const W_TOP = 8;
 const W_BOTTOM = 78;
 
-/**
- * Fig. 7 redrawn: eight archetypes, five products, forty bars.
- *
- * The paper's own chart, at the paper's own scale. The two archetypes §5.3
- * names are marked, because they are the boundary the section is about: under
- * one the contested pair closes, under the other it opens widest.
- */
+/** Fig. 7 redrawn at the paper's scale: eight archetypes, five products each. */
 const whoBoard = (): { readonly board: SVGSVGElement; readonly bars: SVGRectElement[] } => {
   const board = svg('svg', {
     class: 'vl-board',
@@ -238,7 +228,7 @@ const whoBoard = (): { readonly board: SVGSVGElement; readonly bars: SVGRectElem
 const bestOf = (scores: Readonly<Record<ProductId, number>>): ProductId =>
   PRODUCTS.reduce((best, id) => (scores[id] > scores[best] ? id : best));
 
-/** Fig. 8 as it is published: twenty cells, every value printed, tinted by value. */
+/** Fig. 8: twenty cells, each printed and tinted by value. */
 const applicationGrid = (): { readonly element: HTMLElement; readonly cells: HTMLElement[] } => {
   const cells: HTMLElement[] = [];
 
@@ -277,13 +267,8 @@ const applicationGrid = (): { readonly element: HTMLElement; readonly cells: HTM
 /* ---- Block three: Fig. 10 --------------------------------------------------------- */
 
 /**
- * Three of Fig. 10's four panels, at one shared scale.
- *
- * The shared scale is what makes the comparison work: architectural finish and
- * thermal insulation both fall away steeply after their leading indicators,
- * while the standard structural application spreads importance across many. The
- * grey bar is the aggregate of the seven indicators outside the top ten, and it
- * is large exactly where the field is not concentrated.
+ * Three of Fig. 10's four panels on a shared scale, so their spread is
+ * comparable. The grey bar sums the seven indicators outside the top ten.
  */
 const salienceColumn = (context: (typeof SALIENCE)[number]): {
   readonly element: HTMLElement;
@@ -328,13 +313,8 @@ const salienceColumn = (context: (typeof SALIENCE)[number]): {
 /* ---- The panel --------------------------------------------------------------------- */
 
 /**
- * Beat 4. What the model was tested against, and what the test showed.
- *
- * Three blocks, ruled apart and numbered, because they are three different
- * claims: that the model agrees with the panel, that context moves the
- * recommendation in the way the panel expects, and that the attributions behind
- * both came out of the data. Each block carries the paper's own figure rather
- * than a paraphrase of it.
+ * Beat 4: validation. Three numbered blocks: agreement with the expert panel,
+ * behaviour across contexts, and feature importance.
  */
 export function createValidation(): Validation {
   const panel = panelBoard();
@@ -473,8 +453,7 @@ export function createValidation(): Validation {
           },
           0,
         )
-        // The panel's judgement is drawn first and the model's lands inside it,
-        // which is the order the comparison is made in.
+        // Per row, the panel band draws first and the model band lands inside it.
         .fromTo(
           panel.bands,
           { scaleX: 0.15, opacity: 0 },

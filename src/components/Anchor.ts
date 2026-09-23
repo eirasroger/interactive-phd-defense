@@ -14,29 +14,15 @@ export interface AnchorSpec {
 
 export interface AnchorField {
   readonly element: HTMLElement;
-  /** Call every frame: the camera keeps moving after the scene has arrived. */
+  /** Call every frame, since the camera keeps easing after the scene mounts. */
   track(): void;
   show(visible: boolean, settle?: boolean): gsap.core.Timeline;
 }
 
 /**
- * DOM labels tethered to points in the world.
- *
- * The third typographic register the design system names, and the one that was
- * missing: on the glass, in the world, and this — text that belongs to an
- * object rather than to the frame. A composition that talks about four things
- * standing in front of the audience while pointing at none of them reads as a
- * slide that happens to have a render behind it.
- *
- * **Projected into stage coordinates, not window ones.** The canvas layer and
- * the overlay layer are both `inset: 0` inside the same letterboxed stage box,
- * so normalised device coordinates map onto the fixed 1920x1080 surface and the
- * label lands on the object at every scale without reading painted size.
- *
- * Tracking is per frame rather than per beat. The camera arrives on a tween and
- * keeps easing for the better part of two seconds after a scene mounts, so a
- * position sampled once on enter is wrong for exactly as long as anyone is
- * looking at it.
+ * DOM labels tethered to world points. Positions are projected into the fixed
+ * 1920x1080 stage coordinates, which the canvas and overlay share, so labels
+ * stay on target at any scale.
  */
 export function createAnchorField(
   camera: PerspectiveCamera,
@@ -69,8 +55,7 @@ export function createAnchorField(
       for (const anchor of anchors) {
         projected.copy(anchor.position).project(camera);
 
-        // `z > 1` is behind the near plane, where the projection flips and the
-        // label would swing to the opposite side of the frame.
+        // `z > 1` is behind the near plane, where the projection flips sides.
         if (projected.z > 1) {
           anchor.node.style.visibility = 'hidden';
           continue;

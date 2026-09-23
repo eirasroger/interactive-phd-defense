@@ -2,14 +2,11 @@ import gsap from 'gsap';
 import type { FrameHandler } from './types';
 
 /**
- * The single time authority for the presentation.
- *
- * GSAP's ticker is used as the one requestAnimationFrame loop rather than
- * running a competing loop beside it; Three.js rendering and scene updates
- * are driven from here so every subsystem sees the same frame boundary.
+ * Single time source for the presentation. Runs on GSAP's ticker as the only
+ * requestAnimationFrame loop, so rendering and scene updates share one frame.
  */
 
-/** Clamp after a tab switch or a stall, so nothing jumps when focus returns. */
+/** Caps the frame delta after a tab switch or stall, so nothing jumps. */
 const MAX_FRAME_SECONDS = 1 / 15;
 
 export class Clock {

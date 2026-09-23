@@ -9,28 +9,12 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 const BEAT = { candidates: 0, criteria: 1, evidence: 2 } as const;
 
 /**
- * Scene 8 — what decides in practice.
+ * Scene 8: what decides in practice.
  *
- * **The four panels are named in the world, not only in the matrix.** They are
- * standing thirty metres in front of the audience for this beat, and a table
- * that discusses four objects while pointing at none of them is a slide with a
- * render behind it. The anchored labels are what make the columns be *about*
- * something, and they track per frame because the camera is still easing into
- * its pose for most of the time the scene is legible.
- *
- * **The first beat is the objects alone, undimmed and untitled.** The matrix
- * covers the row it is about, so the labels are read against the panels
- * themselves before anything is laid over them: no scrim, no heading, four
- * things and their names. The keys 01 to 04 carry those names into the columns
- * once the matrix arrives.
- *
- * **The handover is staged, not switched.** Everything used to change on the
- * same frame, which is what made the click read as a cut: the veil appeared
- * instantly because a gradient cannot be interpolated, and the labels, the
- * heading and the matrix all crossed each other. The order is now the order the
- * eye needs — the labels release the objects, the light comes down over the
- * park, the claim rises into it, and only then is the matrix built. Just over a
- * second and a half end to end, and no two things arrive together.
+ * Beat 0 shows the four panels in the world with anchored labels, no veil and
+ * no heading. Labels track every frame because the camera is still easing in.
+ * Moving to beat 1 is staged over about 1.5 s: labels fade, the veil comes
+ * down, the heading rises, then the matrix builds.
  */
 export class PracticeScene implements SceneInstance {
   readonly beats = 3;
@@ -42,7 +26,7 @@ export class PracticeScene implements SceneInstance {
   private anchors: AnchorField | null = null;
   private setSlot = -1;
   private layer: HTMLElement | null = null;
-  /** The eyebrow and heading block, held back through the first beat. */
+  /** Eyebrow and heading block, hidden during the first beat. */
   private head: HTMLElement | null = null;
 
   private motion: gsap.core.Timeline | null = null;
@@ -78,10 +62,9 @@ export class PracticeScene implements SceneInstance {
     set.show(SET.void, true);
     anchors.show(false, true);
 
-    // The head is settled to its end state and then hidden as a block, so the
-    // fade that brings it in later is a `fromTo` on one element. A second `from`
-    // on parts already sitting at zero would resolve its destination to zero and
-    // animate nothing — `learnings.md` §31c.
+    // Settle the head's parts, then hide the block so it can fade in later with
+    // one `fromTo`. A `from` on parts already at zero animates nothing
+    // (`learnings.md` §31c).
     slide.revealHead(true);
     if (this.head) gsap.set(this.head, { opacity: 0, y: 18 });
 
@@ -100,15 +83,13 @@ export class PracticeScene implements SceneInstance {
     this.motion?.kill();
     this.motion = null;
 
-    // The parts inside the head are always at their end state; the block above
-    // them is what carries the reveal.
+    // Head parts stay at their end state. The head block carries the reveal.
     slide.revealHead(true);
 
     const timeline = gsap.timeline();
 
     if (index <= BEAT.candidates) {
-      // Back to the objects, in the reverse order: the claim goes first, the
-      // matrix follows it out, the light lifts, and the labels come back last.
+      // Reverse order: heading, matrix, veil, then labels.
       this.criteria.hide();
       this.evidence.hide();
       set.show(SET.void, true);
@@ -153,26 +134,25 @@ export class PracticeScene implements SceneInstance {
       return;
     }
 
-    // Coming from the objects the whole handover has to be built; coming from
-    // the beat after it, only the last row changes.
+    // From beat 0 the full handover runs. From beat 2 only the last row changes.
     const arriving = this.layer?.dataset['veil'] === 'off';
 
     if (arriving) {
       timeline
-        // 1. The labels release the objects they were naming.
+        // 1. Labels fade out.
         .add(anchors.show(false), 0)
-        // 2. The light comes down over the park, on its own CSS transition.
+        // 2. Veil comes down (CSS transition).
         .call(() => {
           if (this.layer) delete this.layer.dataset['veil'];
         }, undefined, 0.18)
-        // 3. The claim rises into it.
+        // 3. Heading rises in.
         .fromTo(
           head as HTMLElement,
           { opacity: 0, y: 18 },
           { opacity: 1, y: 0, duration: seconds(DURATION.slow), ease: EASE.enter },
           0.45,
         )
-        // 4. And the matrix is built into the half of the frame it left clear.
+        // 4. Matrix builds.
         .add(slide.evidence.show(this.setSlot), 0.72)
         .add(set.show(SET.criteria), 0.9)
         .add(this.criteria.play(), 1.05);

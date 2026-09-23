@@ -6,18 +6,8 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 import { el } from '@/utilities/dom';
 
 /**
- * Scene 29 — artificial intelligence as the methodological backbone.
- *
- * The first of Act III's cross-cutting themes, and the first scene of the talk
- * with no building in it. The corridor is clearing underneath this composition
- * as it arrives: the zone owns that, driven by the same progress that opened the
- * ceiling one scene ago, so the presenter's click starts one motion rather than
- * two that have to be kept in step.
- *
- * **One beat, and nothing measured on it.** This is discussion: what the
- * connection between the stations adds, rather than a sixth telling of what each
- * one did. It is worth about half a minute, the argument is a single shape, and
- * that shape only argues while all four vertebrae are on screen together.
+ * Scene 29: AI as the methodological backbone. First Act III theme, single beat.
+ * The zone clears the corridor behind it, driven by the same scene progress.
  */
 export class BackboneScene implements SceneInstance {
   private motion: gsap.core.Timeline | null = null;

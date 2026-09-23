@@ -1,12 +1,8 @@
 import type { Vec3 } from '@/engine/camera/types';
 
 /**
- * The world's light and air, expressed as data.
- *
- * Atmosphere is to lighting what `CameraPose` is to the camera: a zone declares
- * a target and a director works out how to reach it. That is what lets one
- * persistent scene graph hold a dusk exterior and a lit interior without
- * rebuilding anything, and it is the mechanism `recessed` mode is built from.
+ * Lighting and fog as data. A zone declares a target atmosphere and a director
+ * blends to it, like `CameraPose` for the camera.
  */
 export interface Atmosphere {
   readonly fogColor: number;
@@ -14,7 +10,7 @@ export interface Atmosphere {
   readonly fogFar: number;
   /** Hemisphere light, upper half. */
   readonly skyColor: number;
-  /** Hemisphere light, lower half — bounce off the ground. */
+  /** Hemisphere light, lower half (ground bounce). */
   readonly groundColor: number;
   readonly ambientIntensity: number;
   readonly keyColor: number;
@@ -27,12 +23,8 @@ export interface Atmosphere {
 }
 
 /**
- * The `recessed` variant of an atmosphere.
- *
- * Fog closes, the key drops and exposure falls, so the world becomes a dim
- * depth field behind the text without a blur pass. Derived rather than authored
- * twice: a recessed scene is never a separately tuned lighting rig that can
- * drift away from the zone it belongs to.
+ * Dimmed variant of a zone's atmosphere for text slides: closer fog, weaker
+ * key light, lower exposure. Derived from the base so the two stay in sync.
  */
 export const recessed = (base: Atmosphere): Atmosphere => ({
   ...base,
@@ -46,33 +38,17 @@ export const recessed = (base: Atmosphere): Atmosphere => ({
 });
 
 /**
- * The `clouded` variant: the air the deck opens inside.
+ * Variant for the opening, inside the cloud. Derived from the zone's
+ * atmosphere like `recessed`. Exposure changes little because `CloudShell` is
+ * drawn outside the tone curve.
  *
- * A sibling of `recessed` and built the same way, as a transform of the zone's
- * own atmosphere rather than a rig of its own. What it does is close the air to
- * nothing and open the exposure, which between them mean no part of the world
- * survives to be drawn and the frame is `CloudShell`'s panorama alone.
- *
- * **The exposure barely moves, and that is deliberate.** An earlier version
- * opened it by better than half a stop to place the panorama through ACES, and
- * then spent the descent closing back down: the cloud went grey while it was
- * still the whole frame. `CloudShell` is outside the tone curve now, so the
- * white is fixed and the only thing exposure has to carry is the little
- * geometry close enough to survive the fog.
- *
- * `fogColor` is the panorama's eye-level value. Anything close enough to the
- * camera to survive `fogFar` fades to that colour and has to arrive at the one
- * the shell is painting, or there is a seam across the middle of the frame.
+ * `fogColor` must match the panorama's eye-level colour in `CloudShell`, or a
+ * seam shows across the frame.
  */
 export const clouded = (base: Atmosphere): Atmosphere => ({
   ...base,
   fogColor: 0xdbe6f2,
-  // **Open, now that the deck is what hides the world.** This used to close to
-  // twenty-six metres because the cloud was an opaque shell and the fog was the
-  // only thing keeping the site off screen. A deck occludes by being thick, so
-  // what is wanted underneath it is not a blindfold but distance: the ground
-  // seen through gaps in the cloud reads as far below, and the descent arrives
-  // through haze rather than out of a dissolve.
+  // Long fog range. The cloud deck hides the world; fog only adds distance haze.
   fogNear: 55,
   fogFar: 620,
   ambientIntensity: base.ambientIntensity * 1.35,

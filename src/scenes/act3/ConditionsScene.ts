@@ -6,19 +6,9 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 import { el } from '@/utilities/dom';
 
 /**
- * Scene 30 — the two conditions the architecture is designed around.
- *
- * Act III's second cross-cutting theme, and the last composition before the
- * close. Missing evidence and context sensitivity are argued on one slide
- * because they are the same kind of claim: neither belongs to a stage, both were
- * taken as properties of the problem, and the architecture answers each of them
- * the whole way down. Argued apart they are two more slides about the pipeline.
- *
- * **Two beats, and only the second card moves between them.** The weave is a
- * standing picture the presenter talks over; the registers are drawn beside it
- * from the first frame and answer on the click. Nothing else on the slide
- * changes, including the title, so the beat reads as the argument advancing
- * rather than as the slide being rebuilt.
+ * Scene 30: the two conditions the architecture is designed around (missing
+ * evidence and context sensitivity). Act III's second cross-cutting theme.
+ * Two beats; only the second card changes between them.
  */
 export class ConditionsScene implements SceneInstance {
   readonly beats = 2;
@@ -50,11 +40,8 @@ export class ConditionsScene implements SceneInstance {
   }
 
   /**
-   * `SceneDirector` calls this for beat 0 as well, on the way back.
-   *
-   * So beat 0 has to rebuild the opening state rather than assume it survived,
-   * and both branches write everything they depend on. A defence is not walked
-   * in a straight line.
+   * Also called for beat 0 when stepping back, so each branch sets its full
+   * state.
    */
   beat(index: number, settle: boolean): void {
     const figure = this.figure;
@@ -68,12 +55,8 @@ export class ConditionsScene implements SceneInstance {
   }
 
   /**
-   * The outgoing timeline is finished, never abandoned.
-   *
-   * `kill()` drops every tween where it stands and leaves its target at that
-   * value, so a `from` that had not run yet strands its element at the start
-   * value it was never meant to rest on. `progress(1)` writes the end state
-   * first and the kill is then only releasing the tween.
+   * Jumps the current timeline to its end before killing it. A bare `kill()`
+   * would leave unplayed `from` tweens stuck at their start values.
    */
   private settle(): void {
     this.motion?.progress(1).kill();

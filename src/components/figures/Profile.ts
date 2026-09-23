@@ -17,12 +17,8 @@ const CANDIDATES = 5;
 const ATTRIBUTES = 8;
 
 /**
- * A candidate's profile, and the attributes its declaration leaves out.
- *
- * The picture is a statement about incomplete records, so nothing in it is a
- * measurement and nothing is labelled with one. What has to hold is that the
- * shape is the same at every rehearsal and that no two candidates look alike,
- * which a hash over the candidate index gives for free.
+ * Illustrative attribute values (0.38 to 0.96) for one candidate. Hashed from
+ * the index so they are stable across runs and differ per candidate.
  */
 const profileOf = (candidate: number): readonly number[] => {
   let seed = Math.imul(candidate + 7, 2654435761);
@@ -33,11 +29,8 @@ const profileOf = (candidate: number): readonly number[] => {
 };
 
 /**
- * Which attributes each candidate leaves blank.
- *
- * Different subsets per candidate, because that is the shape of the problem:
- * the gaps are not in the same place twice, so no single column can be dropped
- * to make the set comparable again.
+ * Missing attributes per candidate. Each candidate has different gaps, so no
+ * single column can be dropped to make the set comparable.
  */
 const GAPS: readonly (readonly number[])[] = [
   [2, 6],
@@ -54,7 +47,7 @@ interface Track {
 }
 
 /**
- * One candidate, drawn as the profile its declaration supports.
+ * One candidate's attribute bars.
  *
  * @param filled whether the gaps carry inferred values.
  */
@@ -102,15 +95,9 @@ const keyItem = (provenance: string, label: string): HTMLElement =>
   });
 
 /**
- * Where inference sits, and what it is for.
- *
- * The recommendation can be made the moment C3 hands the candidates on. What
- * arrives with them is a set of declarations that stop at different points, so
- * the profile each candidate can be evaluated on has holes in it and the
- * recommendation is made on less than it was designed for. The same three
- * attributes are declared by everyone, and they carry enough of the rest to be
- * estimated from, which is the whole of this station in one picture: the same
- * five candidates, before and after, with one operation between them.
+ * Where inference sits in the pipeline. The same five candidates are shown
+ * with gaps (from C3), then after inference fills them from the three
+ * attributes every declaration reports.
  */
 export function createProfile(): Profile {
   const declaredTracks = Array.from({ length: CANDIDATES }, (_, index) => track(index, false));
@@ -252,8 +239,7 @@ export function createProfile(): Profile {
             },
             seconds(DURATION.quick * 0.8),
           )
-          // The declared profile is built first and the holes are what is left
-          // when it stops, so the gap is watched appearing instead of announced.
+          // Declared bars first, then the empty slots fade in.
           .fromTo(
             declaredBars,
             { scaleY: 0 },
@@ -351,8 +337,7 @@ export function createProfile(): Profile {
             },
             seconds(DURATION.cinematic * 1.25),
           )
-          // The estimates arrive last and land in the holes the first panel
-          // left, which is the only claim the beat makes.
+          // Inferred values arrive last, in the same positions as the gaps.
           .fromTo(
             evaluatedInferred,
             { scaleY: 0 },

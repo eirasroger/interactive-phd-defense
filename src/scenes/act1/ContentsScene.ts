@@ -5,12 +5,7 @@ import { CONTENTS } from '@/content/contents';
 import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 import { el } from '@/utilities/dom';
 
-/**
- * Scene 2 — the contents.
- *
- * One frame and no beats. Clicking through six section titles spends six clicks
- * on a slide nobody needs to be walked through.
- */
+/** Scene 2: contents. A single frame with no beats. */
 export class ContentsScene implements SceneInstance {
   private motion: gsap.core.Timeline | null = null;
 

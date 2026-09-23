@@ -7,26 +7,13 @@ import { el } from '@/utilities/dom';
 
 const BEAT = { hierarchy: 0, practice: 1 } as const;
 
-/** Which claims are live on each beat. The turn carries two of them. */
+/** Claim indices shown on each beat. */
 const CLAIM = [[0], [1, 2]] as const;
 
 /**
- * Scene 4 - circular economy in construction.
- *
- * Two beats, and the first of them is the scene's arrival: the hierarchy is
- * already on screen when the camera settles, so the one click available is
- * spent on the turn rather than on assembling a picture the audience could
- * have been reading the whole time.
- *
- * **One card, and the claims read across underneath the drawing.** Every other
- * composition in this act stands a wide figure beside a 30rem column of
- * numbered claims, which is right where the drawing is tall enough to leave a
- * column free. This one is a chain of four stages with three returns nested
- * under it: the widest figure in the act and the least tall. A sidecar would
- * squeeze it into two thirds of the frame to fill a column that is mostly
- * floor. Given the whole width it reads as one continuous loop, and the three
- * claims sit as three columns beneath it, divided by rules that turn with the
- * reading direction.
+ * Scene 4: circular economy in construction. Two beats; the first is the entry.
+ * The loop figure is wide and short, so it spans the full card width with the
+ * claims in a row beneath it.
  */
 export class CircularEconomyScene implements SceneInstance {
   readonly beats = 2;
@@ -72,10 +59,7 @@ export class CircularEconomyScene implements SceneInstance {
 
     context.root.appendChild(brief.element);
 
-    // The whole first beat, as one arrival: heading, the card it stands on, the
-    // chain closing, and the line that reads it. Overlapped rather than queued,
-    // because four things that finish together is an arrival and four in a row
-    // is a wait.
+    // First beat: heading, card, loop and first claim, overlapped so they finish together.
     const entry = gsap.timeline({ delay: context.entryDelay + 0.15 });
     entry
       .add(brief.revealHead(), 0)
@@ -86,12 +70,9 @@ export class CircularEconomyScene implements SceneInstance {
   }
 
   /**
-   * Each branch describes the state the beat *is*, not the change into it:
-   * beats are reached backwards and out of order as often as forwards.
-   *
-   * The outgoing timeline is finished rather than dropped. `Loop.close` is
-   * built from `from` tweens, and a `from` killed part-way leaves its target at
-   * the value it was animating out of, which across this figure is invisible.
+   * Sets the full state of the beat, since beats can be reached in any order.
+   * The previous timeline is completed before killing it: `Loop.close` uses
+   * `from` tweens, which leave targets invisible if killed part-way.
    */
   beat(index: number, settle: boolean): void {
     const loop = this.loop;
@@ -103,8 +84,7 @@ export class CircularEconomyScene implements SceneInstance {
     gsap.set(this.head, { opacity: 1, y: 0 });
     card.reveal(true);
 
-    // Both beats share the closed chain, so it is asserted rather than assumed:
-    // this beat may be the one the scene was jumped into.
+    // Both beats need the closed loop, including when jumping straight to this beat.
     loop.close(true);
 
     const timeline = gsap.timeline();

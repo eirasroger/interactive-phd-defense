@@ -3,20 +3,15 @@ import './arrow-mark.css';
 
 export interface ArrowMark {
   readonly element: HTMLElement;
-  /** Scaled from its tail, so the arrow is drawn rather than revealed. */
+  /** Animated with `scaleX` from its tail, so the arrow grows. */
   readonly shaft: HTMLElement;
-  /** A sibling, never a child: a head inside the shaft is squashed by the scale. */
+  /** Sibling of the shaft, so the shaft's scale does not distort it. */
   readonly head: HTMLElement;
 }
 
 /**
- * The mark that carries a value from one column to the next.
- *
- * The head is a sibling of the shaft rather than a pseudo-element on it,
- * because a transform applies to a pseudo-element too: scaling the shaft from
- * zero flattened the head against the tail and then stretched it back, which is
- * exactly the cheap look the beats are trying to avoid. Drawn this way the
- * shaft extends at constant thickness and the head lands on its point.
+ * Arrow linking one column to the next. The head is a separate element so it
+ * keeps its shape while the shaft scales.
  */
 export function createArrow(tone: 'ink' | 'field' = 'ink'): ArrowMark {
   const shaft = el('span', { className: 'mk-shaft' });

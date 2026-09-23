@@ -31,8 +31,7 @@
   opacity: 0.5;
 }
 
-/* The heading's second half is held back, so the two sit on one baseline rather
-   than stacking — the coda completes a sentence, it does not start one. */
+/* Heading and coda share one baseline and wrap as one sentence. */
 .contributions-headline {
   display: flex;
   flex-wrap: wrap;
@@ -56,14 +55,9 @@
 
 /* ---- The field ----------------------------------------------------------- */
 /*
- * Fixed, and absolutely positioned inside. Two layouts share one set of cards,
- * so a card's box is a number the figure computes rather than something a grid
- * decides — which is the only way the same five elements can travel from a row
- * into a plan instead of being replaced by five others.
- *
- * The numbers here and in `ContributionMap.ts` are one layout. The SVG shares
- * the coordinate system through its viewBox, so an edge lands on a card edge
- * without measuring anything.
+ * Fixed size with absolutely positioned cards, so the same cards can animate
+ * between the row and plan layouts. Sizes must match `ContributionMap.ts`; the
+ * SVG viewBox uses the same coordinates.
  */
 
 .contribution-field {
@@ -83,14 +77,11 @@
   flex-direction: column;
   border: 1px solid var(--c-border);
   border-radius: 10px;
-  /* The sheet is clipped by the card, which is what lets its window shrink to a
-     masthead sliver without the page inside it being squashed. */
+  /* Clips the sheet so it can shrink to a masthead strip without squashing. */
   overflow: hidden;
 
   background-color: color-mix(in srgb, var(--c-void) 92%, transparent);
-  /* Two shadows, not one: a tight contact shadow that sits the card on the
-     ground, and a wide soft one that lifts it off the world behind. A single
-     large blur reads as a glow. */
+  /* A tight contact shadow plus a wide soft one. */
   box-shadow:
     0 2px 6px rgb(0 0 0 / 0.5),
     0 22px 60px rgb(0 0 0 / 0.55);
@@ -100,14 +91,8 @@
 }
 
 /*
- * The published page, as an object rather than as a picture of one.
- *
- * White stock on a dark ground is the one place in this deck a bright surface is
- * correct — it is what a published page *is*, and dimming it into the palette
- * would make it read as a screenshot someone tried to hide. The window is what
- * animates; the page inside keeps its own aspect at every size, so the masthead
- * is never stretched. That stretch is the exact tell that separates a document
- * from a graphic of one.
+ * The published first page, on white. Only the window height animates; the
+ * image keeps its aspect ratio at every size.
  */
 .paper-sheet {
   position: relative;
@@ -121,14 +106,11 @@
   display: block;
   width: 100%;
   height: auto;
-  /* Paper white is brighter than anything else the deck ever shows. A couple of
-     points off the top end keeps it reading as stock rather than as a lit panel,
-     without touching the black of the type. */
+  /* Slightly dims paper white, the brightest surface in the deck. */
   filter: brightness(0.96) contrast(1.02);
 }
 
-/* A hairline where paper meets card, so the two materials are separated by an
-   edge rather than by a colour change. */
+/* Hairline between paper and card. */
 .paper-sheet::after {
   content: '';
   position: absolute;
@@ -161,9 +143,7 @@
   color: var(--c-emphasis);
 }
 
-/* The station name, and the label that survives into the plan. It is what the
-   audience meets again on the corridor wall in Act II, so it is set as a name
-   rather than as a caption. */
+/* Station name. Stays visible in the plan and reappears in the Act II corridor. */
 .paper-role {
   font-size: 1.0625rem;
   font-weight: var(--fw-medium);
@@ -173,8 +153,7 @@
   text-wrap: pretty;
 }
 
-/* Pinned to the card's foot, so all five sit on one baseline across the row
-   however many lines their station names run to. */
+/* Pinned to the card's foot so all five align across the row. */
 .paper-record {
   display: grid;
   gap: var(--s-1);
@@ -193,9 +172,7 @@
   color: var(--c-text-faint);
 }
 
-/* Tabular, because these are quantities: volume, year, article. The specificity
-   is the credential — the page above says which journal, this says exactly
-   where. */
+/* Volume, year and article number, in tabular figures. */
 .paper-locator {
   font-family: var(--font-figure);
   font-size: var(--t-micro);
@@ -204,10 +181,7 @@
   color: var(--c-text-faint);
 }
 
-/* Neutral, not accented. The key above is already amber and five cards carrying
-   two accents each is ten amber marks in one frame — past the point where an
-   accent means anything. O4 appearing on two cards is the asymmetry
-   `narrative.md` flags, and it is legible as repeated words without colour. */
+/* Muted text colour. The key above already carries the amber accent. */
 .paper-answers {
   margin-block-start: var(--s-2);
   font-family: var(--font-label);
@@ -230,13 +204,8 @@
 }
 
 /*
- * One weight for every edge.
- *
- * Drawn in the text scale rather than the border scale — a border colour is
- * tuned to sit against a surface, and these run over open world.
- *
- * `opacity: 0` is the resting state, so an edge is invisible before the plan
- * forms even if `getTotalLength` returned nothing to draw with.
+ * One weight for every edge, in a text colour since edges run over the world.
+ * Hidden by default until the plan forms.
  */
 .plan-edge {
   fill: none;

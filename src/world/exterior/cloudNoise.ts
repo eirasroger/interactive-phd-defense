@@ -8,23 +8,10 @@ import {
 } from 'three';
 
 /**
- * The cloud's density field, as a tiling 3D texture built at load.
- *
- * **Three bands in three channels, because erosion needs them separate.** A
- * single fractal field thresholded into cloud gives masses whose edges are the
- * same shape as the masses — round, and obviously a level set. Real cloud has
- * large soft bodies whose boundaries are chewed away at a much finer scale, and
- * the only way to get that is to keep the scales apart until the shader can
- * subtract one from the other.
- *
- * **Tiling is not optional.** The raymarch walks world space, so a field that
- * did not wrap would show its own edges as hard planes hanging in the air the
- * moment the camera moved past one. Every octave here is generated on a lattice
- * whose period divides the texture, which is what makes the whole thing
- * seamless in all three axes.
- *
- * 64³ of RGBA is a megabyte, built in a few milliseconds, and it is resident in
- * cache for the whole of the beat that reads it.
+ * Cloud density field as a tiling 64³ RGBA 3D texture (1 MB), built at load.
+ * R, G, B hold body, medium and fine noise separately so the shader can erode
+ * the body with finer detail. Every lattice period divides the size, so it
+ * tiles on all three axes.
  */
 export function createCloudNoise(): Data3DTexture {
   const voxels = SIZE * SIZE * SIZE;
@@ -45,13 +32,7 @@ export function createCloudNoise(): Data3DTexture {
   const texture = new Data3DTexture(data, SIZE, SIZE, SIZE);
   texture.format = RGBAFormat;
   texture.type = UnsignedByteType;
-  // **Mipmapped, which is the whole answer to the march's aliasing.** A ray
-  // step is a length of the field averaged into one sample, and asking a
-  // full-resolution field for that average gives whichever value happened to
-  // sit at the sample point — noise, which the jitter then spreads into
-  // stipple. Mip levels *are* the field pre-averaged at every scale, so a long
-  // stride reads a correspondingly blurred one and the detail it could not
-  // resolve is gone before it can alias.
+  // Mipmapped so long ray steps sample a pre-averaged field and do not alias.
   texture.minFilter = LinearMipmapLinearFilter;
   texture.magFilter = LinearFilter;
   texture.generateMipmaps = true;
@@ -63,18 +44,9 @@ export function createCloudNoise(): Data3DTexture {
 }
 
 /**
- * One band, normalised to its own range before it is quantised.
- *
- * **Averaging octaves concentrates the result around the middle.** Each one is
- * an independent field, so summing four of them is a small central-limit
- * machine: the raw values crowd into roughly 0.35 to 0.65 and almost never
- * reach either end. Left as they are, every threshold the shader applies has to
- * be hand-fitted to a distribution nobody measured — which is exactly how an
- * earlier version ended up with a coverage cut its field never crossed, and a
- * volume that raymarched to empty air.
- *
- * Rescaling to the full byte range makes the shader's constants mean what they
- * say, and costs one pass over a megabyte at load.
+ * Builds one band and rescales it to the full 0-255 range. Summed octaves
+ * cluster around 0.35 to 0.65, so without this the shader thresholds would
+ * need hand-fitting.
  */
 function build(voxels: number, period: number, octaves: number): Uint8Array {
   const raw = new Float32Array(voxels);
@@ -110,7 +82,7 @@ const byte = (value: number): number => {
   return scaled < 0 ? 0 : scaled > 255 ? 255 : scaled;
 };
 
-/** Octaves on doubling lattices, so every one of them tiles with the texture. */
+/** Octaves on doubling lattices, so each one tiles with the texture. */
 function fbm(x: number, y: number, z: number, period: number, octaves: number): number {
   let sum = 0;
   let amplitude = 0.5;
@@ -160,8 +132,7 @@ function noise(x: number, y: number, z: number, period: number): number {
 
 const wrap = (value: number, period: number): number => ((value % period) + period) % period;
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
-/** Quintic rather than cubic: its second derivative vanishes at the lattice,
-    so the field has no visible creases where cells meet. */
+/** Quintic fade: zero second derivative at lattice points, so no creases between cells. */
 const fade = (t: number): number => t * t * t * (t * (t * 6 - 15) + 10);
 
 function hash(x: number, y: number, z: number): number {

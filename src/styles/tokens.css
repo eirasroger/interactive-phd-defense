@@ -1,15 +1,11 @@
 /*
- * Design tokens.
- *
- * Single source of truth for colour, type, spacing, motion and depth.
- * Scenes and components must consume these variables rather than literals,
- * so the whole presentation reads as one system.
+ * Design tokens for colour, type, spacing, motion and depth.
+ * Scenes and components should use these variables for all such values.
  */
 
 :root {
   /* ---- Colour: neutral base ------------------------------------------ */
-  /* Deliberately not pure black: projectors crush true black and it makes
-     depth cues disappear. */
+  /* Slightly above black: projectors crush true black and lose depth cues. */
   --c-void: #07090d;
   --c-base: #0a0c10;
   --c-surface: #12161c;
@@ -23,8 +19,8 @@
   --c-text-faint: #6b7787;
 
   /* ---- Colour: accents ------------------------------------------------ */
-  /* Semantic, used sparingly. Green carries circularity / sustainability,
-     blue carries AI / computation, amber carries emphasis and warnings. */
+  /* Semantic, used sparingly. Green: circularity and sustainability.
+     Blue: AI and computation. Amber: emphasis and warnings. */
   --c-circular: #2dd4a7;
   --c-circular-dim: #1a8a6d;
   --c-ai: #5b9dff;
@@ -36,14 +32,12 @@
   /* ---- Typography ----------------------------------------------------- */
   /* Faces and role assignments live in `fonts.css`, imported first. */
 
-  /* Fixed, because the stage is. These were fluid clamps against the viewport;
-     inside a scaled stage `vw`/`vh` still resolve against the window, which
-     would reintroduce exactly the reflow the fixed surface exists to remove.
-     The values are what those clamps produced at 1920x1080. */
+  /* Fixed sizes for the fixed 1920x1080 stage. `vw`/`vh` would resolve against
+     the window and cause reflow. */
   --t-display: 6.5rem;
   --t-title: 4rem;
   --t-heading: 2.25rem;
-  /* Standalone quantities: must beat the heading beside them without becoming it. */
+  /* Standalone numbers: larger than the adjacent heading. */
   --t-figure: 4.75rem;
   --t-body: 1.375rem;
   --t-caption: 1rem;
@@ -75,20 +69,20 @@
   --s-24: 6rem;
   --s-32: 8rem;
 
-  /* `--stage-w`, `--stage-h` and `--stage-scale` are written by `StageFit`
-     from the `STAGE` constant, so the surface has one definition. */
+  /* `--stage-w`, `--stage-h` and `--stage-scale` are set by `StageFit` from
+     the `STAGE` constant. */
 
-  /* Safe area for content: keeps text off projector edges. */
+  /* Safe area that keeps text off projector edges. */
   --stage-inline: var(--s-32);
   --stage-block: 4rem;
-  /* Body copy: ch is correct here, the block and its text share a font size. */
+  /* Body line length. `ch` works because block and text share a font size. */
   --measure: 62ch;
-  /* Headings: rem-based, because `ch` on a container resolves against the
-     container's font size and silently mis-sizes large child type. */
+  /* Heading line length in rem. `ch` would use the container's font size and
+     mis-size large child type. */
   --measure-hero: 54rem;
 
   /* ---- Motion --------------------------------------------------------- */
-  /* Cinematic easing: slow-out dominant, minimal overshoot. */
+  /* Easing curves with a long slow-out and little overshoot. */
   --e-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --e-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --e-exit: cubic-bezier(0.7, 0, 0.84, 0);
@@ -114,24 +108,22 @@
   --shadow-soft: 0 2px 8px rgb(0 0 0 / 0.3);
   --shadow-lifted: 0 18px 48px rgb(0 0 0 / 0.45);
 
-  /* Contrast for type set directly on the lit world, where no scrim guarantees
-     it. Three layers doing three jobs: a tight one for the glyph edge, a mid
-     one for the body of the letterform, and a wide one that seats the whole
-     block. Cheaper to the picture than any veil strong enough to match it. */
+  /* Text shadow for type set directly on the 3D scene. Three layers: glyph
+     edge, letter body, and a wide glow behind the block. */
   --ink-halo:
     0 1px 2px color-mix(in srgb, var(--c-void) 55%, transparent),
     0 2px 22px color-mix(in srgb, var(--c-void) 78%, transparent),
     0 6px 60px color-mix(in srgb, var(--c-void) 62%, transparent);
 
-  /* The same halo for artwork, which `text-shadow` does not reach. */
+  /* The same halo as a `filter` for images and SVG. */
   --ink-halo-art:
     drop-shadow(0 2px 18px color-mix(in srgb, var(--c-void) 78%, transparent))
     drop-shadow(0 6px 48px color-mix(in srgb, var(--c-void) 55%, transparent));
 }
 
 /*
- * Reduced motion: collapse durations rather than removing transitions, so
- * state changes stay legible but stop animating.
+ * Reduced motion: durations drop to 1ms, so state changes still apply
+ * without animating.
  */
 @media (prefers-reduced-motion: reduce) {
   :root {

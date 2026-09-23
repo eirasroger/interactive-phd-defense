@@ -6,11 +6,8 @@ import { LEAD, levelTravel, turnOffAt, type CameraRig } from './CameraRig';
 import type { CameraMoveOptions, CameraPose, Vec3 } from './types';
 
 /**
- * Moves the camera between declared poses.
- *
- * A single tween owns the camera at any moment; starting a new move kills the
- * previous one rather than queueing behind it, so a presenter pressing ahead
- * mid-flight is never left waiting for an animation they have moved past.
+ * Moves the camera between declared poses. One tween at a time: a new move
+ * kills the previous one, so skipping ahead is instant.
  */
 export class CameraDirector {
   private tween: gsap.core.Tween | null = null;
@@ -18,9 +15,8 @@ export class CameraDirector {
   constructor(private readonly rig: CameraRig) {}
 
   /**
-   * The camera itself, for scenes that tether DOM to a point in the world.
-   * Read-only by convention: posing it is this director's business, and a scene
-   * that moved it would be fighting the move it was handed.
+   * For scenes that pin DOM to world points. Treat as read-only; only this
+   * director moves the camera.
    */
   get camera(): PerspectiveCamera {
     return this.rig.camera;
@@ -35,7 +31,7 @@ export class CameraDirector {
     this.rig.snapTo(pose);
   }
 
-  /** Moves to a pose and returns the duration, which the deck paces content against. */
+  /** Moves to a pose and returns the duration in seconds, used to pace content. */
   moveTo(pose: CameraPose, options: CameraMoveOptions = {}): number {
     this.kill();
 
@@ -51,9 +47,8 @@ export class CameraDirector {
     s.arc = pose.arc ?? 0;
     this.rig.beginMove(pose, duration);
 
-    // Only the position, the lens and the progress are tweened. The look
-    // target is the rig's own business for the length of the move — see
-    // `CameraRig` for why interpolating it here is what made the turns lurch.
+    // Tween position, lens and progress only. `CameraRig` drives the look
+    // target during the move to keep turns smooth.
     this.tween = gsap.to(s, {
       px: pose.position[0],
       py: pose.position[1],
@@ -79,13 +74,8 @@ export class CameraDirector {
 }
 
 /**
- * How long a move should take, from how far it travels and how far it turns.
- *
- * Two budgets rather than one, and the longer wins. They are not the same
- * quantity: a hundred metres flown along a heading is a landscape passing, and
- * a hundred degrees turned on the spot is the whole world sweeping across the
- * frame. Rate-limiting only the distance leaves the turns as fast as the deck's
- * shortest hop allows, which is exactly the move that reads as violent.
+ * Move duration in seconds: the longer of the travel time and the turn time,
+ * so large turns on short hops stay slow.
  */
 function paceOf(from: CameraPose, to: CameraPose): number {
   const { metresPerSecond, degreesPerSecond, minSeconds, maxSeconds } = TRANSITION.camera;

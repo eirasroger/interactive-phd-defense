@@ -18,12 +18,8 @@ export interface StoneField {
 }
 
 /**
- * Where one stone goes.
- *
- * `squat` flattens it and `sit` says how far its centre stands above the ground
- * as a fraction of its size — negative to bury it. A boulder lying on a bank and
- * a slab of bedrock breaking the surface of a hill are the same object with
- * different values of those two.
+ * Places one stone. `squat` flattens it. `sit` is the centre height above the
+ * ground as a fraction of its size; negative buries it.
  */
 export type PlaceStone = (
   x: number,
@@ -34,15 +30,9 @@ export type PlaceStone = (
 ) => void;
 
 /**
- * A field of granite, instanced.
- *
- * Procedural rather than scanned. A stone is a convex lump, and a jittered
- * icosahedron at 20 triangles is indistinguishable from a 40 000-triangle
- * photogrammetry scan at every distance either of these is seen from — while the
- * scan that was rejected for the asset list was 96 MB on its own.
- *
- * The caller owns the scatter and this owns the object, so the bank's boulders
- * and the knoll's outcrop are one piece of code and two plans.
+ * Instanced granite stones built from a jittered icosahedron. At viewing
+ * distance this matches a scanned rock at a fraction of the cost.
+ * The caller supplies the placement through `scatter`.
  */
 export function createStones(
   name: string,
@@ -62,11 +52,8 @@ export function createStones(
   }
   geometry.computeVertexNormals();
 
-  // Warm-neutral rather than a true grey, and darker than granite looks in the
-  // hand. A neutral albedo under a blue sky takes the sky's colour straight to
-  // the eye, and against ground whose own albedo the terrain shader has already
-  // multiplied down to a fraction of it, stone at its nominal value does not
-  // read as stone — it reads as ice.
+  // `tone` should be warm and darker than real granite. A neutral grey picks
+  // up the blue sky and looks like ice against the darkened terrain.
   const material = new MeshStandardMaterial({
     color: new Color(tone),
     roughness: 0.92,
@@ -112,15 +99,9 @@ export function createStones(
 }
 
 /**
- * The hills' bedrock, where it breaks the surface.
- *
- * Scattered by `outcropAt`, which is the same function the ground shades from —
- * so a slab can only stand where the turf has already given way, and the two
- * agree because they read one number rather than because they were tuned to
- * match. Retune the hill and both follow it.
- *
- * Squat and sunk: what is being drawn is the top of the rock the hill is made
- * of, and a boulder shape standing proud reads as something that rolled there.
+ * Bedrock showing through the hills. Scattered by `outcropAt`, the same
+ * function the terrain shader uses, so stones only appear on exposed ground.
+ * Stones are flattened and sunk to look like bedrock.
  */
 export function createOutcrop(): StoneField {
   let seed = 0x5cd21b;

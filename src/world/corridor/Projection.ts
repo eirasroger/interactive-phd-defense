@@ -177,7 +177,7 @@ export function createProjection(): Projection {
   return {
     object,
 
-    // Dark until the deck reaches its own gallery.
+    // Each screen lights once progress reaches its station.
     setProgress(progress, animate) {
       lamps.forEach((lamp, index) => {
         const on = progress >= stationProgress(index) - 1e-6 ? 1 : 0;

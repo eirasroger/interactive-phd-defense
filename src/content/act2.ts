@@ -4,13 +4,8 @@ import fig4Url from '@/assets/figures/fig4.png?url';
 import { ARCHITECTURE_CLAIM, LEARNED_CLAIM, VALIDATION_CLAIM } from '@/content/c5';
 
 /**
- * Act II copy: one slide per contribution.
- *
- * `narrative.md` breaks each station into three or four beats. C1 and C2 are
- * built; the rest are still one slide carrying their claim, and come back one
- * at a time as their content gets written.
- *
- * Headings are the claim column. They are the argument and they are settled.
+ * Act II copy: one slide per contribution, with one caption per beat. Each
+ * heading states the contribution's claim.
  */
 const slide = (station: string, title: string, heading: string): CaptionContent => ({
   eyebrow: `${station} · ${title}`,
@@ -24,10 +19,7 @@ const c4 = (heading: string): CaptionContent => slide('C4', 'Inference', heading
 const c5 = (heading: string): CaptionContent =>
   slide('C5', 'Context-adaptive recommender', heading);
 
-/**
- * Six beats over one held pose. The camera stays where it landed, so each of
- * these is a change on the wall.
- */
+/** C1 beats. The camera holds one pose, so each beat changes only the wall. */
 export const c1Captions: readonly CaptionContent[] = [
   {
     ...c1('The early design decision is a comparison between alternatives.'),
@@ -42,12 +34,7 @@ export const c1Captions: readonly CaptionContent[] = [
   c1('What the framework settles, and what it hands on.'),
 ];
 
-/**
- * Seven beats over one held pose. The contribution is contextualised, the
- * method and its scale are established, the corpus is read, the paradox inside
- * that reading is opened, the burden is located, and what all of it hands on is
- * stated.
- */
+/** C2 beats: context, method, corpus findings, burden, and implications. */
 export const c2Captions: readonly CaptionContent[] = [
   c2('Decision support has to work with the information available at the early design stage.'),
   c2('Environmental Product Declarations carry the required data in partially structured form.'),
@@ -58,11 +45,7 @@ export const c2Captions: readonly CaptionContent[] = [
   c2('Implications for the contributions that follow.'),
 ];
 
-/**
- * Seven beats over one held pose. Two establish why the stage exists and why it
- * cannot be fully automated, one states the workflow, one the reconciliation
- * rule, two run the case study, and the last states what the station produces.
- */
+/** C3 beats: motivation, workflow, reconciliation rule, case study, and output. */
 export const c3Captions: readonly CaptionContent[] = [
   c3('A recommendation is only meaningful over candidates that are already admissible.'),
   c3('Screening at portfolio scale requires automation, and a regulatory verdict requires accountability.'),
@@ -73,11 +56,7 @@ export const c3Captions: readonly CaptionContent[] = [
   c3('The screening produces a candidate set with its reasoning attached.'),
 ];
 
-/**
- * Six beats over one held pose. One establishes why the station exists and what
- * it reads, two build the model, one reports what it achieves, one shows what
- * the representation generalises over, and the last states what it produces.
- */
+/** C4 beats: motivation, model, results, generalisation, and output. */
 export const c4Captions: readonly CaptionContent[] = [
   c4('Information on construction products is not always complete, and inference prevents the recommendation from degrading.'),
   c4('A declared composition becomes a vector through a semantic embedding.'),
@@ -87,15 +66,7 @@ export const c4Captions: readonly CaptionContent[] = [
   c4('What this contribution settles.'),
 ];
 
-/**
- * Eleven beats over one held pose, the longest station in the corridor and the
- * one the other four feed. One states what the preceding contributions supply
- * and what the remaining step demands, two build the model, three are the
- * relational claim drawn as one movement, one is the expert check, two separate
- * the influence of the stakeholder from the influence of the application, one
- * reads the model's own attributions, and the last states what the
- * contribution enables.
- */
+/** C5 beats. C1 to C4 feed this station. Claims are shared with `c5.ts`. */
 export const c5Captions: readonly CaptionContent[] = [
   c5(
     'The recommendation depends on the product evidence, on stakeholder priorities, and on the intended application.',
@@ -116,7 +87,7 @@ export const act2Captions = {
   c5: c5Captions[0] as CaptionContent,
 } satisfies Record<string, CaptionContent>;
 
-/** Beat captions for the stations whose beats are built. */
+/** Beat captions per station. */
 export const act2Beats: Partial<Record<keyof typeof act2Captions, readonly CaptionContent[]>> = {
   c1: c1Captions,
   c2: c2Captions,
@@ -127,7 +98,7 @@ export const act2Beats: Partial<Record<keyof typeof act2Captions, readonly Capti
 
 export const act2Figures: Partial<Record<keyof typeof act2Captions, readonly FigureContent[]>> = {};
 
-/** The paper's Fig. 5: orange partitions, blue flooring, on the BIM model. */
+/** The paper's Fig. 5: BIM model with partitions in orange and flooring in blue. */
 export const c1Render = {
   src: fig4Url,
   alt: 'Third floor of the case study office building, with the evaluated partitions and flooring highlighted.',

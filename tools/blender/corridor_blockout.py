@@ -30,8 +30,7 @@ def station_y(index: int) -> float:
     return APPROACH_END + STATION_GAP * index
 
 def purge() -> None:
-    """Empty the scene without `read_factory_settings`, which unregisters
-    addons and would kill a live blender-mcp session."""
+    """Avoids `read_factory_settings`, which kills a live blender-mcp session."""
     for collection in (bpy.data.objects, bpy.data.meshes, bpy.data.materials, bpy.data.lights):
         for datablock in list(collection):
             collection.remove(datablock, do_unlink=True)
@@ -85,7 +84,6 @@ def add_light(name: str, y: float, energy: float) -> None:
     data.size = 10.0
     data.color = (0.85, 0.90, 1.0)
     lamp = bpy.data.objects.new(name, data)
-    # Above the lintel: at station height the fixture itself is in shot.
     lamp.location = (0, y, CORRIDOR_HEIGHT + 1.6)
     bpy.context.collection.objects.link(lamp)
 
@@ -123,8 +121,7 @@ def add_camera(y: float) -> bpy.types.Object:
     data.clip_end = 1000.0
     camera = bpy.data.objects.new("presenter", data)
     camera.location = (0, y, EYE_HEIGHT)
-    # A camera looks down its local -Z, so X=90 alone faces +Y — back up the
-    # corridor. The 180 roll turns it around without inverting the horizon.
+    # Faces -Y, down the corridor.
     camera.rotation_euler = Euler((math.radians(88.0), 0.0, math.radians(180.0)), 'XYZ')
     bpy.context.collection.objects.link(camera)
     bpy.context.scene.camera = camera
@@ -142,7 +139,6 @@ def build() -> None:
         build_station(index, frame, edge)
         add_light(f"key_{STATIONS[index]}", station_y(index) + STATION_GAP / 2, 5200)
 
-    # The approach has no station of its own, so nothing lights Act I without this.
     add_light("key_approach", APPROACH_END / 2, 3600)
 
     build_world()

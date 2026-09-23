@@ -15,9 +15,6 @@ RESOLUTION = "1k"
 AGENT = "interactive-phd-defense/1.0 (asset fetch)"
 
 WANTED = (
-    # Conifers carry the north-European read. The island trees are gnarled
-    # Mediterranean olives with sparse silver foliage — they were the reason the
-    # site looked dry and dead, and no amount of grading fixes a wrong species.
     "pine_tree_01",
     "fir_tree_01",
     "pine_sapling_medium",
@@ -30,7 +27,6 @@ WANTED = (
     "shrub_02",
     "shrub_03",
     "shrub_04",
-    # Understorey. Bushiness at eye level is what a canopy alone cannot supply.
     "fern_02",
     "celandine_01",
     "periwinkle_plant",
@@ -38,25 +34,17 @@ WANTED = (
     "grass_medium_01",
     "grass_medium_02",
     "grass_bermuda_01",
-    # Furniture. The slim repeated lamp post is the single strongest "this is a
-    # designed public realm" signal in `work/act1_photo_ideas/` — stronger than
-    # any individual plant, because rhythm is what the eye reads as intent.
     "street_lamp_01",
     "street_lamp_02",
     "painted_wooden_bench",
-    # Granite, which is what a Finnish park is edged and bedded with. Boulders
-    # do two jobs at once here: they furnish the bed edges and they break the
-    # waterline, which is otherwise a clean curve where the terrain grid meets
-    # the stream.
     "boulder_01",
     "rock_07",
     "rock_09",
-    # Deliberately not `coast_land_rocks_02`, which is 96 MB.
+    # Skip `coast_land_rocks_02` (96 MB).
     "dandelion_01",
     "weed_plant_02",
     "shrub_sorrel_01",
     "moss_01",
-    # Woodland floor, for the belt's near edge where the camera gets close.
     "tree_stump_01",
     "root_cluster_01",
 )
@@ -68,22 +56,12 @@ TEXTURES = (
     "square_concrete_pavers",
     "concrete_wall_005",
     "brick_wall_10",
-    # The paving split, from `world_design.md` §2.2. Red clay pavers are the
-    # most recognisable single surface in the reference photography; grey
-    # granite goes at the building, where a red path against a dark brick
-    # facade would go tonally flat.
     "red_brick_pavers",
     "granite_tile_02",
-    # The small-cobble strip that edges every path in the photos, and the
-    # stony margin where the stream meets its bank.
     "cobblestone_02",
     "river_small_rocks",
-    # Ground variety. A second grass at a different tile size is the cheapest
-    # way to break the repeat of the first — one draw call, no extra surface.
     "sparse_grass",
     "gravel_floor",
-    # Act II. The corridor's material rhythm is oak in the links and plaster in
-    # the rooms, so those two carry the whole zone between them.
     "oak_veneer_01",
     "herringbone_parquet",
     "rectangular_parquet",
@@ -92,9 +70,7 @@ TEXTURES = (
     "beige_wall_001",
 )
 
-# Real-world coverage of one tile, in metres, from the Poly Haven `info` API.
-# Tiling is authored in metres rather than in repeats, so these are what turn a
-# texture into a material at the right scale.
+# Real-world tile size in metres, from the Poly Haven `info` API.
 TEXTURE_METRES = {
     "leafy_grass": 2.0,
     "park_dirt": 2.0,

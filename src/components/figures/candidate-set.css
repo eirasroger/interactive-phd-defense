@@ -22,8 +22,7 @@
   text-transform: uppercase;
 }
 
-/* The criteria, down the side. This is the column the argument is read in, so
-   it carries full text weight where the headers carry label weight. */
+/* Criteria labels down the side, at full text weight. */
 .candidate-label {
   fill: var(--c-text);
   font-family: var(--font-label);
@@ -33,11 +32,9 @@
 
 /* ---- The cells ----------------------------------------------------------- */
 /*
- * A cell is two rects, not one: a fill that can drain and a frame that stays.
- * The last beat empties the first and dissolves the second's stroke into
- * dashes, both of which interpolate, which a change of class does not. Same
- * construction as `ImpactMethod` and `Declaration`, because it carries the same
- * meaning in all three.
+ * Each cell has a fill rect and a frame rect so the last beat can tween the
+ * fill out and the frame to dashes. Same construction as `ImpactMethod` and
+ * `Declaration`.
  */
 
 .candidate-cell-fill {
@@ -49,12 +46,11 @@
   fill: none;
   stroke: var(--c-border-strong);
   stroke-width: 1.25;
-  /* Gap zero is a solid line, and the start of a tween to a dashed one. */
+  /* Solid line with a zero gap, so it can tween to a dash pattern. */
   stroke-dasharray: 40 0;
 }
 
-/* Quantities carry the figure role and tabular numerals, so a column reads down
-   as a column of numbers rather than as four unrelated strings. */
+/* Tabular numerals keep values aligned down each column. */
 .candidate-value {
   fill: var(--c-text);
   font-family: var(--font-figure);
@@ -65,9 +61,8 @@
 }
 
 /* ---- The threshold ------------------------------------------------------- */
-/* Compliance is satisfied, so it is the one thing on the figure drawn in the
-   sustainability accent. It is also the only row above the rule, which is what
-   says it is a gate and not a comparison. */
+/* Compliance is satisfied, so it is the only row in the circular accent and the
+   only row above the threshold rule (a gate). */
 
 .candidate-cell[data-kind='met'] .candidate-cell-fill {
   fill: color-mix(in srgb, var(--c-circular) 12%, transparent);
@@ -99,7 +94,7 @@
   text-transform: uppercase;
 }
 
-/* ---- What never arrives -------------------------------------------------- */
+/* ---- The note ------------------------------------------------------------ */
 
 .candidate-note-rule {
   fill: var(--c-emphasis);

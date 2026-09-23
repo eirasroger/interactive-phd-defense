@@ -1,48 +1,28 @@
 /**
- * Where the ground is under something, as a field the terrain can ask.
+ * Canopy density field the terrain samples to change the ground under trees
+ * (litter, shade, unmown grass). Built from the seeded tree plan at load, so it
+ * always matches the trees.
  *
- * Grass does not grow the same under a tree as it does in the open, and the
- * difference is the strongest cue there is that a tree is *standing on* the
- * ground rather than placed on it. Leaf litter, root plate, shade and the
- * mower's inability to get close all land in the same place, so one scalar
- * carries all four.
- *
- * A field rather than a texture because the trees are not authored — they are
- * scattered from a seeded plan at load, and a painted map would be a second
- * description of the same thing, drifting the moment the seed changes.
- *
- * Density is **additive and then saturated**, which is what makes a lone tree a
- * small patch and a group a single larger, darker one without either being
- * asked for. Overlapping discs sum; the exponential keeps the sum inside 0..1
- * however many of them there are.
+ * Overlapping discs add up, then an exponential saturates the sum into 0 to 1.
+ * A lone tree makes a small patch and a group makes one larger, darker patch.
  */
 export interface CanopyField {
   /** Register a crown of this radius, in site metres. */
   add(x: number, z: number, radius: number, weight?: number): void;
-  /** How much canopy is over this point: 0 open ground, 1 dense shade. */
+  /** Canopy over this point: 0 open ground, 1 dense shade. */
   sample(x: number, z: number): number;
   readonly count: number;
 }
 
 /**
- * How far past the crown the ground still knows about the tree.
- *
- * Litter falls wider than the canopy and the mower keeps further off than the
- * litter, so the patch is meaningfully larger than the crown. Under it and the
- * ring reads as a shadow with a hard edge; well over it and every tree on the
- * site joins into one continuous stain.
- *
- * There is also a floor set by what samples this. The terrain carries the field
- * per vertex on a 2.5 m grid, so a patch has to be several quads across to be a
- * patch at all — at a crown's own radius it lands on two vertices and the
- * interpolation flattens it to nothing. That is a real constraint rather than a
- * fudge: the visible thing is the rough ground around a tree, and it genuinely
- * is about twice the crown.
+ * Patch reach = crown radius * SPREAD + MARGIN (metres), about twice the crown.
+ * Smaller looks like a hard-edged shadow and is lost on the terrain's 2.5 m
+ * vertex grid. Larger merges all trees into one stain.
  */
 const SPREAD = 2.1;
 const MARGIN = 2.4;
 
-/** Metres of the lookup grid. Comfortably over the largest reach a crown has. */
+/** Lookup grid cell size in metres. Larger than any crown's reach. */
 const CELL = 24;
 
 /** How fast overlapping crowns saturate. Two touching trees reach about 0.8. */
@@ -66,8 +46,7 @@ export function createCanopyField(): CanopyField {
       reaches.push(reach);
       weights.push(weight);
 
-      // Registered in every cell the disc touches, so a sample only ever has to
-      // look in the one cell it falls in.
+      // Added to every cell the disc touches, so a sample checks only its own cell.
       const from = Math.floor((x - reach) / CELL);
       const to = Math.floor((x + reach) / CELL);
       const near = Math.floor((z - reach) / CELL);
@@ -94,8 +73,7 @@ export function createCanopyField(): CanopyField {
         const dz = z - zs[index]!;
         const squared = (dx * dx + dz * dz) / (reach * reach);
         if (squared >= 1) continue;
-        // Flat under the crown and tangent at the edge, so neither the trunk
-        // nor the rim of the patch reads as a ring.
+        // Flat at the centre and zero-slope at the edge, so no visible ring.
         const falloff = 1 - squared;
         sum += weights[index]! * falloff * falloff;
       }

@@ -13,12 +13,8 @@ export interface Backbone {
 /* ---- The board ---------------------------------------------------------------- */
 
 /**
- * One measured board, and every mark placed against it.
- *
- * The SVG owns the geometry and the HTML anchors to it by percentage, so a word
- * and the shape it names cannot drift apart at any stage size. Four columns laid
- * out in CSS would each have to guess where the other three resolved, and the
- * whole point of this board is that the four sit on one line.
+ * Board size in SVG units. HTML labels are positioned by percentage of it, so
+ * text stays aligned with its shape at any stage size.
  */
 const BOARD = { width: 1440, height: 486 } as const;
 
@@ -29,17 +25,10 @@ const columnMid = (index: number): number => MARGIN + COLUMN * (index + 0.5);
 const SPINE = { y: 50, thickness: 5, glint: 320 } as const;
 const RISER = { top: SPINE.y + 4, bottom: 104 } as const;
 
-/** Where the vertebra sits, and how much room it has. */
+/** Vertebra centre line and half-width. */
 const NODE = { y: 252, half: 78 } as const;
 
-/**
- * The rows, and why the family sits above the shape.
- *
- * The riser comes down from the spine and lands on the name of what the spine
- * delivers here. Below that is the shape, and below the shape is what the stage
- * asks for and why the ask is its own. Read top to bottom that is: the
- * technology, its form, and the reason the form is different.
- */
+/** Label rows, top to bottom: family (under the riser), verb and need (under the shape). */
 const ROW = { family: 116, verb: 386, need: 434 } as const;
 
 const atBoard = (x: number, y: number): string =>
@@ -60,28 +49,15 @@ const mark = (
 /* ---- The vertebrae -------------------------------------------------------------- */
 
 /**
- * Four shapes, and the reason none of them looks like the others.
- *
- * The slide has one thing to say and it is a difference, so the difference has
- * to be visible before anything is read. Each shape is a silhouette first and a
- * diagram second: a wedge, a cross, a target, a fan. From the back of a theatre
- * they are four different objects, and that is the argument. Read closely they
- * are also true, which is what stops them being decoration.
- *
- * Nothing here is measured. This is a discussion slide, and a quantity on it
- * would be the fifth telling of a figure the committee has already read.
+ * One distinct silhouette per stage, so the four differ at a distance. The
+ * shapes are schematic and carry no measured values.
  */
 interface Vertebra {
   readonly group: SVGGElement;
   build(timeline: gsap.core.Timeline, at: number, motion: number): void;
 }
 
-/**
- * Extract — many into one.
- *
- * Documents arriving in whatever shape their author chose, and one reading
- * coming out. A wedge, because convergence is the whole claim.
- */
+/** Extract: many strands converging into one output. */
 function extract(cx: number, cy: number): Vertebra {
   const group = svg('g', { class: 'bb-node' });
   const waist = { x: cx + 42, y: cy };
@@ -115,11 +91,8 @@ function extract(cx: number, cy: number): Vertebra {
 }
 
 /**
- * Screen — the one place a person stands in the pipeline.
- *
- * A channel with a bar across it. The bar is the only warm mark on the slide and
- * it is taller than the channel it interrupts, because what stops here is not a
- * property of the channel.
+ * Screen: a channel with a gate across it. The gate is the only warm mark on
+ * the slide and is taller than the channel.
  */
 function screen(cx: number, cy: number): Vertebra {
   const group = svg('g', { class: 'bb-node' });
@@ -157,12 +130,8 @@ function screen(cx: number, cy: number): Vertebra {
 }
 
 /**
- * Estimate — a value that is not there, and how sure the model is that it found
- * it.
- *
- * A core with rings around it, breathing. The dashed side is what arrived
- * incomplete and the solid side is what leaves, still carrying its spread: the
- * shape says *estimate* rather than *value* without a word or a number.
+ * Estimate: a core with uncertainty rings. Dashed input is the incomplete
+ * value, solid output is the estimate with its spread.
  */
 function estimate(cx: number, cy: number): Vertebra {
   const group = svg('g', { class: 'bb-node' });
@@ -215,13 +184,8 @@ function estimate(cx: number, cy: number): Vertebra {
 }
 
 /**
- * Recommend — one in, an ordering out.
- *
- * Rows, not a fan. A fan says *several outputs* and this stage has one output
- * that happens to have an order inside it, which is a different claim and the
- * only one of the four that is about arrangement rather than about flow. Rows
- * also give the board its fourth topology: converging, crossing, concentric,
- * stacked, and no two of those can be mistaken for each other at distance.
+ * Recommend: one input, one ranked output drawn as stacked rows of
+ * decreasing length.
  */
 function recommend(cx: number, cy: number): Vertebra {
   const group = svg('g', { class: 'bb-node' });
@@ -234,8 +198,7 @@ function recommend(cx: number, cy: number): Vertebra {
   });
   const node = mark('circle', { cx: hinge.x, cy, r: 5, class: 'bb-head' });
 
-  // Rows are wider than they are tall, so the block reads right of the hinge
-  // unless the run is pulled back under the column's own centre.
+  // Shifted left so the row block sits centred in the column.
   const rowLeft = cx - 50;
 
   const widths = [1, 0.84, 0.7, 0.58, 0.48];
@@ -277,14 +240,8 @@ const VERTEBRAE = { extract, screen, estimate, recommend } as const;
 /* ---- Motion helpers -------------------------------------------------------------- */
 
 /**
- * Growth is written to attributes, never to a transform.
- *
- * `transformOrigin` on an SVG shape is a translate wrapped around a scale, and
- * GSAP leaves the compensating translate on the element when the tween lands.
- * Every bar of an earlier build finished sitting exactly its own height too
- * high, with a clean `scaleY(1)` on it and nothing in the geometry to blame.
- * Attributes carry no such baggage: the value the tween ends on is the value in
- * the drawing.
+ * Tweens SVG attributes directly. With `transformOrigin` on SVG, GSAP leaves a
+ * compensating translate behind, which offsets the shape.
  */
 const grow = (
   timeline: gsap.core.Timeline,
@@ -318,11 +275,8 @@ const pop = (
 };
 
 /**
- * A stroke drawn on, in the path's own normalised length.
- *
- * Every path here carries `pathLength="1"`, so the dash pattern is written in
- * the same units whatever the path's real length, and nine strands of different
- * lengths draw at the same rate.
+ * Draws strokes on. Paths use `pathLength="1"`, so paths of any length draw
+ * at the same rate.
  */
 const draw = (
   timeline: gsap.core.Timeline,
@@ -349,22 +303,9 @@ const draw = (
 let sequence = 0;
 
 /**
- * The backbone, in one beat.
- *
- * A spine the width of the frame with a light travelling it that never stops,
- * and four vertebrae hanging off it that look nothing like each other. That is
- * the whole slide: the technology runs through everything, and it is a different
- * bone at every joint.
- *
- * **One beat, no clicks.** The presenter has about half a minute here and the
- * shape only argues while all four are on screen together. A build that revealed
- * them one at a time would spend the half minute assembling the picture instead
- * of standing on it.
- *
- * **The motion after the build belongs to CSS.** The glint along the spine, the
- * pulses dropping into each vertebra and the breathing rings all run on
- * keyframes, so the frame stays alive for as long as the presenter stands on it
- * with no timeline to own and none to dispose of.
+ * A full-width spine with four different vertebrae below it, built in one beat.
+ * Idle motion after the build (spine glint, breathing rings) runs on CSS
+ * keyframes, so no timeline needs to be kept or disposed.
  */
 export function createBackbone(): Backbone {
   sequence += 1;
@@ -425,13 +366,9 @@ export function createBackbone(): Backbone {
   );
 
   /**
-   * The spine opens left to right, and it is the only thing the wipe touches.
-   *
-   * A group carries one `clip-path`, and the spine already needs its own for the
-   * rounded ends and to keep the glint inside them, so the wipe wraps it rather
-   * than replacing it. Nothing else goes in: the risers build on their own
-   * clock, and clipped by a wipe still crossing the board the last of them would
-   * animate somewhere nobody can see it.
+   * Left-to-right wipe for the spine only. It wraps the spine group because a
+   * group takes one `clip-path` and the spine already uses its own. Risers stay
+   * outside so the wipe cannot hide them while they animate.
    */
   const spineWipe: Wipe = createWipe(board, BOARD.width, BOARD.height, 'x');
   const revealed = svg('g', { 'clip-path': spineWipe.clip });
@@ -536,14 +473,7 @@ export function createBackbone(): Backbone {
         seconds(0.42),
       );
 
-      /**
-       * One pulse down each riser, and only one.
-       *
-       * It ran on a loop and the four verticals never stopped twitching, which
-       * is movement with nothing to say for half a minute of standing on the
-       * slide. Fired once with the riser it is falling down, it reads as the
-       * spine delivering to that stage and then leaves the frame still.
-       */
+      /** One pulse down each riser, fired once so the frame then stays still. */
       drops.forEach((drop, index) => {
         const at = seconds(0.44 + index * STAGGER * 1.8);
         timeline.to(drop, { opacity: 1, duration: seconds(DURATION.instant) }, at);

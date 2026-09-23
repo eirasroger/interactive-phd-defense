@@ -13,13 +13,8 @@ import './standing.css';
 export interface Standing {
   readonly element: HTMLElement;
   /**
-   * Set the frame to beat `index`: bands up to and including it are lit, and
-   * the ones after it are dark.
-   *
-   * Every beat writes the whole state rather than the difference from the one
-   * before it. A beat that trusts its predecessor renders wrong the first time
-   * the presenter steps backwards, and a defence is not walked in a straight
-   * line.
+   * Show beat `index`: bands up to it are lit, later bands are dark. Each call
+   * writes the full state so stepping backwards renders correctly.
    */
   reveal(index: number, settle: boolean): gsap.core.Timeline;
 }
@@ -38,13 +33,8 @@ interface Mark {
 }
 
 /**
- * A mark, retracted and measured.
- *
- * Every stroke carries its own length, so the retracted state is per element
- * and cannot be one shared value. `getTotalLength` is defined for every
- * geometry element, but a browser that disagrees should degrade to a mark that
- * fades rather than to a scene that throws on entry, and a length of zero is
- * left alone rather than written as a dash pattern of zero.
+ * Measures each stroke and retracts it with a dash offset of its own length.
+ * If `getTotalLength` fails or returns 0, the stroke is left undashed.
  */
 const measure = (root: Element): Mark => {
   const strokes = Array.from(root.querySelectorAll<SVGGeometryElement>('.icon-stroke')).map(
@@ -73,16 +63,9 @@ const measure = (root: Element): Mark => {
 /* ---- The continuation trail -------------------------------------------------------- */
 
 /**
- * The mark the third band carries instead of an icon.
- *
- * A segment that is covered and a trail that carries on after it stops. It has
- * no scale, no axis and nothing written on it, and the three are drawn
- * identically: the column head says which boundary this is, and a mark that
- * varied in length would be read as a measurement of something nobody defined.
- *
- * The spacing grows, so the trail thins as it travels, and the dots keep
- * drifting outward once the band has settled. That drift is the only thing on
- * the foot of the frame saying the boundary is not where the work ends.
+ * The third band's mark: a solid segment followed by a trail of dots. All three
+ * trails are identical, so length carries no meaning. Dot spacing grows by
+ * `growth`, and the dots keep drifting outward after the band settles.
  */
 const TRAIL = {
   width: 260,
@@ -100,7 +83,7 @@ interface Trail {
   readonly element: SVGSVGElement;
   readonly solid: SVGRectElement;
   readonly dots: readonly SVGCircleElement[];
-  /** The resting opacity each dot was given by its distance along the trail. */
+  /** Resting opacity per dot, fading with distance along the trail. */
   readonly rest: readonly number[];
 }
 
@@ -145,8 +128,7 @@ const buildTrail = (): Trail => {
       cy: String(TRAIL.midline),
       r: String(TRAIL.radius),
     });
-    // One cycle, offset along itself, so the trail reads as a single thing
-    // travelling outward rather than as seven things twitching.
+    // Phase-offset each dot so the trail moves outward as one wave.
     node.style.animationDelay = `${(index * -0.9).toFixed(2)}s`;
     return node;
   });
@@ -163,7 +145,7 @@ interface Band {
   readonly element: HTMLElement;
   readonly label: HTMLElement;
   readonly rule: HTMLElement;
-  /** What rises into the band when it is lit, in reading order. */
+  /** Elements that fade in when the band is lit, in reading order. */
   readonly cells: readonly HTMLElement[];
   readonly marks: readonly Mark[];
   readonly trails: readonly Trail[];
@@ -212,11 +194,8 @@ const buildBand = (band: StandingBand): Band => {
 };
 
 /**
- * The third band, set as a matrix.
- *
- * Three columns, one per boundary, and two rows named in a gutter at the left.
- * The reader is told which sentence is the limit and which is the work it opens
- * rather than inferring it from a colour.
+ * The third band as a matrix: one column per boundary, and two labelled rows
+ * (limit and next step) with their names in a left gutter.
  */
 const buildHorizon = (): Band => {
   const label = el('span', { className: 'std-label', text: STANDING_LIMITS.label });
@@ -271,35 +250,22 @@ const buildHorizon = (): Band => {
 /* ---- The opening ------------------------------------------------------------------- */
 
 /**
- * A band lights on one scalar, and its chrome is a function of it.
- *
- * The ground, the tint behind the label, the inset hairline, the drop shadow
- * and the grid texture are all derived from `--open` in the sheet, so they
- * cannot cross and cannot drift, and the band reads as one surface coming up
- * rather than as five properties arriving on five clocks.
- *
- * **The ease is not `expo.out`.** `expo` spends about nine tenths of its
- * distance in the first quarter of its duration, which on a small element reads
- * as crisp and on a surface the width of the frame reads as a snap followed by
- * a crawl. `power2.out` answers the click at once and still settles.
+ * A band lights by tweening `--open` from 0 to 1. The stylesheet derives the
+ * ground, label tint, hairline, shadow and grid from it, so they stay in sync.
+ * `power2.out` responds at once and settles smoothly on a full-width surface.
  */
 const LIGHT = { seconds: 1.5, ease: 'power2.out' } as const;
 
-/** The rule is drawn across the band before anything stands on it. */
+/** The rule draws across the band before the cells appear. */
 const RULE = { seconds: 1.15, ease: 'power2.inOut' } as const;
 
-/**
- * In seconds from the start of a band's beat.
- *
- * The ground comes up first and the words arrive into a surface that already
- * exists. Reversing that puts text on nothing and then slides a panel under it.
- */
+/** Start times in seconds within a band's beat. The ground comes up before the text. */
 const CUE = { ground: 0, rule: 0.1, cells: 0.34, mark: 0.62 } as const;
 
 const STROKE_STEP = 0.05;
 const MARK_STEP = 0.13;
 
-/** Everything a band owns, for one `killTweensOf` that misses nothing. */
+/** Every animated element of a band, for `killTweensOf`. */
 const contentsOf = (band: Band): Element[] => [
   band.element,
   band.label,
@@ -313,7 +279,7 @@ const contentsOf = (band: Band): Element[] => [
   ...band.trails.flatMap((trail) => [trail.solid, ...trail.dots]),
 ];
 
-/** The state a band rests in once it has been lit, written without motion. */
+/** Sets a band to its final lit state with no animation. */
 const setLit = (band: Band): void => {
   gsap.set(band.element, { '--open': 1 });
   gsap.set([band.label, ...band.cells], { opacity: 1, y: 0 });
@@ -334,11 +300,8 @@ const setLit = (band: Band): void => {
 };
 
 /**
- * The state a band rests in before its beat.
- *
- * Not invisible. The name stays legible and the ground keeps a hairline, so the
- * frame's architecture is readable from the first beat and each click fills a
- * region that was already there.
+ * Sets a band to its state before its beat. The label stays dimly visible and
+ * the ground keeps a hairline, so the full layout shows from the first beat.
  */
 const setDark = (band: Band): void => {
   gsap.set(band.element, { '--open': 0 });
@@ -361,12 +324,8 @@ const setDark = (band: Band): void => {
 };
 
 /**
- * One band coming up, as one gesture.
- *
- * The ground, then the rule drawn across it, then the columns rising into it,
- * then the marks drawing themselves onto lines that already exist. Four cues
- * inside a second and a half, which is a sequence the eye can follow and not a
- * queue it has to wait through.
+ * Animates one band in, in order: ground, rule, cells, then marks.
+ * All four cues fit in about 1.5 s.
  */
 const lightBand = (timeline: gsap.core.Timeline, band: Band): void => {
   timeline.fromTo(
@@ -382,8 +341,7 @@ const lightBand = (timeline: gsap.core.Timeline, band: Band): void => {
     seconds(CUE.ground),
   );
 
-  // Drawn from the left rather than faded: a rule that appears is a border, and
-  // a rule that is drawn is a region being set out.
+  // The rule draws in from the left.
   timeline.fromTo(
     band.rule,
     { scaleX: 0 },
@@ -406,9 +364,8 @@ const lightBand = (timeline: gsap.core.Timeline, band: Band): void => {
   band.marks.forEach((mark, order) => {
     const from = seconds(CUE.mark) + order * seconds(MARK_STEP);
 
-    // Only `strokeDashoffset` moves. Tweening opacity as well would override
-    // `icon-faint` and bring the scaffolding up to full weight against what it
-    // holds.
+    // Tween only `strokeDashoffset`. Tweening opacity would override the
+    // `icon-faint` styling.
     mark.strokes.forEach((stroke, index) => {
       timeline.to(
         stroke.node,
@@ -430,9 +387,8 @@ const lightBand = (timeline: gsap.core.Timeline, band: Band): void => {
       settled,
     );
 
-    // Absence is revealed rather than drawn: the draw writes `stroke-dasharray`
-    // and would replace the dash pattern with a solid line, which says the
-    // opposite of what the pattern says.
+    // Dashed strokes fade in. The draw effect writes `stroke-dasharray` and
+    // would overwrite their dash pattern.
     timeline.to(
       mark.dashes as gsap.TweenTarget,
       { opacity: 0.85, duration: seconds(DURATION.slow), ease: EASE.enter },
@@ -443,9 +399,8 @@ const lightBand = (timeline: gsap.core.Timeline, band: Band): void => {
   band.trails.forEach((trail, order) => {
     const from = seconds(CUE.mark) + order * seconds(STAGGER * 1.6);
 
-    // Drawn by width rather than by a transform: an SVG scale takes the cap
-    // radius and the hairline weight with it, so a scaled rule arrives at a
-    // different thickness than it settles on.
+    // Animate the width attribute. An SVG scale would also scale the corner
+    // radius and line weight.
     timeline.to(
       trail.solid,
       { attr: { width: TRAIL.covered }, duration: seconds(DURATION.cinematic), ease: 'power2.out' },
@@ -469,23 +424,10 @@ const lightBand = (timeline: gsap.core.Timeline, band: Band): void => {
 /* ---- The frame --------------------------------------------------------------------- */
 
 /**
- * The closing frame: three bands, three beats, one title.
- *
- * **The composition is whole from the first beat.** All three bands are on the
- * surface from the moment the scene is entered, dark, with their names legible
- * and their grounds down to a hairline. A frame that grew a band per click would
- * be a slide being assembled in front of the committee; a frame whose
- * architecture is visible from the start and fills in is the argument arriving
- * inside a shape that was already stated. It also means nothing reflows: every
- * element holds its final position for the whole scene, and a beat changes only
- * light.
- *
- * **Each band owns a hue.** Blue has meant *learned* since Act I and carries the
- * theoretical claims; amber is this deck's colour for the place a person stands
- * and carries the four audiences; violet is neither, and carries the boundary.
- * Three regions that would otherwise be told apart by position alone are told
- * apart by light, and each beat brings a colour onto the frame that was not on
- * it before.
+ * The closing frame: three bands, one per beat. All bands are laid out from the
+ * start, dark, so nothing reflows and each beat only lights a band.
+ * Hues: blue for the theoretical claims, amber for the four audiences, violet
+ * for the boundary.
  */
 export function createStanding(): Standing {
   const bands: readonly Band[] = [...STANDING_BANDS.map(buildBand), buildHorizon()];
@@ -510,9 +452,8 @@ export function createStanding(): Standing {
           setDark(band);
           return;
         }
-        // Bands earlier than the one this beat belongs to are written to their
-        // lit state rather than replayed, so a jump straight to the third beat
-        // lands on the same frame as walking to it.
+        // Earlier bands are set lit without animation, so jumping to a beat
+        // gives the same frame as stepping to it.
         if (position < target || settle) {
           setLit(band);
           return;

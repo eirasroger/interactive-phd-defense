@@ -7,26 +7,17 @@ export interface Wipe {
   readonly clip: string;
   /** The rectangle to grow, in the board's own user units. */
   readonly rect: SVGRectElement;
-  /** How far it has to grow to reveal everything. */
+  /** Final size that reveals everything. */
   readonly extent: number;
-  /** The attribute that carries the growth. */
+  /** The attribute that grows. */
   readonly attribute: 'width' | 'height';
 }
 
 /**
- * A reveal measured in the board's own user units.
- *
- * `stroke-dasharray` cannot do this job on a board stretched by
- * `preserveAspectRatio="none"`. With `vector-effect: non-scaling-stroke` the
- * dash pattern is laid out in a device space while `getTotalLength` reports
- * view-box units, and the two disagree by a factor that depends on the display.
- * The symptom is a line that draws most of the way and stops, with no error and
- * a `stroke-dashoffset` of zero sitting on it.
- *
- * A clip rectangle in `userSpaceOnUse` carries no such ambiguity: it is written
- * in the same units the path is, so the reveal is exact by construction. The
- * cost is that a board wipes as one gesture instead of line by line, which is
- * the right reading anyway for a set of lines that are formed together.
+ * A line reveal done with a growing clip rectangle in the board's user units.
+ * On boards with `preserveAspectRatio="none"` and `non-scaling-stroke`, dash
+ * offsets use device units while `getTotalLength` uses view-box units, so dash
+ * reveals stop short. The whole board wipes as one.
  */
 export function createWipe(
   board: SVGSVGElement,
@@ -58,10 +49,10 @@ export function createWipe(
   };
 }
 
-/** The state a wipe starts a build from. */
+/** Start state of a wipe. */
 export const hidden = (wipe: Wipe): gsap.TweenVars => ({ attr: { [wipe.attribute]: 0 } });
 
-/** The state a wipe ends on, and the one `settle` writes directly. */
+/** End state of a wipe. Also set directly on `settle`. */
 export const shown = (wipe: Wipe): gsap.TweenVars => ({
   attr: { [wipe.attribute]: wipe.extent },
 });

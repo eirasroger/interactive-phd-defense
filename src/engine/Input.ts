@@ -9,12 +9,7 @@ export interface PresenterHandlers {
 
 const POINTER_IDLE_MS = 2500;
 
-/**
- * Presenter input.
- *
- * PageUp/PageDown are included because that is what physical presenter remotes
- * emit; without them the deck cannot be driven from a clicker.
- */
+/** Presenter keys. PageUp/PageDown are what presenter clickers send. */
 export function bindPresenterInput(handlers: PresenterHandlers, signal: AbortSignal): void {
   window.addEventListener(
     'keydown',
@@ -59,16 +54,12 @@ export function bindPresenterInput(handlers: PresenterHandlers, signal: AbortSig
   );
 }
 
-/** Below this a gesture is a tap; above it, a deliberate swipe. */
+/** Minimum travel in px for a swipe. Shorter gestures count as taps. */
 const SWIPE_MIN_PX = 40;
 
 /**
- * Touch navigation.
- *
- * The deck is driven by a clicker in the hall, which emits key events; on a
- * phone there is no keyboard, so without this the first scene is the only one
- * reachable. A tap means the same thing the clicker does, and a swipe is added
- * because a deck being read rather than presented needs to go backwards.
+ * Touch navigation for phones. A tap advances. Swipe left advances and swipe
+ * right goes back.
  */
 export function bindTouchNavigation(
   handlers: Pick<PresenterHandlers, 'next' | 'previous'>,
@@ -98,8 +89,7 @@ export function bindTouchNavigation(
       const dx = event.clientX - originX;
       const dy = event.clientY - originY;
 
-      // A mostly-vertical drag was aimed at the page, not at the deck. Treating
-      // it as a tap would advance the talk every time someone tried to scroll.
+      // Ignore mostly vertical drags, which are scroll attempts.
       if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > SWIPE_MIN_PX) return;
 
       if (dx <= -SWIPE_MIN_PX) handlers.next();
@@ -110,7 +100,7 @@ export function bindTouchNavigation(
   );
 }
 
-/** Hides the cursor while the presenter is talking rather than pointing. */
+/** Hides the cursor after `POINTER_IDLE_MS` without pointer movement. */
 export function bindPointerIdle(signal: AbortSignal): void {
   let timer = 0;
 
@@ -135,6 +125,6 @@ export async function toggleFullscreen(): Promise<void> {
       await document.documentElement.requestFullscreen();
     }
   } catch {
-    // Fullscreen is a convenience; denial must never interrupt the talk.
+    // Ignore denial. Fullscreen is optional.
   }
 }

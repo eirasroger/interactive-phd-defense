@@ -1,30 +1,17 @@
 /**
- * C4 — inference. Data of record.
+ * C4: inference. Content data.
  *
- * The station argues a general operation and validates it on one attribute.
- * Everything about the operation (what a comparison needs, which features are
- * admissible, how a composition becomes a vector, how the two networks are
- * trained together) holds for any attribute that correlates with material
- * composition. Everything with a number attached to it is the end-of-life case
- * study, which is the attribute the model was built and measured on.
- *
- * Every quantity here is published in the C4 paper and `assertPublished`
- * checks the arithmetic that relates them. C2's corpus figures are a different
- * population and none of them is carried into this file.
+ * The operation applies to any attribute that correlates with material
+ * composition. All numbers come from the end-of-life case study in the C4
+ * paper, and `assertPublished` checks the arithmetic between them.
  */
 
 /* ---- Where the stage sits ------------------------------------------------ */
 
 /**
- * What C3 hands on, and what happens to it here.
- *
- * The recommendation can be made as soon as the candidates are shortlisted.
- * Product declarations are rarely complete, so some of the attributes the
- * recommendation reads are missing for some of the candidates, and the
- * recommendation is then made on less evidence than it was designed for.
- * Material composition is declared by every product and it predicts several of
- * the attributes that go missing, so the missing values can be estimated before
- * the recommendation is made.
+ * Pipeline position: between the C3 shortlist and the recommendation. Missing
+ * attributes are estimated from material composition, which every product
+ * declares.
  */
 export const STAGE = {
   upstream: 'Shortlisted candidates',
@@ -38,11 +25,8 @@ export interface Input {
 }
 
 /**
- * What the model reads for this attribute.
- *
- * The three named ones are what an end-of-life prediction needs. The fourth is
- * there because the operation is not tied to this attribute: a different target
- * reads whatever else the record reliably carries.
+ * Model inputs for the end-of-life target. The last entry stands for whatever
+ * other fields a different target would read.
  */
 export const INPUTS: readonly Input[] = [
   { key: 'composition', label: 'Material composition' },
@@ -51,16 +35,16 @@ export const INPUTS: readonly Input[] = [
   { key: 'others', label: 'and others' },
 ] as const;
 
-/** How a value is held once the pipeline has both kinds. */
+/** Where an attribute value comes from. */
 export type Provenance = 'declared' | 'inferred' | 'absent';
 
-/** The attribute this contribution predicts, and the form the output takes. */
+/** The predicted attribute and its output form. */
 export const TARGET = {
   label: 'End-of-life circularity pathway',
   form: 'A probability distribution across eight pathways',
 } as const;
 
-/** The eight outputs, in the order the softmax layer holds them. */
+/** The eight outputs, in softmax order. */
 export const PATHWAY_SET: readonly string[] = [
   'Reuse',
   'Reconditioning',
@@ -103,11 +87,11 @@ export interface WorkedMaterial {
   readonly declared: string;
   /** Weight percentage within the product. */
   readonly weight: number;
-  /** What the declared name decomposes into once normalised and segmented. */
+  /** Terms after normalisation and segmentation. */
   readonly terms: readonly string[];
 }
 
-/** Appendix B, verbatim. One product, two constituents, one of them composite. */
+/** Appendix B worked example: one product, two materials. */
 export const WORKED: readonly WorkedMaterial[] = [
   { declared: 'aluminium foil', weight: 75, terms: ['aluminum', 'foil'] },
   { declared: 'wood', weight: 25, terms: ['wood'] },
@@ -123,10 +107,8 @@ export interface Stage {
 }
 
 /**
- * The encoder, its mirror, and the head that reads the latent space.
- *
- * `units` is the width the drawing scales from, so the composition is the
- * network's own shape and nothing about it is chosen for appearance.
+ * Encoder, decoder and predictor layers. `units` is the layer width, and the
+ * figure scales its columns from it.
  */
 export const ENCODER: readonly Stage[] = [
   { key: 'input', label: 'Product embedding', units: 300, detail: 'Weighted material vector' },
@@ -164,12 +146,8 @@ export interface Objective {
 }
 
 /**
- * The two objectives, and the ratio between them.
- *
- * The weighting is what makes the latent space task-aware. Reconstruction is
- * held at a tenth so the encoder keeps enough of the input to be a faithful
- * compression while the geometry of the latent space is shaped by the
- * prediction it has to support.
+ * The two loss terms and their weights. Reconstruction at 0.1 keeps the
+ * encoding faithful while the prediction shapes the latent space.
  */
 export const OBJECTIVES: readonly Objective[] = [
   {
@@ -186,7 +164,7 @@ export const OBJECTIVES: readonly Objective[] = [
   },
 ] as const;
 
-/** What the two weighted losses are added into, and why that is the point. */
+/** Sum of the two weighted losses. */
 export const TOTAL = {
   label: 'Total loss',
   body: 'Both networks are trained by minimising it together',
@@ -211,12 +189,7 @@ export interface Reduction {
   readonly spread: number | null;
 }
 
-/**
- * Three ways to reach fifty dimensions, measured through the same predictor.
- *
- * The comparison is the contribution's own claim about the architecture, so it
- * is held as data and drawn from the data.
- */
+/** Three reductions to 50 dimensions, each measured through the same predictor. */
 export const REDUCTIONS: readonly Reduction[] = [
   { key: 'autoencoder', label: 'Autoencoder', loss: 0.002, spread: null },
   { key: 'pca', label: 'Principal component analysis', loss: 0.042, spread: 0.002 },
@@ -229,11 +202,8 @@ export const REDUCTIONS: readonly Reduction[] = [
 ] as const;
 
 /**
- * The reduction comparison, in the paper's own wording.
- *
- * The ratio of the two published losses is a round twenty-one and the paper
- * states "over twenty times", so the wording is what gets printed and the
- * arithmetic is only used to check it still holds.
+ * The paper's wording for the loss ratio (0.042 / 0.002 = 21). The ratio is
+ * only used to check this text in `assertPublished`.
  */
 export const REDUCTION_CLAIM = {
   label: 'Autoencoder against principal component analysis',
@@ -260,7 +230,7 @@ export interface Metric {
   readonly decimals: number;
 }
 
-/** Table 1's error budget, held per split so the generalisation gap is visible. */
+/** Table 1 errors per split, so the train-test gap shows. */
 export const METRICS: readonly Metric[] = [
   { key: 'me', label: 'Mean error', unit: '%', train: 0.01, test: 0.01, overall: 0.01, decimals: 2 },
   {
@@ -292,7 +262,7 @@ export const METRICS: readonly Metric[] = [
   },
 ] as const;
 
-/** Ten independent stratified splits, reported as mean and standard deviation. */
+/** Ten stratified splits: mean and standard deviation. */
 export const CROSS_VALIDATION = [
   { key: 'prediction', label: 'Test prediction loss', mean: 0.0032, deviation: 0.0002 },
   { key: 'reconstruction', label: 'Test reconstruction loss', mean: 0.0021, deviation: 0.0001 },
@@ -302,14 +272,13 @@ export interface Recall {
   readonly key: string;
   readonly label: string;
   /**
-   * Share of products whose most probable pathway the model identifies. Null
-   * where the paper reports the category as unresolved and publishes no figure;
-   * a number invented to fill the gap would be a claim nobody made.
+   * Share of products whose most probable pathway is identified (0 to 1). Null
+   * where the paper publishes no figure.
    */
   readonly share: number | null;
 }
 
-/** The confusion matrix, read as one row per pathway. */
+/** Confusion matrix recall, one row per pathway. */
 export const RECALL: readonly Recall[] = [
   { key: 'recycling', label: 'Recycling', share: 0.9 },
   { key: 'landfill', label: 'Inert landfilling', share: 0.9 },
@@ -322,14 +291,8 @@ export const RECALL: readonly Recall[] = [
 ] as const;
 
 /**
- * Why four of the eight stay unresolved.
- *
- * Reuse, reconditioning, valorisation and composting are reported
- * inconsistently, so two labels in the training data often describe the same
- * declared text. The measurement that shows it is reuse, which the model reads
- * as recycling in most of the test cases where reuse was the declared outcome.
- * Their individual results are therefore not conclusive, and the declarations
- * support reading them together with recycling as one recovery class.
+ * Why four pathways stay unresolved: their labels are reported inconsistently.
+ * `share` is how often declared reuse is predicted as recycling.
  */
 export const FLOOR = {
   label: 'Reuse, reconditioning, valorisation and composting are reported inconsistently',
@@ -342,31 +305,19 @@ export const FLOOR = {
 
 export interface Transfer {
   readonly key: string;
-  /** What the model is handed, and why it has no exact match for it. */
+  /** The input term. `note` says why it has no exact match. */
   readonly declared: string;
   readonly note: string;
-  /** The material terms it comes out beside, as far as the paper names them. */
+  /** Nearest terms named in the paper. */
   readonly neighbours: readonly string[];
   readonly pathway: string;
   readonly tone: 'energy' | 'recovery';
 }
 
 /**
- * What semantic similarity is for.
- *
- * A declaration names a material in whatever words its author chose, and new
- * materials keep arriving. The embedding places a term by meaning, so an input
- * the model has no exact match for still comes out beside terms it does know,
- * and the outcome predicted for those terms is the outcome it gets.
- *
- * Both rows are Section 4.1: an unfamiliar wood resolves beside wood, pine and
- * birch and is predicted to energy recovery through incineration, and the
- * concrete composition resolves onto ready-mix concrete, whose aggregates carry
- * a high recycling rate.
- *
- * Fig. 3 reports five nearest neighbours for each probe and the text names only
- * some of them, so every row draws a trailing mark saying the list continues.
- * Filling the rest in would be inventing distances the paper does not publish.
+ * Unseen inputs predicted through their nearest known terms (Section 4.1).
+ * Fig. 3 has five neighbours per probe but the text names only some, so each
+ * row draws a trailing mark for the rest.
  */
 export const TRANSFERS: readonly Transfer[] = [
   {
@@ -387,14 +338,14 @@ export const TRANSFERS: readonly Transfer[] = [
   },
 ] as const;
 
-/** The three columns the transfers are read across. */
+/** Column headings for the transfer table. */
 export const TRANSFER_STEPS = [
   'What is declared',
   'What it resolves to',
   'What is predicted',
 ] as const;
 
-/** Why the property matters at all, stated once above the table. */
+/** Claim shown above the transfer table. */
 export const TRANSFER_CLAIM = {
   label: 'A material the model has never seen is predicted like the materials it resembles.',
   body: 'Declarations name materials in whatever words their author chose, and new products keep arriving.',
@@ -404,28 +355,23 @@ export const TRANSFER_CLAIM = {
 
 export interface Settlement {
   readonly key: string;
-  /** Which mark is drawn beside the claim. */
+  /** Icon drawn beside the claim. */
   readonly glyph: 'ring' | 'funnel';
   readonly claim: string;
-  /** A published figure, where one anchors the claim. */
+  /** Supporting published figure, if any. */
   readonly figure: string | null;
 }
 
 export interface Attribute {
   readonly key: string;
   readonly label: string;
-  /** Whether this contribution is the one that measured it. */
+  /** True if C4 measured it. */
   readonly measured: boolean;
 }
 
 /**
- * The takeaways, with the reason the contribution exists first.
- *
- * The headline is the thesis claim: the recommendation is produced either way,
- * and what inference protects is the evidence behind it. The reach comes second
- * and is drawn rather than written, because a mechanism that works on one
- * attribute and a mechanism that works on any attribute correlated with
- * composition are two different contributions, and this one is the second.
+ * Takeaways. `reach` is drawn as a diagram: one source feeding any attribute
+ * that correlates with composition.
  */
 export const SETTLES = {
   headline: 'The recommendation keeps its quality when the evidence on a product is incomplete.',

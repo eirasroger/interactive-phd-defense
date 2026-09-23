@@ -30,12 +30,8 @@
   gap: var(--s-3);
 }
 
-/*
- * The spine, the key and the two returns all sit on this grid, so the right end
- * of the spine and the right end of a return rail are the same pixel. That
- * alignment is the comparison: a credit given back at D is measured against the
- * burden drawn to the left of it.
- */
+/* Spine, key and returns share this grid so the spine and the return rails end
+   on the same pixel. The module D credit lines up against the burden. */
 .bd-row,
 .bd-return {
   display: grid;
@@ -70,8 +66,8 @@
   will-change: transform;
 }
 
-/* Padding on a block a few pixels wide is a floor on its width, and the whole
-   point of the spine is that four of these blocks are a few pixels wide. */
+/* Padding only on the first block. Padding would set a minimum width on the
+   narrow stage blocks. */
 .bd-stage:first-child {
   padding-inline: var(--s-3);
 }
@@ -86,9 +82,8 @@
   opacity: 0;
 }
 
-/* Only the product block is wide enough to hold its own key. The rest are named
-   in the legend, which is the honest way round: a label squeezed into a
-   six-pixel block is a label about to be misread. */
+/* Only the product block is wide enough for its key. The others are named in
+   the legend. */
 .bd-stage:first-child .bd-stage-key {
   opacity: 1;
 }
@@ -157,7 +152,7 @@
   color: var(--ink-muted);
 }
 
-/* ---- What comes back ---------------------------------------------------- */
+/* ---- Module D returns --------------------------------------------------- */
 
 .bd-recovery {
   display: grid;
@@ -211,8 +206,7 @@
   background-color: color-mix(in srgb, var(--c-base) 6%, transparent);
 }
 
-/* Anchored to the right, because the credit is given back at module D and paid
-   against everything drawn to the left of it. */
+/* Right-anchored so the module D credit grows back against the burden. */
 .bd-return-fill {
   position: absolute;
   inset-block: 0;
@@ -238,5 +232,4 @@
   color: var(--ink-faint);
 }
 
-/* Both returns are the same kind of credit, drawn in the same colour on the
-   same rail, so the only difference the eye can find between them is length. */
+/* Both returns share one colour and rail style so they differ only in length. */

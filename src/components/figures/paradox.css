@@ -34,8 +34,7 @@
   min-width: 0;
 }
 
-/* Placed on the axes rather than on the container's edges, because a head that
-   names an axis has to stand over it. 30/420 and 356/420 are where they are. */
+/* Heads are centred over the axes, at x = 30/420 and 356/420. */
 .pd-heads {
   position: relative;
   height: 0.875rem;
@@ -52,8 +51,7 @@
   color: var(--ink-faint);
 }
 
-/* Aspect-locked, so a label placed by percentage lands on the value its line
-   was drawn at. */
+/* Aspect must match the SVG viewBox so percentage-placed labels line up. */
 .pd-plot {
   position: relative;
   width: 100%;
@@ -84,7 +82,7 @@
   fill: var(--slope);
 }
 
-/* Colour follows the category, so a line and its two labels are one object. */
+/* One colour per category, shared by its line, dots and labels. */
 .pd-line[data-key='insulation'],
 .pd-dot[data-key='insulation'],
 .pd-label[data-key='insulation'] {
@@ -111,7 +109,7 @@
   white-space: nowrap;
 }
 
-/* The axes stand at 30/420 and 356/420 of the plot; the labels hang off them. */
+/* Labels sit just outside the axes at x = 30/420 and 356/420. */
 .pd-label[data-side='origin'] {
   right: calc(100% - 7.14% + 0.75rem);
   text-align: right;

@@ -1,14 +1,8 @@
 /**
- * Where two paved routes meet, worked out from the routes themselves.
- *
- * A junction is a *shape*, and deleting rectangles from two ribbons cannot make
- * one — which matters here because the riverside walk meets the avenue at 66°,
- * and that is the junction the camera stands on for two consecutive scenes.
- *
- * So the shape is constructed: in each of the four quadrants the two carriageway
- * edges are met with an arc tangent to both, as in
- * `another_park_pathway_idea`. The arcs then say exactly how much of each
- * route's kerb has to go, so `realm.ts` and this module cannot disagree.
+ * Path junction geometry. In each of the four corners where two paths cross,
+ * the two path edges are joined by an arc tangent to both (see
+ * `another_park_pathway_idea`). The arcs also define how much kerb `realm.ts`
+ * removes.
  */
 
 export interface Route {
@@ -20,39 +14,26 @@ export interface Route {
   readonly centre: (along: number) => number;
 }
 
-/** One station of a fillet's outer profile: a point, and which way is grass. */
+/** One point on a fillet's outer edge, with its outward normal. */
 export interface Frame {
   readonly x: number;
   readonly z: number;
-  /** Unit normal pointing off the carriageway, which is the way the section runs. */
+  /** Unit normal pointing away from the paving. */
   readonly nx: number;
   readonly nz: number;
 }
 
 /**
- * One quadrant's worth of junction: the curve its paving is bounded by.
- *
- * Only the boundary, because the *fill* is a radial patch swept from the
- * crossing point out to it. Filling the wedge alone — from the corner the two
- * carriageway edges make, out to the arc — is the obvious construction and it
- * does not work: its inner sides are chords of two curved ribbons, so it leaves
- * a sliver of bare ground against each of them, and no amount of tuning where
- * the chords sit closes both at once. Sweeping from the middle of the junction
- * instead means the patch *contains* both carriageways and there is no inner
- * boundary left to disagree with anything.
+ * The outer edge of one junction corner. The paving is filled from the
+ * crossing point out to this edge, so it covers both paths with no gaps.
  */
 export interface Fillet {
   readonly frames: readonly Frame[];
 }
 
 /**
- * How much of one route's edge, on one side, the junction has taken over.
- *
- * Held as a projection onto the route's own direction rather than as an
- * interval of its parameter, so a caller can test any point it already has
- * without converting coordinates. The two ends are the tangent points of the
- * two fillets on that side, which is precisely where the kerb stops being
- * straight.
+ * The stretch of one path edge that the junction replaces, stored as a range
+ * along the path's direction. The ends are the arc tangent points.
  */
 export interface Mouth {
   readonly route: string;
@@ -73,71 +54,31 @@ export interface Junction<T extends Route> {
   readonly mouths: readonly Mouth[];
 }
 
-/**
- * Kerb radius at a junction, in metres, before the site has its say.
- *
- * Large enough that the arc is read as a radius rather than as a chamfer, and
- * small enough that the mouth does not swallow the whole crossing. It is a
- * maximum rather than a value: `wedge` reduces it until the tangent points fit
- * on the routes that are actually there, because the riverside walk crosses the
- * avenue only sixteen metres short of the bridge and a radius that reaches past
- * the abutment would pave the bank.
- */
+/** Max kerb radius at a junction in metres. Reduced where a path ends too close to fit it. */
 const RADIUS = 2.6;
 
 /**
- * How far either side of the crossing the straight lines this is built on have
- * to agree with the curves they stand for.
- *
- * The construction is a straight-line one — two edges, an arc tangent to both —
- * and the riverside walk is not straight. Taking each route's direction from a
- * derivative at the crossing makes a tangent, which leaves the curve by a third
- * of a metre by the time it reaches the tangent point; the fan then starts
- * outside the ribbon's own edge and the gap between them is bare ground.
- *
- * A **secant** over the reach the junction actually occupies meets the curve at
- * both ends instead of at one, so what is left is the sagitta in between —
- * under a tenth of a metre, which the fill's own overlap absorbs.
+ * Half-length of the secant used for path direction at a crossing. A secant
+ * fits a curved path better than a tangent over the junction's size.
  */
 const SECANT = 4.0;
 
 /**
- * How far past its tangent point a fillet runs before handing back to the
- * ribbon.
- *
- * The ribbons are swept in whole quads and can only stop on a quad boundary, so
- * the handover can miss by up to one step. Rather than cutting quads — which is
- * a mesh problem for a millimetre of benefit — the fillet overruns and the
- * ribbon gives way conservatively, so the two always overlap. The overlap costs
- * nothing because both are the same section on the same ground; it only needs
- * the fillet to win the depth test, which is what `TIER` is for.
- *
- * Generous, because the ribbon gives way by more than a step: a section cut
- * square to a skewed route reaches back along it by the offset times the skew,
- * so the outer gutter of a quad tests a metre further into the mouth than its
- * centreline does, and the whole quad goes with it.
+ * How far a fillet continues past its tangent point. Paths can only stop on
+ * whole quads, so the fillet overlaps them to avoid gaps. `TIER` makes the
+ * fillet win the depth test.
  */
 export const LEAD = 2.8;
 
-/**
- * Metres between stations along a lead.
- *
- * The lead is where the straight construction becomes the curve again, which
- * cannot be done in one step. A station is also the width of a span in the fan
- * that fills the junction, so a lead drawn as one 2.8 m chord let the top of the
- * river bank come through the middle of its own paving.
- */
+/** Spacing between points along a lead. Small enough that the paving follows the ground. */
 const STATION = 0.7;
 
-/** Stations round the arc. One every ~9°, which is smooth at a metre's range. */
+/** Points along the arc, about one every 9°. */
 const ARC = 10;
 
 /**
- * Every place two routes cross, with the junction that belongs there.
- *
- * Priority is the table's order, exactly as it is for the ribbons: the earlier
- * route carries through and the later one gives way, so the mouth is paved in
- * the senior's surface.
+ * All path crossings with their junction geometry. The earlier path in the
+ * list has priority, and its surface paves the junction.
  */
 export function crossings<T extends Route>(paths: readonly T[]): Junction<T>[] {
   const found: Junction<T>[] = [];
@@ -155,7 +96,7 @@ export function crossings<T extends Route>(paths: readonly T[]): Junction<T>[] {
   return found;
 }
 
-/** Whether a point lies in the stretch of kerb a junction has taken over. */
+/** Whether a point is in the stretch of kerb a junction replaces. */
 export function inMouth(mouth: Mouth, x: number, z: number): boolean {
   const t = (x - mouth.ox) * mouth.ax + (z - mouth.oz) * mouth.az;
   return t >= mouth.from && t <= mouth.to;
@@ -183,11 +124,7 @@ function cross<T extends Route>(senior: T, minor: T): Junction<T> | null {
     })),
   );
 
-  // One radius for the whole junction, and it is the smallest any of its four
-  // corners can carry. Four different radii at one crossing would read as a
-  // mistake even where each of them fits — and one of them is always tight,
-  // because the riverside walk meets the avenue sixteen metres short of the
-  // bridge and the avenue's paving stops at the abutment.
+  // Same radius on all four corners: the smallest that every corner can fit.
   const radius = quadrants.reduce(
     (limit, { arms }) => (arms ? Math.min(limit, arms.limit) : limit),
     RADIUS,
@@ -227,35 +164,32 @@ function extend(reach: Map<string, [number, number]>, key: string, value: number
   else reach.set(key, [Math.min(span[0], value), Math.max(span[1], value)]);
 }
 
-/** One quadrant's two arms, before a radius has been settled on. */
+/** The two path edges at one junction corner, before the radius is chosen. */
 interface Arms {
   readonly at: Vec;
   readonly corner: Vec;
   readonly angle: number;
   readonly senior: Arm;
   readonly minor: Arm;
-  /** The largest radius this quadrant's shorter arm can carry. */
+  /** The largest radius this corner can fit. */
   readonly limit: number;
 }
 
-/** One route leaving a junction corner: which way it goes, and how far it can. */
+/** One path edge leaving a junction corner: its direction and how far it runs. */
 interface Arm {
   readonly path: Route;
   readonly along: Vec;
   readonly outward: Vec;
-  /** Which side of the centreline this arm's edge is, as the sign of its offset. */
+  /** Side of the centreline, as the sign of the offset. */
   readonly side: number;
-  /** Ground distance from the corner to the end of the route, along `along`. */
+  /** Distance from the corner to the end of the path, along `along`. */
   readonly run: number;
 }
 
 /**
- * Where one quadrant's two carriageway edges meet, and how much room each has.
- *
- * The only part worth spelling out is which way the two edges run *away* from
- * their corner: it is whichever direction increases the distance from the other
- * route, which is a sign test rather than a case analysis and so cannot be got
- * backwards for a particular skew.
+ * Where two path edges meet at one corner, and how much room each has. Each
+ * edge runs away from the corner in the direction that moves away from the
+ * other path.
  */
 function corner(
   at: Vec,
@@ -313,7 +247,7 @@ function corner(
   };
 }
 
-/** How far a route still runs from a point, in the direction given. */
+/** Remaining path length from a point in the given direction. */
 function runAhead(path: Route, from: Vec, dir: Vec): number {
   const component = path.axis === 'z' ? dir[1] : dir[0];
   const here = path.axis === 'z' ? from[1] : from[0];
@@ -321,7 +255,7 @@ function runAhead(path: Route, from: Vec, dir: Vec): number {
   return Math.max(0, Math.abs(end - here) / Math.max(Math.abs(component), 1e-3));
 }
 
-/** The arc that fills one quadrant, and where it leaves each route. */
+/** The arc for one corner, and its tangent points on each path. */
 function wedge(arms: Arms, radius: number): {
   fillet: Fillet;
   tangentSenior: Vec;
@@ -341,8 +275,7 @@ function wedge(arms: Arms, radius: number): {
 
   const from = Math.atan2(tangentSenior[1] - centre[1], tangentSenior[0] - centre[0]);
   const to = Math.atan2(tangentMinor[1] - centre[1], tangentMinor[0] - centre[0]);
-  // The short way round, which is the one that passes the corner. The long way
-  // is a hole punched through the middle of the junction.
+  // Take the short way round the arc.
   let sweep = to - from;
   while (sweep > Math.PI) sweep -= Math.PI * 2;
   while (sweep < -Math.PI) sweep += Math.PI * 2;
@@ -360,20 +293,9 @@ function wedge(arms: Arms, radius: number): {
 }
 
 /**
- * The stations between a tangent point and the ribbon the fillet hands back to.
- *
- * **Sampled from the route, not projected along a straight line.** The fillet is
- * a straight-line construction and the riverside walk is a curve, so a lead run
- * on straight leaves the ribbon's own edge by a third of a metre — and the two
- * kerbs arrive at the handover as diverging bands with bare ground between them.
- *
- * The construction's offset from the curve is therefore carried at the tangent
- * point, where the arc must be met exactly, and eased out well before the
- * ribbon, which gives way generously and must be met exactly too.
- *
- * Capped by the run the arm has. Where a route ends inside the junction's reach
- * — the avenue does, at the bridge abutment — paving that ran on would land
- * under the deck.
+ * Points from a tangent point back to the path edge. Sampled along the real
+ * curved path, with the offset at the tangent point eased out so both ends
+ * line up. Stops early if the path ends first.
  */
 function lead(arm: Arm, tangent: Vec, spent: number): Frame[] {
   const reach = Math.max(0, Math.min(LEAD, arm.run - spent));
@@ -397,39 +319,25 @@ function lead(arm: Arm, tangent: Vec, spent: number): Frame[] {
   return frames;
 }
 
-/**
- * Where a section offset lands on the ground, at one station along a route.
- *
- * Offset along the centreline's own normal, which stops a path widening through
- * its bends. The same construction the ribbons are swept with, and it has to be
- * — otherwise the fillet hands back to an edge the ribbon never drew.
- */
+/** A point offset from the path centreline along its normal, same as `realm.ts`. */
 function edgeAt(path: Route, along: number, offset: number): Vec {
   const on: Vec = path.axis === 'z' ? [path.centre(along), along] : [along, path.centre(along)];
   return add(on, scale(normal(path, bearingAt(path, along)), offset));
 }
 
-/** Unit direction of a route at one station, in site coordinates. */
+/** Unit direction of a path at a position along it. */
 function bearingAt(path: Route, along: number): Vec {
   const slope = path.centre(along + 0.5) - path.centre(along - 0.5);
   return unit(path.axis === 'z' ? [slope, 1] : [1, slope]);
 }
 
 /**
- * Where two centrelines meet.
- *
- * One is a function of z and the other a function of x, so the crossing is the
- * fixed point of composing them. The avenue is straight and the riverside walk
- * slack, which makes the composition a strong contraction and the iteration a
- * formality — but it is written as an iteration rather than solved by hand
- * because the whole point of `paths.ts` is that either centreline may be
- * changed without anything downstream being retyped.
+ * Where two centrelines cross. One gives x from z and the other z from x, so
+ * the crossing is found by fixed-point iteration. Works for any centreline shape.
  */
 function meeting(a: Route, b: Route): Vec | null {
   const [along, across] = a.axis === 'z' ? [a, b] : [b, a];
 
-  // `along` is x as a function of z; `across` is z as a function of x. The
-  // crossing is therefore the fixed point of one composed with the other.
   let x = (across.from + across.to) / 2;
   for (let step = 0; step < 60; step += 1) {
     const next = along.centre(across.centre(x));
@@ -443,22 +351,13 @@ function meeting(a: Route, b: Route): Vec | null {
   const z = across.centre(x);
   if (x < across.from || x > across.to) return null;
   if (z < along.from || z > along.to) return null;
-  // A fixed point that is not a crossing: two near-parallel routes converge
-  // happily on a point neither of them passes through.
+  // Near-parallel paths can converge on a point neither passes through.
   if (Math.abs(along.centre(z) - x) > 1e-3) return null;
 
   return [x, z];
 }
 
-/**
- * Unit direction of a route where it passes a point, in site coordinates.
- *
- * A secant over `SECANT` metres rather than a derivative, which matters
- * because everything downstream is built from straight lines: a derivative
- * makes a tangent that leaves a curving route by a third of a metre by the time
- * it reaches the tangent point, and the ribbon's own edge is then inside the
- * fill's boundary with bare ground showing between them.
- */
+/** Path direction at a point, from a secant over `SECANT` metres. */
 function heading(path: Route, at: Vec): Vec {
   const along = path.axis === 'z' ? at[1] : at[0];
   const slope = (path.centre(along + SECANT) - path.centre(along - SECANT)) / (2 * SECANT);
@@ -466,14 +365,8 @@ function heading(path: Route, at: Vec): Vec {
 }
 
 /**
- * The direction a *positive* section offset moves in, which is not simply "the
- * left-hand perpendicular".
- *
- * A route along +Z offsets its section in X and a route along +X offsets its
- * section in Z, and those are opposite handedness. One perpendicular for both
- * puts every mouth on the wrong side of half the network — kerbs surviving
- * inside the junction and vanishing outside it. Derived from the axis so it
- * matches the offset `realm.ts` sweeps its ribbons with.
+ * Direction of a positive section offset. Paths along Z and X use opposite
+ * perpendiculars, matching how `realm.ts` builds them.
  */
 function normal(path: Route, [x, z]: Vec): Vec {
   return path.axis === 'z' ? [z, -x] : [-z, x];

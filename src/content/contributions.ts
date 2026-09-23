@@ -6,33 +6,20 @@ import paper5 from '@/assets/presentation/papers/paper5.png';
 import type { ContributionMapSpec } from '@/components/figures/ContributionMap';
 
 /**
- * Scene 11 — the four objectives answered, and the shape the answers make.
+ * Scene 11: the contributions, how they answer the objectives, and how they
+ * connect. Last scene of Act I.
  *
- * **One paper at a time, at a size where it is actually a paper.** Five headers
- * laid out in a row is five grey smudges: at a fifth of the frame the masthead
- * is unreadable and the title is texture, so the images end up decorating a
- * layout that would have been better without them. Featured one per beat, the
- * sheet is 944 units wide, the journal is legible from the back of the hall and
- * the title is read off the page itself — which is why nothing here repeats it
- * in type.
+ * One paper per beat, large enough to read. The paper image carries the title
+ * and authors, so the text column shows only the role and the objective.
  *
- * **The sheet carries title and authorship; the column carries meaning.** No
- * element appears in both. The column is what the audience cannot get from
- * looking at the page: which station this is, and which objective it answers.
- *
- * **`role` is the station name from `narrative.md`, not a paraphrase.** It is
- * what survives into the plan, and it is the label the audience meets again on
- * the corridor wall in Act II. The two must not drift.
- *
- * **This is the last scene of Act I.** What follows it is the doors opening, so
- * the frame it leaves on is the pipeline itself — which is the thing the camera
- * is about to walk into.
+ * `role` must match the station name in `narrative.md` and on the Act II
+ * corridor wall.
  */
 
 export const CONTRIBUTIONS = {
   eyebrow: 'Contributions',
   heading: 'How the objectives are answered.',
-  /** Held back until the plan forms, so the heading earns a second half. */
+  /** Appended to the heading when the plan forms. */
   coda: 'And how they connect.',
 
   map: {
@@ -79,29 +66,17 @@ export const CONTRIBUTIONS = {
         sheet: paper5,
         journal: 'Sustainable Production and Consumption',
         locator: '67 (2026) 119–144',
-        // The second asymmetry, and it is left to be noticed rather than
-        // announced: O4 is the only line that appears twice, on two consecutive
-        // beats. `narrative.md` flags it; a slide that counts it out loud one
-        // scene after counting six into four is arithmetic twice running.
+        // O4 is answered by both C4 and C5. Intentionally left unannounced
+        // (see `narrative.md`).
         answers: 'O4',
         plan: { column: 3, lane: 'axis' },
       },
     ],
 
     /*
-     * One kind of edge, drawn one way.
-     *
-     * `decisions.md` §20 distinguishes C2 → C5 as design-time foundation from
-     * the inference-time flow of the other two into C5, and in the corridor that
-     * distinction is load-bearing — it is why the corpus is the floor rather
-     * than a third channel. **On this slide it is not.** Drawn as ground running
-     * under the diagram it stopped reading as an edge at all, and a viewer
-     * seeing the pipeline for the first time has no way to know that the shape
-     * underneath is a relation. The distinction belongs where it can be
-     * explained, which is Act II standing on it.
-     *
-     * Here C2 → C5 runs straight down the axis between the C3 and C4 lanes:
-     * same weight, same arrowhead, no special pleading.
+     * All edges use one style. C2 → C5 is a design-time link (`decisions.md`
+     * §20), but that distinction is shown in Act II. Here it runs along the
+     * axis between the C3 and C4 lanes like any other edge.
      */
     edges: [
       { from: 'C1', to: 'C2' },

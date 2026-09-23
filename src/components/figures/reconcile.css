@@ -1,8 +1,6 @@
 /*
- * One axis per indicator, the full width of the band. The shading is the set of
- * values a product is still allowed to have, and every source in the scenario
- * puts a mark on the same scale, so "strictest" is a position rather than a
- * word.
+ * One full-width axis per indicator. The shading is the admissible range, and
+ * every source places its mark on the same scale.
  */
 .rc {
   display: grid;
@@ -26,11 +24,8 @@
 }
 
 /*
- * The axis reserves the space its marks label into, so the row's box is the
- * whole drawing and a mark cannot overflow into the row above it. The strip is
- * therefore below the row's centre, and the two text columns are nudged the
- * same distance down to meet it. Every measure here is fixed rem, so the nudge
- * stays correct.
+ * The axis reserves room above for its mark labels, so the strip sits below the
+ * row centre. The text columns are shifted down by the same fixed rem to align.
  */
 .rc-row-head,
 .rc-governing {
@@ -80,7 +75,7 @@
   border-radius: 3px;
 }
 
-/* The shading needs one word, once, at the end that never moves. */
+/* Label at the fixed end of the shaded range. */
 .rc-band::after {
   content: 'Admissible';
   position: absolute;
@@ -102,8 +97,7 @@
   right: var(--s-3);
 }
 
-/* The moving edge is the only edge that is drawn, because it is the only one
-   the rule decides. */
+/* Only the edge set by the rule gets a border. */
 .rc-row[data-kind='max'] .rc-band {
   border-right: 3px solid var(--c3-accent);
 }
@@ -148,7 +142,7 @@
   background-color: var(--source);
 }
 
-/* A cap on the stem, so a mark reads as a placed measure rather than a tick. */
+/* Round cap on top of the stem. */
 .rc-mark-stem::before {
   content: '';
   position: absolute;
@@ -188,8 +182,7 @@
   text-transform: uppercase;
 }
 
-/* A mark the region no longer covers keeps its position and loses its weight.
-   Nothing announces that it lost; it is simply outside the shading. */
+/* Marks outside the admissible range stay in place, drawn dashed and hollow. */
 .rc-mark[data-state='outside'] .rc-mark-stem {
   width: 2px;
   left: -1px;

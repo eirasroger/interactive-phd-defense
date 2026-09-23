@@ -6,11 +6,8 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 import { el } from '@/utilities/dom';
 
 /**
- * Scene 10 — the six gaps regrouped into four objectives.
- *
- * Four beats, one per objective, and none spent on anything but a fold. The six
- * gaps stand along the top throughout; each beat lights the ones its objective
- * is motivated by.
+ * Scene 10: the six gaps regrouped into four objectives. One beat per
+ * objective; each beat highlights the gaps that motivate it.
  */
 const BEATS = OBJECTIVES.map.items.length;
 
@@ -18,7 +15,7 @@ export class ObjectivesScene implements SceneInstance {
   readonly beats = BEATS;
 
   private map: ObjectiveMap | null = null;
-  /** Everything the entry timeline animates, so a killed entry can be settled. */
+  /** Elements the entry timeline animates, reset if the entry is killed. */
   private head: HTMLElement[] = [];
 
   private motion: gsap.core.Timeline | null = null;
@@ -38,10 +35,8 @@ export class ObjectivesScene implements SceneInstance {
       el('div', { className: 'objectives-composition', children: [headBlock, map.element] }),
     );
 
-    // Only now is there a layout to read line breaks off. If the webfont has not
-    // resolved the text will rewrap when it does, so measure again on that —
-    // guarded by the scene's signal, because a scene that has already exited must
-    // not be writing to its own dead DOM.
+    // Measure after layout, and again once webfonts load since text may rewrap.
+    // The abort check skips the remeasure if the scene has already exited.
     map.measure();
     if (document.fonts.status !== 'loaded') {
       void document.fonts.ready.then(() => {
@@ -79,9 +74,8 @@ export class ObjectivesScene implements SceneInstance {
     const map = this.map;
     if (!map) return;
 
-    // The deck calls this for beat 0 immediately after `enter`, which kills the
-    // entry timeline while its `from` tweens are still at their start values —
-    // an invisible composition. Settling the head is what puts them back.
+    // Beat 0 runs right after `enter` and kills the entry timeline while its
+    // `from` tweens are still hidden, so reset the head to visible.
     this.motion?.kill();
     gsap.set(this.head, { opacity: 1, y: 0 });
 

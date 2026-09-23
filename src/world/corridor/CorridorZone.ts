@@ -30,15 +30,9 @@ const COVE = {
 };
 
 /**
- * The ceiling coming off, in the order the camera needs it gone.
- *
- * The rise leaves from C5, so C5's lid goes first and the sequence runs back
- * toward the mouth ahead of the camera. It is the only rigged geometry in the
- * zone and the only thing that happens during the climb, which is what makes
- * the climb a beat rather than dead travel.
- *
- * They lift and then fade. Eleven slabs left hovering would be between the
- * camera and the plan at exactly the moment the figure has to be read.
+ * Ceiling lid timing in seconds. The climb starts at C5, so C5's lid goes first
+ * and the rest follow toward the mouth. Lids lift, then fade so they do not
+ * block the plan view.
  */
 const CEILING = {
   travel: 1.4,
@@ -48,51 +42,26 @@ const CEILING = {
 } as const;
 
 /**
- * The building draining to nothing, in the climb it happens inside.
- *
- * It starts late and finishes early. The first seconds are still a room being
- * left — the ceiling lifting off a lit gallery is the shot, and it needs the
- * gallery — and the last are the plan being read, which wants the change over
- * before the camera settles rather than resolving under the audience's eyes.
+ * Shell fade to black during the climb, in seconds. Starts late so the lit
+ * gallery is visible as the ceiling lifts, and ends before the camera settles.
  */
 const DRAIN = { delay: 0.7, seconds: 2.6 } as const;
 
 /**
- * The figure leaving.
- *
- * Longer than the camera's own drift on purpose. The move is over at 1.9 s and
- * the composition begins arriving at 1.65 s, so the last second of the clearing
- * runs underneath a claim already on screen: the incoming thing starts before
- * the outgoing one has finished, which is the whole of why a transition reads
- * as expensive rather than as two states joined by a fade.
- *
- * `ease` is the camera's, not the interface's. `power2.inOut` is crisp on a
- * panel and wrong on something the size of a building — it spends its soft ends
- * by moving at four times the average speed through the middle, and a
- * seventy-five metre front doing that is a wipe with soft edges.
- *
- * What is left once it has gone is the sea, which is already there: it belongs
- * to the roof coming off rather than to the drawing leaving. See `FIELD`.
+ * Plan and flow fade-out. Deliberately longer than the 1.9 s camera move so it
+ * overlaps the incoming slide. Uses the camera's gentle ease: `power2.inOut` is
+ * too fast mid-way on a 75 m front. The sea stays (see `FIELD`).
  */
 const CLEARING = { seconds: 2.9, ease: 'sine.inOut' } as const;
 
 /**
- * The volume filling, and why it fills with the roof rather than after the plan.
- *
- * The sea is the place Act III is argued inside, and a place first met on the
- * slide that needs it reads as a backdrop being switched on. It arrives on the
- * climb instead, so the plan is read *inside* the volume from the first frame it
- * is legible in, and the theme after it inherits a world that was already there
- * rather than one that appears as the drawing goes.
- *
- * Behind the drain, so the shell is on its way to nothing before anything is
- * seen through it, and settled well before the camera is. Leaving is quicker
- * than arriving and takes no delay: stepping back into Act II is a room closing
- * over the camera, and a field lingering inside a lit gallery is a fault.
+ * Data sea fade-in during the climb, in seconds, so Act III already has its
+ * setting when the plan appears. Starts after the drain. Fades out faster and
+ * with no delay when returning to Act II.
  */
 const FIELD = { delay: 1.1, seconds: 3.2, out: 1.2 } as const;
 
-/** What the shell is worth once the drawing is carrying the information. */
+/** Shell colour when fully drained. */
 const VOID = new Color(0x05070a);
 
 const CORRIDOR_ATMOSPHERE: Atmosphere = {
@@ -111,19 +80,9 @@ const CORRIDOR_ATMOSPHERE: Atmosphere = {
 };
 
 /**
- * The air the plan is read through.
- *
- * Fog sized for a corridor hides two thirds of a 75 m run seen from sixty
- * metres up, so it opens with the camera, and its colour goes from the warm
- * near-black of an interior to a cold one: what the camera climbs out into is
- * not a bigger room.
- *
- * Key and environment go **up**, which is counterintuitive for a shot that ends
- * on a drawing in the dark. They are paying for the middle of the climb, not
- * the end of it: the roof is eleven lids with nothing on them but sky, and
- * unlit they are black slabs against a black ground — the one event in the
- * whole move, invisible. By the time the camera arrives they are gone and the
- * shell is hidden, so what they cost there is nothing.
+ * Atmosphere for the overhead plan view. Fog is pushed out so the full 75 m run
+ * is visible from above, and turns a cold dark blue. Key and environment light
+ * go up so the lifting lids stay visible during the climb.
  */
 export const opened = (base: Atmosphere): Atmosphere => ({
   ...base,
@@ -133,10 +92,8 @@ export const opened = (base: Atmosphere): Atmosphere => ({
   ambientIntensity: base.ambientIntensity * 1.5,
   keyIntensity: base.keyIntensity * 1.4,
   environmentIntensity: base.environmentIntensity * 1.3,
-  // **The corridor draws its background at zero intensity**, because a museum
-  // with no apertures never shows one, and the colour set above is multiplied
-  // by it. Left at zero the whole of Act III sits on pure black however the fog
-  // is coloured — the setting to change is not the one that names a colour.
+  // The corridor base uses 0, which would make the background pure black
+  // whatever its colour.
   backgroundIntensity: 1,
 });
 
@@ -164,11 +121,8 @@ function mount(source: Object3D): Object3D {
 }
 
 /**
- * Materials arrive shared with the asset cache, and a lid has to be faded.
- *
- * Tweening opacity through a shared datablock would take the fade to whatever
- * else the cache hands out later — the same trap as baking several assets
- * against one material name (`learnings.md` §7c), one layer further down.
+ * Clones every material so fades do not leak into the shared asset cache.
+ * See `learnings.md` §7c.
  */
 function unshare(object: Object3D): MeshStandardMaterial[] {
   const owned: MeshStandardMaterial[] = [];
@@ -187,7 +141,7 @@ function unshare(object: Object3D): MeshStandardMaterial[] {
   return owned;
 }
 
-/** A shell material, and what it was before the drain took it. */
+/** A shell material and its values before the drain. */
 interface Skin {
   readonly material: MeshStandardMaterial;
   readonly color: Color;
@@ -263,7 +217,7 @@ class Corridor implements ZoneInstance {
     stage.add(this.root);
   }
 
-  /** Only the links carry lamps; every gallery's light is in the bake. */
+  /** Lamps go in the links only. Gallery lighting is baked. */
   private lightEnfilade(): void {
     const half = ROOM.length / 2;
     const axis = [0, 1, 2, 4].map((index) => STATIONS[index]?.z ?? 0);
@@ -286,39 +240,20 @@ class Corridor implements ZoneInstance {
   }
 
   /**
-   * The open ceiling is the cue for everything the plan view shows.
-   *
-   * The pulse used to wait for a beat of its own and does not any more: the
-   * overlook is one state, reached by one click and left by one click. Driving
-   * it from progress rather than from a beat also means a jump into the scene,
-   * or back to it from later in the deck, finds the pipeline running — the flow
-   * has no idea it was ever navigated away from.
-   */
-  /**
-   * A museum has no sky, and until now it borrowed the one outside.
-   *
-   * Background and environment are global and were installed by the exterior at
-   * build time with nothing ever taking them down, so the corridor ran on a
-   * dusk sky texture and an outdoor PMREM for the whole of Acts II and III. It
-   * went unseen only because the corridor draws its background at zero
-   * intensity — so the moment the overlook needed a background colour, Act III
-   * came up behind a photograph of the sky.
-   *
-   * **On the handover, not on mount.** Cleared when the corridor became active
-   * it fired at the *start* of the crossing, and the crossing begins with the
-   * camera on the avenue looking at the whole building: the sky went flat and
-   * every surface outside lost the light it was lit by, nine seconds before
-   * anyone was indoors. `ZoneDirector` defers this to the release for exactly
-   * the reason it defers the shadow rig.
-   *
-   * Clearing also makes the zone *path-independent*: loading straight into a
-   * corridor scene and walking into one from Act I now light the same.
+   * Clears the exterior's global sky background and environment map.
+   * `ZoneDirector` calls this on handover, after the exterior is out of view.
+   * Makes lighting the same whether the corridor is loaded directly or entered
+   * from Act I.
    */
   takeSky(): void {
     this.context.world.setBackground(null);
     this.context.world.setEnvironment(null);
   }
 
+  /**
+   * Driven by zone progress, so jumping into any scene finds the ceiling, sea
+   * and flow in the right state.
+   */
   setProgress(progress: number, animate: boolean): void {
     const open = progress >= RISE.opens;
     this.setCeiling(!open, animate);
@@ -385,18 +320,7 @@ class Corridor implements ZoneInstance {
   }
 
   /**
-   * The figure leaving, so the argument can carry on without it.
-   *
-   * Act III's cross-cutting themes are about the pipeline rather than about a
-   * place, and a plan drawing held under them for six scenes is a backdrop the
-   * audience stops seeing by the second one. So the corridor is spent here: the
-   * drawing and the flow clear on one front, and what is left standing is the
-   * sea, which has been there since the roof came off.
-   *
-   * Nothing about this is a scene's business. It is the zone's own last state,
-   * driven by the same progress that opened the ceiling, so entering the theme
-   * from a jump or stepping back into the overlook both find the world in the
-   * condition the deck says it is in.
+   * Fades out the plan drawing and flow for Act III's themes, leaving the sea.
    */
   private setClearing(dispersed: boolean, animate: boolean): void {
     if (dispersed === this.dispersed) return;
@@ -425,14 +349,7 @@ class Corridor implements ZoneInstance {
     this.flow.setCleared(this.clearing.level);
   }
 
-  /**
-   * The sea, which the overlook stands in rather than arrives at.
-   *
-   * Same gate as the ceiling, because it is the same event: the roof comes off
-   * and what is outside the building is not a sky but the volume the pipeline
-   * moves. Driven from zone progress like everything else here, so a jump into
-   * any Act III scene finds the field at the level the deck says it is at.
-   */
+  /** Fades the data sea in or out. Uses the same progress gate as the ceiling. */
   private setField(present: boolean, animate: boolean): void {
     if (present === this.flooded) return;
     this.flooded = present;
@@ -457,12 +374,8 @@ class Corridor implements ZoneInstance {
   }
 
   /**
-   * The building becoming its own plan.
-   *
-   * One scalar drives every material, so there is no state to get out of step:
-   * the shell keeps its geometry and loses its surfaces, and the drawing arrives
-   * in the same stroke. Going back is instant and complete, which is what a jump
-   * back into Act II is entitled to.
+   * Fades the shell to black and draws the plan, both from one 0-1 level.
+   * Returning to 0 is instant.
    */
   private setDrain(level: number, animate: boolean): void {
     gsap.killTweensOf(this.drain);
@@ -492,10 +405,7 @@ class Corridor implements ZoneInstance {
     for (const light of this.lights) light.intensity = COVE.intensity * (1 - level);
     this.projection.setLevel(1 - level);
     this.projector.setLevel(1 - level);
-    // A drained shell is a black solid standing over a drawing lying on the
-    // floor, and it hides most of it. Once it is carrying no information it
-    // stops being drawn at all — at 0.97 of the way to black there is nothing
-    // left to see leave.
+    // Hide the nearly black shell so it does not cover the plan on the floor.
     this.shell.visible = level < 0.97;
     this.plan.setDrawn(level);
   }

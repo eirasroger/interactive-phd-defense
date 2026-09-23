@@ -1,10 +1,6 @@
 /*
- * Orientation cue: which section, how far through.
- *
- * It has to stay readable over both grounds the deck puts behind it — the dark
- * exterior and the lit corridor wall — so the row carries its own scrim and
- * sets its type at full weight against it. Quiet is a matter of scale and
- * position here, and legibility is the thing that earns it a place on screen.
+ * Current section and progress. Carries its own scrim so it stays readable
+ * over both the dark exterior and the lit corridor wall.
  */
 .progress-indicator {
   position: fixed;
@@ -27,7 +23,7 @@
   transition: opacity var(--d-quick) var(--e-standard);
 }
 
-/* Full-bleed, so the scrim reaches the stage edges the row is inset from. */
+/* Scrim extends past the row's inset to the stage edges. */
 .progress-indicator::before {
   content: '';
   position: absolute;

@@ -5,7 +5,7 @@ import { el } from '@/utilities/dom';
 import './magnitude.css';
 
 export interface MagnitudeField {
-  /** What the share is of. Names the denominator, because each one differs. */
+  /** Names the denominator. Each field has its own. */
   readonly label: string;
   /** Whole percent, 0 to 100. One cell per unit. */
   readonly value: number;
@@ -13,7 +13,7 @@ export interface MagnitudeField {
 }
 
 export interface MagnitudeGroup {
-  /** What the fields underneath have in common. Two or three words. */
+  /** Group heading, two or three words. */
   readonly label: string;
   readonly fields: readonly MagnitudeField[];
 }
@@ -25,37 +25,23 @@ export interface MagnitudeSpec {
 
 export interface Magnitude {
   readonly element: HTMLElement;
-  /** The grids materialise, then fill. One gesture, and the whole argument. */
+  /** Builds the empty grids, then fills them. */
   play(settle?: boolean): gsap.core.Timeline;
 }
 
 /*
- * Three shares of a hundred, each drawn as a hundred cells.
- *
- * **The disproportion is counted, not estimated.** A bar says "this one is
- * longer"; a field of a hundred units says "nine of these, against fifty of
- * these", and the audience can check it. It is also the only encoding on which
- * the empty part of a quantity is as present as the filled part, which is what
- * makes nine percent read as nine percent rather than as a short bar.
- *
- * **And the fills are raced.** All three start on the same frame at the same
- * rate, so the economic field is finished before the burden fields are a third
- * of the way through, and the difference between what the sector is worth and
- * what it costs becomes a duration as well as an area. That is the beat. A
- * figure whose three quantities arrive together states them; one whose
- * quantities arrive at their own size argues.
- *
- * Each field names its own denominator. Three measures over three different
- * populations may be ruled against a common hundred; asserting a conversion
- * between them is what would be false — `learnings.md` §31e.
+ * Each share is a grid of 100 cells, so the empty part is visible and the
+ * counts can be checked. All fills start together at the same rate, so
+ * duration also shows size. Each field names its own denominator
+ * (`learnings.md` §31e).
  */
 const COLUMNS = 20;
 const ROWS = 5;
 const CELLS = COLUMNS * ROWS;
 
-/** Seconds between one cell lighting and the next. The race is built from this. */
+/** Seconds per filled cell. */
 const FILL_STEP = 0.022;
-/** And this is the sweep that builds the empty field before anything fills. */
+/** Seconds per cell for the sweep that builds the empty grid. */
 const WAKE_STEP = 0.0055;
 
 interface Field {
@@ -185,15 +171,7 @@ export function createMagnitude(spec: MagnitudeSpec): Magnitude {
           0.1,
         );
 
-      /*
-       * The empty field is built before anything fills it.
-       *
-       * Six milliseconds a cell across a hundred is a six-hundredth of a second
-       * per grid and reads as a sweep rather than as a hundred arrivals. It also
-       * has to finish before the fill starts, or the two staggers cross and the
-       * grid appears to fill and materialise at once, which is legible as
-       * neither.
-       */
+      // Build the empty grids. This must finish before the fill starts.
       for (const [index, field] of fields.entries()) {
         timeline.from(
           field.cells,
@@ -208,8 +186,7 @@ export function createMagnitude(spec: MagnitudeSpec): Magnitude {
         );
       }
 
-      // Every fill starts here, and only here. The lengths differ because the
-      // quantities do, which is the whole point of the figure.
+      // All fills share one start time; duration scales with value.
       const start = 1.0;
 
       for (const field of fields) {

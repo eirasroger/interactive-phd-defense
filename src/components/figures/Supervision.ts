@@ -26,12 +26,8 @@ const percent = (value: number, places = 0): string => `${(value * 100).toFixed(
 /* ---- Deterministic scatter --------------------------------------------------- */
 
 /**
- * A repeatable pseudo-random offset.
- *
- * The control diagram has to show a range that was *randomised*, which a set of
- * identical bands cannot say. Nothing about the positions is a measurement, so
- * they are a function of the row index: the same drawing every reload, and no
- * number invented that a reader could take for one.
+ * Deterministic pseudo-random value in 0-1 from a seed. Used for illustrative
+ * scatter only, so the drawing is identical on every reload.
  */
 const jitter = (seed: number): number => {
   const mixed = Math.imul(seed + 1, 2654435761) >>> 8;
@@ -43,11 +39,8 @@ const jitter = (seed: number): number => {
 const CONTROL_BOARD = { width: 380, height: 100 } as const;
 
 /**
- * Four indicators the control set covers, named so the rows are readable.
- *
- * Short forms of the published indicator names. Which one is swept varies
- * across the 24,000 cases; density under the insulation applications is drawn
- * because it is the sweep the application beat later depends on.
+ * Short forms of the published indicator names. The swept indicator varies
+ * across the 24,000 cases.
  */
 const CONTROL_ROWS = [
   'Global warming potential',
@@ -58,12 +51,9 @@ const CONTROL_ROWS = [
 const CONTROL_VARIED = 0;
 
 /**
- * A control case, drawn as the case itself.
- *
- * Three alternatives are identical on every indicator but one, so the preferred
- * alternative follows from that row alone and no judgement enters. The marks are
- * lettered on the swept row because without knowing they are the same three
- * products throughout, the clustering says nothing.
+ * A control case: three alternatives that differ on one indicator only, so the
+ * preferred one follows from that row. Marks on the swept row are lettered to
+ * show they are the same three products throughout.
  */
 const controlDiagram = (): SVGSVGElement => {
   const board = svg('svg', {
@@ -122,8 +112,7 @@ const controlDiagram = (): SVGSVGElement => {
       continue;
     }
 
-    // Held inside a narrow randomised window, which is why the three marks
-    // overlap and why the window is not in the same place on every row.
+    // Other indicators sit in a narrow randomised window, offset per row.
     const centre = (trackLeft + trackRight) / 2 + (jitter(row) - 0.5) * 26;
     for (const offset of [-7, 0, 7]) board.appendChild(mark_(centre + offset, y, false));
   }
@@ -135,7 +124,7 @@ const controlDiagram = (): SVGSVGElement => {
 
 const GENERATED_BOARD = { width: 564, height: 100 } as const;
 
-/** What the system prompt fixes, §3.2.2. The six are named rather than counted. */
+/** What the system prompt fixes (§3.2.2). */
 const PROMPT_FACETS = [
   'Assessment role',
   'Indicator set',
@@ -146,12 +135,8 @@ const PROMPT_FACETS = [
 ] as const;
 
 /**
- * The labelling pipeline, end to end.
- *
- * This is the part of the corpus a committee presses on, so the whole of it is
- * drawn: what the prompt constrains, what comes back, and what happens to a
- * label the model could not resolve. Neither field carries a value, because the
- * beat is about the mechanism and the values belong to the samples.
+ * The labelling pipeline: prompt constraints, model, returned fields, and
+ * whether a label is kept or discarded. Fields show no values.
  */
 const generatedDiagram = (): SVGSVGElement => {
   const board = svg('svg', {
@@ -165,7 +150,7 @@ const generatedDiagram = (): SVGSVGElement => {
     return node;
   };
 
-  /* What goes in. */
+  /* Input. */
   board.appendChild(title('The prompt fixes', 0));
   board.appendChild(
     svg('rect', { class: 'sv-panel', x: '0', y: '16', width: '150', height: '80', rx: '5' }),
@@ -198,7 +183,7 @@ const generatedDiagram = (): SVGSVGElement => {
 
   board.appendChild(feed(256, 282, 56));
 
-  /* What comes back. */
+  /* Output. */
   board.appendChild(title('Every label returns', 286));
   board.appendChild(
     svg('rect', { class: 'sv-panel', x: '286', y: '16', width: '124', height: '80', rx: '5' }),
@@ -220,8 +205,8 @@ const generatedDiagram = (): SVGSVGElement => {
     );
   }
 
-  /* What happens to it. A confident label is weighted in; one the model could
-     not resolve never enters the corpus. */
+  /* Outcome: confident labels are kept and weighted, unresolved ones are
+     discarded. */
   board.appendChild(
     svg('path', {
       class: 'sv-feed sv-feed-kept',
@@ -257,13 +242,9 @@ const EXPERTS = 6;
 const CASES_DRAWN = 4;
 
 /**
- * Six batches that share no scenario, each carrying its own judgement.
- *
- * The columns are labelled, because unlabelled they are a barcode. One cell in
- * every column is the alternative that expert preferred, so the drawing says
- * what an expert case actually is: a set of alternatives and a decision over
- * it. Which row that cell falls on is a function of the column index and
- * carries no claim, since the cases are not published per batch.
+ * Six expert batches with no shared scenario. One cell per column marks the
+ * expert's preferred alternative. Its row is illustrative, since cases are not
+ * published per batch.
  */
 const expertDiagram = (): SVGSVGElement => {
   const board = svg('svg', {
@@ -324,7 +305,7 @@ interface Span {
   readonly extent: number;
 }
 
-/** Segment spans across the board, with the gaps taken out of the segments. */
+/** Segment spans across the board, with gaps subtracted from segment widths. */
 const spansOf = (shares: readonly number[]): readonly Span[] => {
   const usable = RIBBON.width - SEGMENT_GAP * (shares.length - 1);
   let cursor = 0;
@@ -377,17 +358,9 @@ const sourceCard = (source: LabelSource): HTMLElement => {
 };
 
 /**
- * Beat 2. Where the labels came from, and what each source is worth.
- *
- * Three sources, each drawn as the method it actually is, and then the same
- * three read twice: what they contributed against the share of the objective
- * they carry. Both bands are the same width, so the ribbons between them are
- * the re-weighting itself. The expert group enters as a sliver and leaves as a
- * fifth of the objective, which is the argument for weighting by source at all.
- *
- * Each card's text carries only what its diagram cannot draw. The diagram shows
- * the method; the lines beside it give the coverage, the provenance and what the
- * group puts into the trained model.
+ * Beat 2: the three label sources and their weight. Each card draws its
+ * method. The ribbon maps each source's share of the corpus (top band) to its
+ * share of the training objective (bottom band).
  */
 export function createSupervision(): Supervision {
   const cards = SOURCES.map(sourceCard);
@@ -444,9 +417,8 @@ export function createSupervision(): Supervision {
         const index = INFLUENCE.indexOf(entry);
         const span = spans[index];
         const share = kind === 'volume' ? entry.volume : entry.objective;
-        // Six-tenths of one percent is seven pixels wide, so that one readout
-        // is hung off the left of its segment rather than centred on a block
-        // narrower than the numeral.
+        // Segments under 5% are too narrow for a centred label, so it anchors
+        // to the segment's left edge.
         const tiny = share < 0.05;
         const anchor = tiny ? (span?.start ?? 0) : (span?.start ?? 0) + (span?.extent ?? 0) / 2;
         return el('p', {

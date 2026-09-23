@@ -1,14 +1,10 @@
 /**
- * C1 — decision framework. Data of record.
+ * C1 decision framework data. Quantities are from Table 5 of the paper, ordinal
+ * scales from Tables 2 and 3. Two values are assumed: the plaster partition's
+ * circular fraction and the biogenic fractions inferred from the inventories.
  *
- * Every quantity is Table 5 of the paper, verbatim. Ordinal positions are the
- * scales declared in Tables 2 and 3. Two values are assumptions and are marked
- * as such: the plaster partition's undeclared circular fraction, and the
- * biogenic fractions read off the inventories rather than stated outright.
- *
- * `PROFILES` carries only the stakeholder cases whose published outcome the
- * model below reproduces exactly. Table 6's water (3x) and comfort (8x) cases
- * are deliberately absent.
+ * `PROFILES` holds only the cases this model reproduces exactly, so Table 6's
+ * water (3x) and comfort (8x) cases are left out.
  */
 
 export type Family = 'circularity' | 'environmental' | 'economic' | 'performance';
@@ -24,7 +20,7 @@ export interface Metric {
   readonly family: Family;
   readonly scale: Scale | null;
   readonly unit?: string;
-  /** What the metric resolves into. Shown on the framework beat. */
+  /** Sub-items of the metric, shown on the framework beat. */
   readonly parts?: readonly string[];
 }
 
@@ -378,7 +374,7 @@ export interface Profile {
   readonly label: string;
   readonly metric: string;
   readonly factor: number;
-  /** Published winner per scenario. The model is asserted against it at load. */
+  /** Published winner per scenario. `assertPublished` checks the model against it at load. */
   readonly wins: Readonly<Record<string, string>>;
 }
 

@@ -1,7 +1,6 @@
 /*
- * Three tiers over one rule. The rule spans the full width because it is the
- * only horizontal in the composition that means anything: stochastic reading
- * above it, deterministic execution below.
+ * Three tiers split by a full-width rule: model (stochastic) steps above it,
+ * deterministic steps below.
  */
 .wf {
   display: grid;
@@ -17,8 +16,8 @@
   align-content: center;
 }
 
-/* The line spans everything, the node centres over the content the line
-   divides, so it does not sit off-axis by half the gutter. */
+/* The line spans the full width. The left padding centres the node over the
+   content column. */
 .wf-rule {
   position: relative;
   grid-column: 1 / -1;
@@ -54,7 +53,7 @@
   color: var(--ink-muted);
 }
 
-/* ---- Tier 1: what arrives ----------------------------------------------- */
+/* ---- Tier 1: inputs ----------------------------------------------------- */
 
 .wf-docs {
   display: grid;
@@ -77,8 +76,7 @@
     0 8px 20px color-mix(in srgb, var(--source) 10%, transparent);
 }
 
-/* The colour each input carries is the authority it carries, and the same four
-   tones are read again on the axes and on the constraint chips. */
+/* Source colour. The same four tones are used on the axes and constraint chips. */
 .wf-doc::before {
   content: '';
   position: absolute;
@@ -88,8 +86,7 @@
   background-color: var(--source);
 }
 
-/* A regulatory schema is digitised by hand into key-value pairs, so it is the
-   one input no model reads. */
+/* Regulatory schemas are digitised by hand, so no model reads them. */
 .wf-doc[data-path='direct'] {
   background-color: color-mix(in srgb, var(--source) 5%, #ffffff);
 }
@@ -123,7 +120,7 @@
   color: var(--ink-faint);
 }
 
-/* ---- Tier 2: what the model returns ------------------------------------- */
+/* ---- Tier 2: model output ----------------------------------------------- */
 
 .wf-records {
   display: grid;
@@ -164,7 +161,7 @@
   color: var(--ink-muted);
 }
 
-/* ---- The rule ------------------------------------------------------------ */
+/* ---- Rule --------------------------------------------------------------- */
 
 .wf-rule-line {
   position: absolute;
@@ -219,7 +216,7 @@
   color: var(--ink-faint);
 }
 
-/* ---- Tier 3: what the engine does --------------------------------------- */
+/* ---- Tier 3: engine ----------------------------------------------------- */
 
 .wf-verdict {
   display: grid;
@@ -255,8 +252,7 @@
   gap: var(--s-2);
 }
 
-/* The cohort, before any scenario has been declared. Tinting these would
-   assert a result this panel has not established. */
+/* Candidate chips stay neutral because no scenario has been applied yet. */
 .wf-chip {
   flex: 1;
   padding: var(--s-2) 0;

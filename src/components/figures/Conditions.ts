@@ -6,9 +6,9 @@ import './conditions.css';
 
 export interface Conditions {
   readonly element: HTMLElement;
-  /** Beat one: the silhouette forms and is carried across its gaps. */
+  /** Beat one: opens the evidence card and builds the silhouette. */
   open(settle: boolean): gsap.core.Timeline;
-  /** Beat two: the profile re-forms under a different context. */
+  /** Beat two: opens the context card and re-forms the profile. */
   apply(settle: boolean): gsap.core.Timeline;
 }
 
@@ -30,10 +30,8 @@ interface Timing {
 }
 
 /**
- * Growth written to the attribute the geometry is in, never to a transform.
- *
- * `transformOrigin` on an SVG child resolves against its `transform-box` and
- * GSAP bakes the compensating translate into the matrix it leaves behind.
+ * Tweens geometry attributes directly. On SVG children, GSAP's `transformOrigin`
+ * leaves a baked translate in the transform matrix.
  */
 const attr = (
   timeline: gsap.core.Timeline,
@@ -79,17 +77,14 @@ const fade = (
   );
 };
 
-/* ---- Card one: the silhouette, carried ---------------------------------------------- */
+/* ---- Card one: silhouette ----------------------------------------------------------- */
 
 const COLUMNS = 12;
 const BARS = { left: 22, right: 398, base: 270, floor: 40, reach: 192, gap: 10 } as const;
 
 /**
- * Which columns are not firmly known.
- *
- * One isolated and one adjacent pair, so the drawing says the absences have
- * structure rather than being scattered noise. That is what the market analysis
- * established, and it is a different claim from "the data is patchy".
+ * Columns with missing data. Grouped (one single, one pair, one single) to show
+ * that the gaps have structure, as the market analysis found.
  */
 const MISSING = new Set([2, 6, 7, 10]);
 
@@ -97,15 +92,9 @@ const PITCH = (BARS.right - BARS.left) / COLUMNS;
 const BAR_WIDTH = PITCH - BARS.gap;
 
 /**
- * The profile, as a function rather than as a list of heights.
- *
- * The curve has to pass through the top of every column including the ones that
- * are not there, so the heights and the curve are one function sampled at two
- * resolutions. Hand-picked heights with a spline fitted through them is the same
- * drawing with somewhere for the two to disagree.
- *
- * Two humps and neither in the middle: a single centred bell is a shape the eye
- * files as a chart, and this is a silhouette.
+ * Profile height at t (0 to 1). One function drives both the column heights and
+ * the curve, so the curve always meets the column tops. Two off-centre humps keep
+ * it from looking like a bell chart.
  */
 const profileAt = (t: number): number => {
   const hump = (centre: number, spread: number, weight: number): number =>
@@ -130,15 +119,8 @@ interface Silhouette {
 }
 
 /**
- * Card one, and the whole of it.
- *
- * Columns of evidence, some of which are not there at all, and one curve running
- * the width of the card straight over the gaps. That is the section in a single
- * gesture: the record is incomplete, and what the pipeline produces is
- * continuous across it.
- *
- * Nothing is labelled. Two earlier passes of this card carried a legend and then
- * a pair of micro-labels, and both were the drawing apologising for itself.
+ * Card one: columns of evidence with some missing. Shows that the record has
+ * gaps and the pipeline output stays continuous across them. Unlabelled.
  */
 function createSilhouette(): Silhouette {
   const board = svg('svg', {
@@ -186,8 +168,7 @@ function createSilhouette(): Silhouette {
         );
       });
 
-      // The columns that are not firmly known settle a beat behind the rest, so
-      // the eye finds them rather than having to be told where to look.
+      // Missing columns settle a beat later so the eye finds them.
       fade(timeline, absent, 1, at + seconds(0.92) * motion, motion, {
         duration: DURATION.slow,
         stagger: STAGGER * 2,
@@ -196,23 +177,20 @@ function createSilhouette(): Silhouette {
   };
 }
 
-/* ---- Card two: one profile, two forms ----------------------------------------------- */
+/* ---- Card two: profile -------------------------------------------------------------- */
 
 const RADIAL = { cx: 210, cy: 150, reachX: 152, reachY: 122, arms: 7 } as const;
 
 /**
- * The same product under two contexts.
- *
- * Seven arms rather than an even number, so the form has no axis of symmetry to
- * read as an ornament, and no grid behind it, because a grid would make it a
- * chart and this card carries no quantity.
+ * Arm reaches (0 to 1) for the same product under two contexts. Seven arms avoid
+ * an axis of symmetry. No grid, since the card shows no quantity.
  */
 const BEFORE = [0.96, 0.5, 0.88, 0.44, 0.8, 0.56, 0.92] as const;
 const AFTER = [0.42, 0.97, 0.52, 0.93, 0.38, 0.99, 0.48] as const;
 
 const armAngle = (index: number): number => (index / RADIAL.arms) * Math.PI * 2 - Math.PI / 2;
 
-/** Elliptical, so a form centred in a wide board fills it rather than floating. */
+/** Elliptical, so the form fills the wide board. */
 const cornerAt = (index: number, reach: number): [number, number] => {
   const angle = armAngle(index);
   return [
@@ -238,15 +216,9 @@ interface Profile {
 }
 
 /**
- * Card two, and the whole of it.
- *
- * One form, which re-forms. The audience is shown the same object twice and the
- * ghost of the first stays behind it, so the change is the picture rather than
- * something they have to hold in memory across a click.
- *
- * GSAP cannot tween a polygon's points without a plugin this project does not
- * carry, so the reach of each arm is tweened on a proxy and the geometry is
- * rebuilt from it. Exact, and it costs one object.
+ * Card two: one form that re-forms, with a ghost of the first shape left behind.
+ * GSAP cannot tween polygon points without a plugin, so a proxy value is tweened
+ * and the geometry is rebuilt from it.
  */
 function createProfile(): Profile {
   const board = svg('svg', {
@@ -288,14 +260,7 @@ function createProfile(): Profile {
   return {
     board,
 
-    /**
-     * The form comes up in the light, and nothing about it pops.
-     *
-     * An earlier pass grew each corner from a radius of zero, which is a set of
-     * small events inside a card that is already making one large one. Uncovered
-     * by the card's own opening and lit as it goes, the drawing is part of that
-     * gesture rather than a second one arriving on top of it.
-     */
+    /** Fades the form in while the card is still opening. */
     arrive(timeline, delay, motion) {
       fade(timeline, [ring], 1, delay, motion, { duration: DURATION.cinematic });
       fade(timeline, [form], 1, delay + seconds(0.12) * motion, motion, {
@@ -329,32 +294,25 @@ function createProfile(): Profile {
   };
 }
 
-/* ---- The composition ---------------------------------------------------------------- */
+/* ---- Composition -------------------------------------------------------------------- */
 
 interface Card {
   readonly element: HTMLElement;
-  /** Read from the first frame: the claim this card makes. */
+  /** Title and lead, visible from the first frame. */
   readonly claim: readonly HTMLElement[];
 }
 
 /**
- * Where each step comes in, as a position on the card's own opening.
- *
- * Not a delay in seconds. The steps are uncovered by the card's growing edge, so
- * their light has to be a function of how far open the card is or the edge cuts
- * through a line that is already lit. Expressed here and read by the sheet, so
- * there is one clock for the whole gesture and nothing to keep in step.
+ * When each step lights up, as a fraction (0 to 1) of the card's `--open`.
+ * Written to `--at` and read by the stylesheet, so steps stay in sync with the
+ * card's edge.
  */
 const STEP_AT = [0.08, 0.34, 0.6] as const;
 
 /**
- * A card: the claim on the left, the drawing beside it.
- *
- * Side by side rather than stacked, so the figure is read against the sentence
- * it belongs to instead of underneath a block the eye has already left. The
- * claim's column is a fixed width and the drawing's frame is a fixed width, so
- * widening the card widens only the space between them: the drawing is uncovered
- * at the size it will keep, and nothing scales or reflows.
+ * A card with the claim on the left and the drawing beside it. Both columns are
+ * fixed width, so opening the card only widens the space between them and
+ * nothing reflows.
  */
 const buildCard = (
   key: string,
@@ -391,21 +349,9 @@ const buildCard = (
 };
 
 /**
- * A card opens on one scalar, and everything else is a function of it.
- *
- * The first version of this move ran six tweens: width, the run's height, the
- * stage's height, the stage's light, a per-step rise and the drawing's own
- * build, each on its own clock and its own delay. Six curves crossing is six
- * things happening, and no amount of tuning the delays makes that read as one
- * gesture. Here the sheet derives the width, both heights, the stage's light and
- * every step's light from `--open`, so they cannot drift and there is nothing to
- * keep in step.
- *
- * **And the ease is not `expo.out`.** `expo` spends about nine tenths of its
- * distance in the first quarter of its duration, which on a small element reads
- * as crisp and on a card the size of half the frame reads as a snap followed by
- * a crawl. `power2.out` answers the click immediately and still settles, which
- * is what a surface this large needs.
+ * A card opens by tweening one value, `--open` (0 to 1). The stylesheet derives
+ * width, heights and step lighting from it. `power2.out` because `expo.out`
+ * snaps then crawls on an element this large.
  */
 const OPENING = { seconds: 1.7, ease: 'power2.out' } as const;
 
@@ -424,16 +370,9 @@ const openCard = (
 };
 
 /**
- * Two conditions, two cards, two beats.
- *
- * Nothing is drawn between them: both sections claim their condition runs the
- * length of the pipeline, and neither claims one leads to the other.
- *
- * **The second card carries only its claim until the click.** A card that
- * arrives whole on a click is a slide change; a card that shows an unlit drawing
- * for a minute is a drawing nobody is looking at. Standing narrow with its claim
- * already made, it is the one thing on screen that is visibly unfinished, which
- * is what a second beat is for.
+ * Two conditions as two cards over two beats. No connector between them, since
+ * neither condition leads to the other. The second card shows only its claim
+ * until the second beat opens it.
  */
 export function createConditions(): Conditions {
   const silhouette = createSilhouette();
@@ -452,12 +391,7 @@ export function createConditions(): Conditions {
   return {
     element,
 
-    /**
-     * Beat one, with every state it depends on written here.
-     *
-     * A beat that trusts the beat before it renders wrong the first time the
-     * presenter steps backwards, and a defence is not walked in a straight line.
-     */
+    /** Sets every state it depends on, so stepping backwards renders correctly. */
     open(settle) {
       gsap.killTweensOf(everything);
       const timeline = gsap.timeline();
@@ -470,20 +404,15 @@ export function createConditions(): Conditions {
 
       fade(timeline, claims, 1, 0, motion, { duration: DURATION.slow, stagger: STAGGER * 1.4 });
       openCard(timeline, evidence, seconds(0.28) * motion, motion);
-      // Behind the opening edge, so the columns are drawn in room that already
-      // exists rather than growing alongside it.
+      // Starts once the card has mostly opened.
       silhouette.build(timeline, seconds(1.24) * motion, motion);
 
       return timeline;
     },
 
     /**
-     * Beat two: the second card takes the room it was left, and fills it.
-     *
-     * One opening, and the drawing continuing out of it rather than starting
-     * beside it. The starting state is written rather than assumed, because a
-     * jump can land on this beat directly and because stepping back and forward
-     * again has to run the same move twice.
+     * Opens the second card and re-forms its profile. Sets its starting state
+     * explicitly, since a jump can land here directly.
      */
     apply(settle) {
       gsap.killTweensOf(everything);

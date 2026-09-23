@@ -11,10 +11,8 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 const BEAT = { carrier: 0, basis: 1 } as const;
 
 /**
- * Scene 5 — EPDs as decision-support data.
- *
- * The declaration is whole and on screen from arrival, because that is how it
- * arrives in practice. The one click asks where its numbers came from.
+ * Scene 5: EPDs as decision-support data. The declaration is shown whole on
+ * entry. The second beat shows where its numbers come from.
  */
 export class EpdScene implements SceneInstance {
   readonly beats = 2;
@@ -37,8 +35,7 @@ export class EpdScene implements SceneInstance {
     });
 
     this.carrier = slide.addStatement(EPD.carrier);
-    // Amber, and the only amber in the column: the declaration is the argument,
-    // these two lines are what is inside it.
+    // The only emphasis lines in the column.
     this.basis = EPD.basis.map((line) => slide.addStatement(line, 'emphasis'));
 
     const figure = createDeclaration(EPD.declaration);
@@ -58,15 +55,13 @@ export class EpdScene implements SceneInstance {
     this.motion = entry;
   }
 
-  // Each case describes the state the beat *is*, not the change into it: beats
-  // are reached backwards and out of order as often as forwards.
+  // Each case sets the full state of its beat, since beats can be reached in any order.
   beat(index: number, settle: boolean): void {
     const slide = this.slide;
     const figure = this.figure;
     if (!slide || !figure || !this.carrier) return;
 
-    // Killed rather than completed: every tween targets an absolute value, so
-    // nothing is stranded when a click outruns the motion.
+    // Safe to kill: every tween targets an absolute value.
     this.motion?.kill();
     this.motion = null;
 

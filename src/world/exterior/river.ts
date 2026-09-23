@@ -17,67 +17,44 @@ export interface River {
 }
 
 /**
- * Metres between sections along the stream, and quads across it.
- *
- * `ACROSS` is what the waterline's shape is made of: the ribbon fades out where
- * the terrain rises through it, so the edge can only be as fine as the rows.
+ * Metres between sections along the stream, and quads across it. `ACROSS`
+ * sets how fine the faded waterline edge can be.
  */
 const STEP = 1.0;
 const ACROSS = 34;
 
 /**
- * How far light gets through the water.
- *
- * A stream is a thin absorbing layer over a bed you can see, and what says so is
- * that the *same* water is clear at the edge and dark in the channel. At the
- * 0.55 m bottom the column absorbs about three quarters.
+ * Light absorption depth in metres (Beer's law). Clear at the edges, dark in
+ * the channel. At the 0.55 m bottom about three quarters is absorbed.
  */
 const EXTINCTION = 0.34;
 
 /**
- * How much of a grazing reflection survives the water being transparent.
- *
- * This stream is read from two opposite geometries — down into from the bridge,
- * along from the bank — and a constant opacity has to pick one. Alpha is what
- * the reflection is multiplied by on the way out, so lifting it with the view
- * angle keeps both.
+ * How far alpha rises toward 1 at grazing angles, so reflections survive when
+ * seen along the bank while the water stays clear from the bridge.
  */
 const SHEEN = 0.82;
 
-/** How much the shared wave field is compressed to suit a four-metre channel. */
+/** Compression of the shared wave field for a channel about four metres wide. */
 const CHANNEL_SCALE = 2.6;
 
 /**
- * Where the ribbon starts and stops. The east end reaches well inside the lake:
- * the ribbon is faded out against the basin rather than ending on its own
- * geometry, so it has to exist for the whole of that fade, and the bays bend the
- * shoreline it is measured from by tens of metres.
+ * Ribbon extent along x. The east end reaches well into the lake so the fade
+ * into the basin completes before the geometry ends.
  */
 const FROM = LAND.lake.west + 50;
 const TO = -320;
 
 /**
- * The stream, running west out of the lake.
- *
- * Built around depth rather than reflection: every vertex carries how deep the
- * water is above the terrain beneath it, which is what produces the most
- * recognisable thing about a real stream — pale and stony at the edges, dark in
- * the channel. The bed is shaded rather than modelled; a stony bottom under
- * 30 cm of water seen from a bridge is a value and a scatter.
- *
- * Deliberately not the lake's material — see `lake.ts`.
+ * The stream running west out of the lake. Each vertex stores the water depth
+ * above the terrain, which drives opacity, roughness and ripple strength.
+ * Uses its own material, separate from the lake's (see `lake.ts`).
  */
 export function createRiver(): River {
   /**
-   * The ribbon is cut to `bankReach`, the whole swale, and masked back by its own
-   * depth. `halfWidth` describes only the flat part of the section, and the water
-   * surface crosses the bank a good way up the climb — a ribbon quoted at the
-   * bed's width stops inside its own waterline, on a cut polygon edge with the
-   * alpha feather never reaching zero.
-   *
-   * Reading `bankReach` rather than rebuilding it matters: the swale is not
-   * constant. It lays back to twelve metres through the outlet so the bank can
-   * meet the lake's beach at the lake's own slope.
+   * The ribbon spans the whole swale (`bankReach`) and is masked by depth. The
+   * waterline sits partway up the bank, past `halfWidth`, and the swale widens
+   * to 12 m at the outlet.
    */
   const columns = Math.ceil((FROM - TO) / STEP) + 1;
   const positions: number[] = [];
@@ -93,9 +70,8 @@ export function createRiver(): River {
   for (let column = 0; column < columns; column += 1) {
     const along = FROM - column * STEP;
     const centre = riverAt(along);
-    // Sections cut square to the flow, not to the x axis: slicing a 50° bend
-    // along x lays down a channel half again too wide through the meander and
-    // pinched on the crossings.
+    // Sections are cut square to the flow so the channel keeps its width
+    // through bends.
     const slope = riverSlope(along);
     const scale = 1 / Math.hypot(1, slope);
     const half = bankReach(along);
@@ -112,8 +88,7 @@ export function createRiver(): River {
       positions.push(x, surface, z);
       uvs.push(arc * 0.25, across * 0.25);
       depths.push(Math.max(0, surface - surfaceAt(x, z)));
-      // The stream's half of the outlet handover; the lake reads the same
-      // function for the other half.
+      // Stream share of the outlet handover. The lake uses the same function.
       mouths.push(streamShare(x, z));
       channel.push(arc, across);
     }
@@ -139,10 +114,8 @@ export function createRiver(): River {
   const ripples = createRippleTexture();
 
   const material = new MeshStandardMaterial({
-    // The colour of the *water*, not of the stream: what reads as the stream's
-    // colour is this laid over the bed at a thickness that varies across the
-    // channel. Peat-dark, because a stream in a two-metre channel sees very
-    // little sky — it sees its own banks and whatever grows over it.
+    // Water colour, blended over the bed by depth. Peat-dark because a narrow
+    // channel reflects its banks more than the sky.
     color: 0x22362d,
     roughness: 0.12,
     metalness: 0,
@@ -186,55 +159,41 @@ export function createRiver(): River {
       .replace(
         '#include <normal_fragment_begin>',
         `#include <normal_fragment_begin>
-         // Sampled in channel coordinates rather than world ones, so the surface
-         // follows the meander round instead of marching due west across a bend
-         // running north — and advected downstream, which is the whole read of
-         // moving water. Compressed, because the field is sized for a lake and
-         // this channel is under four metres wide.
+         // Sampled in channel coordinates so ripples follow the meander, advected
+         // downstream and scaled down for the narrow channel.
          vec2 flow = rippleAt(vec2(vChannel.x - uTime * 1.7, vChannel.y) * ${CHANNEL_SCALE.toFixed(2)}, uTime);
-         // Broken hardest where it is shallowest, which is where a stream runs
-         // over its own bed and the only white water appears.
+         // Stronger ripples in shallow water.
          float shallow = 1.0 - smoothstep(0.05, 0.55, vDepth);
          normal = normalize(normal + vec3(flow.x, 0.0, flow.y) * (0.20 + shallow * 0.55));
 
-         // How much of the water column is in the way, by Beer's law. What says
-         // "shallow" is seeing the actual ground through it; the bed underneath
-         // is real terrain, gravel-textured below the water line.
+         // Water column opacity by Beer's law. The bed is the terrain, with
+         // gravel texture below the waterline.
          float column = 1.0 - exp(-vDepth / ${EXTINCTION.toFixed(3)});
 
-         // Fresnel, so the surface is a mirror along the bank and a window from
-         // the bridge.
+         // Fresnel: reflective at grazing angles, transparent from above.
          float facing = saturate(dot(normal, normalize(vViewPosition)));
          float glance = pow(1.0 - facing, 5.0);
 
-         // Feathered at the waterline instead of ending on a cut edge: the bank
-         // is uneven at a finer scale than this mesh resolves.
+         // Feather the waterline. The bank is finer than the mesh resolution.
          float wetted = smoothstep(0.0, 0.06, vDepth);
 
-         // Handed over to the lake at the outlet — both bodies are drawn at the
-         // same level there, so only one of them may depict the water.
+         // Fade out at the outlet, where the lake takes over at the same level.
          diffuseColor.a =
            saturate(mix(column, 1.0, glance * ${SHEEN.toFixed(2)})) * wetted * vMouth;
 
-         // The ribbon is cut wider than the water, so the dry swale is covered by
-         // fragments that must not exist. Alpha alone will not do it: the mesh
-         // writes depth, so a transparent fragment still occludes the bank.
+         // Discard dry fragments. The mesh writes depth, so a transparent
+         // fragment would still occlude the bank.
          if (diffuseColor.a < 0.01) discard;`,
       )
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
-         // Water you can see the bottom of is not a mirror: broken shallow water
-         // scatters, and the channel stays sharp enough to hold a reflection.
+         // Shallow water is rougher. The channel stays sharp enough to reflect.
          roughnessFactor = mix(roughnessFactor, 0.55, 1.0 - smoothstep(0.04, 0.34, vDepth));
 
-         // Nor is a grazing reflection — the reflected ray turns by twice the
-         // wave slope, so looked along rather than into, the flow trains read as
-         // bands. Same fix as the lake's, one notch rougher.
-         //
-         // vViewPosition is view space, so its y is screen vertical; multiplying
-         // on the left by mat3(viewMatrix) applies the transpose and gives the
-         // world direction to the eye.
+         // Rougher at grazing angles to avoid banding in reflections. Same as
+         // the lake, slightly rougher. Left-multiplying by mat3(viewMatrix)
+         // applies the transpose, giving the world-space direction to the eye.
          vec3 toEye = normalize(vViewPosition) * mat3(viewMatrix);
          roughnessFactor = mix(roughnessFactor, 0.42, pow(1.0 - abs(toEye.y), 3.0));`,
       );

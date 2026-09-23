@@ -34,17 +34,14 @@ const loading = createLoadingScreen();
 const diagnostics = createDiagnosticsOverlay();
 const contextNotice = createContextNotice();
 
-// Inside the stage, not on the body: the chrome belongs to the composition and
-// has to scale and letterbox with it rather than clinging to the window edges.
+// Added to the stage so the UI scales and letterboxes with the slide.
 stage.append(progress.element, loading.element, diagnostics.element, contextNotice.element);
 
-// On the viewport, not the stage: it reports that the stage is scaled too far
-// down to read, so it cannot be subject to that scale itself.
+// Added to the viewport so it stays readable when the stage is scaled down.
 viewport.append(createOrientationNotice());
 
 if (!supportsWebGL) {
-  // The talk still has to happen. Text scenes render without a renderer, so
-  // failing loudly here would be worse than degrading quietly.
+  // Degrade quietly: text scenes still work without WebGL.
   document.documentElement.dataset['webgl'] = 'unavailable';
 }
 
@@ -62,16 +59,9 @@ const engine = new Engine({
 engine.start();
 
 if (import.meta.env.DEV) {
-  // Dev-only handles, stripped from production builds.
-  //
-  // `__engine` inspects the scene graph and renderer counters. `__time` scales
-  // GSAP's global timeline, which is how a transition gets *authored* rather
-  // than guessed at: the entry into Act II is nine seconds of continuously
-  // changing camera, doors and light, and at 1x the only way to look at any
-  // given moment of it is to catch one. At 0.1 it can be watched.
-  //
-  // The render loop is GSAP's ticker and is not on the global timeline, so
-  // slowing this slows the animation and leaves the frame rate alone.
+  // Dev-only handles. `__engine` exposes the engine for inspection. `__time`
+  // scales GSAP's global timeline to slow transitions down for review. The
+  // render loop runs on GSAP's ticker, so frame rate is unaffected.
   (globalThis as { __engine?: Engine }).__engine = engine;
   (globalThis as { __time?: (scale: number) => void }).__time = (scale: number) => {
     gsap.globalTimeline.timeScale(scale);

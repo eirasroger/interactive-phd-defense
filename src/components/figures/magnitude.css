@@ -1,10 +1,6 @@
 /*
- * Three shares of a hundred, each drawn as a hundred cells.
- *
- * **20 by 5, not 10 by 10.** A square field of a hundred is 480px tall in this
- * card and there is a second section under it; laid out five deep it is 116px
- * and every row is a clean twenty, which is also the easier grid to count
- * against. The shape follows the space it has to live in and loses nothing.
+ * Three percentages, each drawn as a grid of 100 cells. The grid is 20x5 so it
+ * fits the card height (116px) with a section below it.
  */
 .mg {
   display: flex;
@@ -34,7 +30,6 @@
   color: var(--c-text-faint);
 }
 
-/* The grouping is the claim, so it is ruled rather than merely spaced. */
 .mg-group-rule {
   height: 1px;
   background: linear-gradient(
@@ -61,14 +56,8 @@
   gap: var(--s-12);
 }
 
-/*
- * 480, and the field is sized rather than fluid.
- *
- * One field, a divider and two fields at this width fill the 1600 the card
- * leaves almost exactly, and a fixed width is what keeps the cell grid on whole
- * pixels. On a stage pinned to 1920x1080 that is as deterministic as the
- * surface it is drawn on.
- */
+/* Fixed 480px width: three fields and a divider fill the card's 1600px, and
+   cells land on whole pixels. */
 .mg-field {
   --bar: var(--c-text-faint);
 
@@ -101,8 +90,7 @@
   letter-spacing: var(--ls-display);
   color: var(--bar);
 
-  /* Without tabular figures the count-up jitters sideways as digits change
-     width, and this one counts from 0 to 50. */
+  /* Tabular figures stop the count-up from jittering sideways. */
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }
@@ -121,11 +109,7 @@
   width: 100%;
 }
 
-/*
- * A cell is one unit of the whole, drawn whether or not it is part of the
- * quantity. The unfilled ones are what make nine percent read as nine out of a
- * hundred rather than as a short bar, so they are dim and never absent.
- */
+/* Unfilled cells stay visible (dim) so the value is shown out of 100. */
 .mg-cell {
   aspect-ratio: 1;
   border-radius: 2px;
@@ -135,8 +119,7 @@
     box-shadow var(--d-normal) var(--e-standard);
 }
 
-/* Lit rather than merely coloured: the filled region carries a soft bloom of
-   its own accent, so the quantity reads as a mass at the back of a hall. */
+/* Filled cells get a soft glow in their accent so they stay visible from a distance. */
 .mg-cell[data-on] {
   background-color: var(--bar);
   box-shadow: 0 0 10px color-mix(in srgb, var(--bar) 45%, transparent);

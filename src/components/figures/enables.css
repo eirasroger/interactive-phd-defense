@@ -1,7 +1,4 @@
-/*
- * The closing frame of the corridor. Three cards, one beat, on the projected
- * white. Title, two lines, then the figure that performs the claim.
- */
+/* Closing frame of the corridor: three cards, each with a title, body and figure. */
 .en {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -68,13 +65,8 @@
 }
 
 /*
- * Anything the timeline scales resolves its origin against its own box.
- *
- * The group matters as much as the mark inside it. A `<g>` scaled with
- * `transformOrigin: center` and no `transform-box` resolves that origin against
- * the whole view box and bakes a translation into the matrix, which slides the
- * group sideways. The symptom is a connector that no longer meets the token it
- * was measured against.
+ * Scaled elements use their own box as the transform origin. Without
+ * `transform-box`, a scaled `<g>` uses the view box and drifts sideways.
  */
 .en-node-row,
 .en-seed,
@@ -90,7 +82,7 @@
   transform-origin: center center;
 }
 
-/* ---- 01. Cost, and what the recommendation reads instead --------------------------- */
+/* ---- 01. Cost versus full ranking --------------------------------------------------- */
 
 .en-seed {
   fill: var(--c5-contested);
@@ -131,12 +123,12 @@
   --standing: var(--c5-trailing);
 }
 
-/* The alternative a cost-led shortlist would put first. */
+/* First by cost alone. */
 .en-node-row[data-standing='cost'] {
   --standing: var(--c5-contested);
 }
 
-/* The alternative the full picture puts first. */
+/* First on all criteria. */
 .en-node-row[data-standing='lead'] {
   --standing: var(--c5-lead);
 }
@@ -162,8 +154,7 @@
   stroke-linecap: butt;
 }
 
-/* Laid over the neutral connector and faded out along it, so where the accent
-   is gone the line is indistinguishable from the other four. */
+/* Overlay on the neutral connector, faded out along its length. */
 .en-link-accent {
   fill: none;
   stroke-width: 2.75;
@@ -186,7 +177,7 @@
     stroke-width 320ms ease;
 }
 
-/* The setting the ordering underneath belongs to. */
+/* The setting that produces the ordering below. */
 .en-segment[data-active='true'] {
   stroke: var(--c5-accent);
   stroke-width: 6.5;
@@ -236,14 +227,14 @@
   fill: var(--standing);
 }
 
-/* ---- 03. Evidence that is not there -------------------------------------------------- */
+/* ---- 03. Missing evidence ------------------------------------------------------------ */
 
 .en-slab {
   fill: color-mix(in srgb, var(--c5-accent) 38%, transparent);
   stroke: none;
 }
 
-/* What an indicator leaves behind once the model is told its value is gone. */
+/* Outline of an indicator whose value was removed. */
 .en-slab-absent {
   fill: none;
   stroke: var(--rule-strong);
@@ -296,7 +287,7 @@
   transition: fill 320ms ease;
 }
 
-/* ---- 03. What the score is known to within ---------------------------------------- */
+/* ---- 03. Score uncertainty ---------------------------------------------------------- */
 
 .en-spread {
   fill: color-mix(in srgb, var(--standing) 26%, transparent);

@@ -18,33 +18,19 @@ export interface Instanced {
 }
 
 /**
- * The plant's own full height, in the geometry's local units.
- *
- * Carried on every `InstancedMesh` this produces because `wind.ts` cannot
- * derive it: a tree arrives as three or four primitives — bark, twig, dead
- * branches, trunk — and each one's bounding box describes only its own part.
- * Normalising sway against the primitive would give the twig mesh full
- * amplitude at the height where the bark mesh has none, and the canopy would
- * visibly shear off the trunk. Sway has to be a function of height up *the
- * plant*, so the plant is what gets measured.
+ * Full plant height in local units. `wind.ts` needs it because a tree is split
+ * into several primitives and each bounding box covers only its own part.
+ * Sway measured per primitive would shear the canopy off the trunk.
  */
 export interface PlantMetrics {
   readonly plantHeight: number;
 }
 
 /**
- * Where one instance ends up, decided by the caller.
- *
- * The asset carries a *plan* — which plant, where in x and z, how big, which
- * way round — and nothing it can say about the vertical is worth believing:
- * `scatter_planting` places every one of them on a level Blender floor, and the
- * ground they arrive on rolls nine metres. So the site gets to move each
- * instance onto its own terrain and to refuse the ones that landed on paving,
- * and this module stays a bucketing routine that knows nothing about either.
- *
- * Return `false` to drop the instance. `matrix` is in the root's space and is
- * the caller's to rewrite; `bounds` is the whole plant's local box, which is
- * what tells a 12 m fir from a grass tuft drawn with the same call.
+ * Caller hook that places one instance. `scatter_planting` exports on a flat
+ * floor, so the site drops each plant onto its terrain and rejects plants on
+ * paving. Return `false` to drop the instance. `matrix` is in root space and
+ * may be rewritten. `bounds` is the whole plant's local box.
  */
 export type Seat = (matrix: Matrix4, bounds: Box3) => boolean;
 
@@ -55,25 +41,14 @@ interface Bucket {
   plantHeight: number;
 }
 
-/** Positions sampled when fingerprinting a geometry. Enough to never collide. */
+/** Positions sampled when fingerprinting a geometry. */
 const SAMPLES = 24;
 
 /**
- * Collapses a scattered asset into one draw call per distinct thing drawn.
- *
- * The planting arrives from Blender as ~1400 separate nodes, one per plant, and
- * `GLTFLoader` rebuilds them as ~1400 draw calls. Bucketed by *what they draw*
- * rather than by where they stand, the same site costs a dozen — at which point
- * density is free.
- *
- * **Buckets are keyed on geometry content, not on `geometry.uuid`.** The
- * exporter duplicates mesh data for some species (`Plane.064` is written 29
- * times), so keyed by identity those become buckets of one and the instancing
- * silently does nothing.
- *
- * **Everything is instanced, including buckets of one.** It saves no draw call
- * by itself; it buys every plant reaching the vertex shader through
- * `instanceMatrix`, so the wind has one path to handle rather than two.
+ * Groups a scattered asset (about 1400 plant nodes) into instanced meshes, one
+ * per material and geometry. Buckets are keyed on geometry content because the
+ * exporter duplicates mesh data (`Plane.064` is written 29 times). Buckets of
+ * one are instanced too, so the wind shader has a single `instanceMatrix` path.
  */
 export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
   root.updateMatrixWorld(true);
@@ -88,9 +63,8 @@ export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
   root.traverse((child) => {
     const mesh = child as Mesh;
     if (!mesh.isMesh) return;
-    // A multi-material object is one primitive per material by the time glTF
-    // has been through it, so a mesh here carries exactly one. Anything else is
-    // a structural change upstream and should be seen, not averaged away.
+    // glTF splits multi-material objects into one primitive per material.
+    // An array here means the export changed upstream.
     if (Array.isArray(mesh.material)) {
       throw new Error(
         `${mesh.name || 'planting mesh'} has ${mesh.material.length} materials; expected one per primitive.`,
@@ -125,10 +99,8 @@ export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
   const chunks: Chunked[] = [];
 
   for (const bucket of buckets.values()) {
-    // Split by position rather than drawn as one field. A bucket's instances
-    // are scattered over the whole site, so as a single mesh it is culled by a
-    // volume the size of the site and never rejected by either frustum — see
-    // `chunking.ts`.
+    // Split each bucket into spatial chunks so frustum culling can reject
+    // them. See `chunking.ts`.
     const chunked = chunkInstances(
       { geometry: bucket.geometry, material: bucket.material, matrices: bucket.matrices },
       root.name || 'planting',
@@ -142,9 +114,7 @@ export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
     }
   }
 
-  // The refusal count is reported rather than assumed. A clearance rule that is
-  // working and one that is quietly emptying the site look identical from any
-  // camera, and this is the only number that separates them.
+  // Logged so a clearance rule that drops too many plants is visible.
   console.info(
     `[exterior] planting: ${nodes - refused} of ${nodes} nodes kept ` +
       `(${refused} on built ground) in ${meshes.length} instanced draws ` +
@@ -155,29 +125,18 @@ export function collapseToInstances(root: Object3D, seat?: Seat): Instanced {
     object,
     meshes,
     dispose() {
-      // Geometry and materials belong to the asset cache and are handed out
-      // again on the next visit to the zone. Only the instance buffers added
-      // here are this object's to release.
+      // Geometry and materials belong to the asset cache. Only the instance
+      // buffers are released here.
       for (const chunk of chunks) chunk.dispose();
     },
   };
 }
 
 /**
- * The whole plant this primitive belongs to, as a local-space box.
- *
- * `GLTFLoader` expands a multi-primitive mesh into a `Group` holding one child
- * per primitive, and those children carry no transform of their own — so the
- * union of their geometry bounding boxes, taken on the parent, is the plant
- * measured in exactly the space the vertex shader sees. Cached per node
- * because every instance of a template asks the same question.
- *
- * The box rather than the height alone: the wind normalises sway against the
- * height, and the site needs a crown radius to decide what a placement clears.
- *
- * **The root is never the plant.** A single-primitive plant is exported as a
- * bare `Mesh` hanging off the scene, so taking the parent reaches the scene
- * itself and measures the union of every geometry on the site.
+ * Local-space box of the whole plant a primitive belongs to. `GLTFLoader`
+ * groups primitives under an untransformed parent, so the union of their boxes
+ * is the plant in vertex-shader space. Cached per node. The root is never used
+ * as the plant, since single-primitive plants hang directly off it.
  */
 function plantBounds(mesh: Mesh, root: Object3D, cache: Map<Object3D, Box3>): Box3 {
   const parent = mesh.parent;
@@ -201,11 +160,8 @@ function plantBounds(mesh: Mesh, root: Object3D, cache: Map<Object3D, Box3>): Bo
 }
 
 /**
- * A content hash of a geometry, so duplicated mesh data buckets as one.
- *
- * Vertex and index counts alone would merge genuinely different plants that
- * happen to match, so a spread of actual positions is folded in as well. Two
- * geometries agreeing on all of that are the same geometry.
+ * Content hash of a geometry, so duplicated mesh data shares a bucket. Combines
+ * vertex count, index count and a sample of positions.
  */
 function fingerprint(geometry: BufferGeometry): string {
   const position = geometry.getAttribute('position');

@@ -5,7 +5,7 @@ import { splitLines } from './splitLines';
 import './gap-cards.css';
 
 export interface GapCard {
-  /** Shown large in the card, and the number the objectives scene regroups. */
+  /** Large number on the card. The objectives scene regroups by it. */
   readonly key: string;
   readonly title: string;
   readonly body: string;
@@ -17,53 +17,33 @@ export interface GapCardsSpec {
 
 export interface GapCards {
   readonly element: HTMLElement;
-  /** The card frames, for the scene's own entrance stagger. */
+  /** Card frames, for the scene's entrance stagger. */
   readonly frames: readonly HTMLElement[];
   /**
-   * Splits the titles into their rendered lines. Must be called once the cards
-   * are in the document, and again if the webfont resolves after that.
+   * Splits titles into rendered lines. Call once the cards are in the document,
+   * and again after the webfont loads.
    */
   measure(): void;
-  /** `-1` for the empty frames, then the index of the card being spoken about. */
+  /** Index of the active card, or `-1` for empty frames. */
   show(active: number, settle?: boolean): gsap.core.Timeline;
 }
 
 /*
- * Six gaps, as a three-by-two field of cards filled one at a time.
+ * Six gaps as a three-by-two grid of cards, filled one at a time. Empty frames
+ * with numbers show from the start, so the count of six is clear. The next
+ * scene regroups it into four.
  *
- * **The frames stand empty from the first frame.** Only the numbers are in them
- * until a card is reached, which establishes the count before the first gap is
- * spoken — six cards arriving out of nothing leaves the audience counting
- * instead of listening, and six is load-bearing: the next scene regroups it
- * into four.
+ * Each card is pending, active or settled. Only the active card gets the amber
+ * accent.
  *
- * **Three across rather than six down.** A six-row stack at this measure sets
- * each gap as a line of a list, and a list is read ahead of the speaker. A card
- * is a block with edges, so the eye rests inside the one being spoken about.
- *
- * **Three states, and the accent belongs to the middle one.** A card is pending,
- * then active, then settled, and the amber travels with the active card rather
- * than being a property of any gap. That is what keeps six equal claims looking
- * like six equal claims, and it also gives the room an unmistakable answer to
- * *which one is he on*.
- *
- * Colours are resolved from tokens here rather than left as `var()` in the tween:
- * GSAP interpolates colour values, not custom-property references, and a tween
- * to `var(--x)` lands on the final frame instead of animating.
+ * Colours are resolved from tokens because GSAP cannot animate to `var(--x)`.
+ * It jumps to the final value.
  */
 
 /**
- * The choreography, in seconds from the start of a beat.
- *
- * **A beat is a hand-off, not a cross-fade, and the offsets are what say so.**
- * The card losing the accent starts letting go at zero and is done in a third of
- * a second; the card taking it does not begin until that release is most of the
- * way through. Everything running from t=0 at one duration — which is what this
- * was — is why it read as soft: six parts arriving together is one event, and a
- * beat should be a short sequence the eye can follow.
- *
- * Reading order down the card: frame, then the mark that says *this one*, then
- * the number, then the statement line by line, then the description.
+ * Start times in seconds from the start of a beat. The previous card releases
+ * the accent first, then the new card animates in order: frame, glow, rule,
+ * number, title lines, body.
  */
 const CUE = {
   release: 0,
@@ -85,25 +65,19 @@ const SPAN = {
   body: 0.62,
 } as const;
 
-/**
- * One ease for everything was the other half of the softness. Roles move
- * differently: a frame settles, a rule is drawn, type arrives.
- */
+/** Eases per role. */
 const MOVE = {
-  /** Unfussy, and over before the eye follows it. */
   release: 'power2.out',
-  /** Decelerating into place, without `expo`'s long tail on a moving box. */
+  /** Avoids the long tail of `expo` on a moving box. */
   arrive: 'power3.out',
-  /** A rule being drawn, not thrown. */
   rule: 'power4.out',
-  /** Type. `expo.out` is the deck's own enter, and it is right for a wipe. */
   type: EASE.enter,
 } as const;
 
-/** Line-to-line delay inside one statement. */
+/** Delay between title lines, in seconds. */
 const LINE_STEP = 0.07;
 
-/** Tokens are the source of truth for colour, and GSAP needs resolved values. */
+/** Reads a CSS custom property from `:root`. */
 const token = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -139,7 +113,7 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
       children: [glow, rule, key, title, body],
     });
 
-    // Replaced by the measured lines; until then the whole statement is one.
+    // `lines` holds the whole title until `measure` splits it.
     return {
       element,
       rule,
@@ -166,9 +140,7 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
       const shown = phase !== 'pending';
       const lit = phase === 'active';
 
-      // Anything not being handed the accent moves at once and quickly. Running
-      // a release through the arrival choreography would take a second to undo
-      // what the next card is spending a second doing.
+      // Cards losing or lacking the accent change at once, with the short release timing.
       const quick = !lit;
       const at = (cue: number): number => (quick ? 0 : cue);
       const span = (length: number): number => (quick ? SPAN.release : length);
@@ -180,8 +152,7 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
           vars: {
             borderColor: shown ? colours.edgeLit : colours.edge,
             scale: lit ? 1.018 : 1,
-            // Rising rather than only growing. Four pixels is nothing to name
-            // and everything to feel.
+            // Active card lifts 4px.
             y: lit ? -4 : 0,
             opacity: phase === 'settled' ? 0.88 : 1,
           },
@@ -212,8 +183,7 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
         },
         {
           node: card.lines,
-          // Past 100%: a line clearing its own mask by a margin arrives with
-          // travel behind it rather than appearing to start at the edge.
+          // Past 100% so hidden lines sit fully below their mask.
           vars: { yPercent: shown ? 0 : 112 },
           at: at(CUE.title),
           duration: span(SPAN.title),
@@ -241,7 +211,7 @@ export function createGapCards(spec: GapCardsSpec): GapCards {
         const lines = splitLines(card.title, card.source);
         if (lines.length > 0) card.lines = lines;
       }
-      // The freshly built lines carry none of the state the old block had.
+      // New line elements have no tween state, so reapply the current one.
       api.show(current, true);
     },
 

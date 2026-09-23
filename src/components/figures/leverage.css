@@ -4,8 +4,7 @@
   width: 100%;
 }
 
-/* Same treatment the ledger gives its attribution, because it is the same
-   thing: the figure states where it comes from and gets out of the way. */
+/* Source attribution, styled like the ledger's. */
 .leverage-source {
   font-family: var(--font-label);
   font-size: var(--t-micro);
@@ -19,15 +18,14 @@
   overflow: visible;
 }
 
-/* The spine both wedges are measured from, and the phases they run across. */
+/* Shared axis and phase labels. */
 
 .leverage-axis {
   stroke: var(--c-border-strong);
   stroke-width: 1;
 }
 
-/* Each name is set off the baseline on one of two rows, so the tick is what
-   says which point on the axis it belongs to. */
+/* Phase names sit on two rows; the tick marks each one's axis position. */
 .leverage-tick {
   fill: none;
   stroke: var(--c-border-strong);
@@ -81,7 +79,7 @@
 }
 
 /* ---- The window the thesis works in ------------------------------------ */
-/* Amber, as everywhere the act points at its own subject. */
+/* Amber marks the thesis's own subject throughout the act. */
 
 .leverage-window-edge {
   fill: none;

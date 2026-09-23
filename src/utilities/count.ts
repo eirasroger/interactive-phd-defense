@@ -18,12 +18,8 @@ export function formatCount(value: number, format: CountFormat = {}): string {
 }
 
 /**
- * A quantity arriving at its value.
- *
- * Counting is the only way a number reads as *measured* rather than typeset,
- * and it is why every readout in the deck writes through here: one formatter
- * for the tween and for `settle`, so a beat reached backwards shows the same
- * string to the character.
+ * Tweens a number from 0 to `to` in `node`. Uses `formatCount`, the same
+ * formatter as `settle`, so stepping back to a beat shows identical text.
  */
 export function countUp(
   node: HTMLElement,

@@ -1,58 +1,27 @@
 /**
- * The four objective marks.
+ * The four objective icons. All share a 64-unit grid, 1.5 stroke, round caps
+ * and the same inset. Colour comes from the card. Each icon draws the
+ * objective's mechanism.
  *
- * **One construction, four drawings.** Every mark is built on the same 64-unit
- * grid, with the same 1.5 stroke, the same round caps and joins, and the same
- * optical inset — which is the whole difference between a set and four pictures
- * that happen to share a slide. Nothing is filled except the accent dots, and
- * nothing carries a colour of its own: the card decides that, so a mark is amber
- * while its objective is being spoken and neutral once it is not.
- *
- * **Each mark draws its objective's mechanism, not a symbol for its subject.**
- * A gear for *method*, a brain for *machine learning* or a shield for
- * *compliance* would be four stock glyphs, and a committee reads stock glyphs as
- * decoration. A radar with uneven arms *is* multi-criteria evaluation; a
- * threshold that five candidates meet and two pass *is* prefiltering.
- *
- * Three element roles, and the reveal treats each differently:
- *
- * - `icon-stroke` — drawn on, in the order the eye should read. The draw works
- *   by writing `stroke-dasharray`, so nothing that is *meant* to be dashed can
- *   carry this class: the animation would overwrite the pattern and leave a
- *   solid line where an absence was drawn.
- * - `icon-dash` — a dashed stroke that means something is missing. Revealed by
- *   opacity, for exactly that reason.
- * - `icon-dot` — scaled up after the strokes land, so the marks arrive on lines
- *   that already exist rather than floating in first.
- *
- * `icon-faint` composes with any of them: scaffolding — the axis cage, the
- * sheets behind the front one — present and deliberately not competing.
+ * Element roles:
+ * - `icon-stroke`: drawn on by animating `stroke-dasharray`, so never use it on a dashed line.
+ * - `icon-dash`: a dashed stroke meaning something is missing. Revealed by opacity.
+ * - `icon-dot`: scaled in after the strokes.
+ * - `icon-faint`: modifier for background scaffolding.
  */
 
 export type ObjectiveIcon = 'indicators' | 'corpus' | 'gate' | 'ranking';
 
-/**
- * The optical box every mark is drawn inside: 8 to 56 on both axes, on a 64
- * grid. Normalising the box is what stops one mark reading as bigger than
- * another when they are the same nominal size — the thing that most reliably
- * gives away four drawings pretending to be a set.
- */
+/** Drawing box shared by all icons: 8 to 56 on both axes of the 64 grid, so they look the same size. */
 const BOX = { min: 8, max: 56, mid: 32 } as const;
 
 const dot = (cx: number, cy: number, r = 2.2): string =>
   `<circle class="icon-dot" cx="${cx}" cy="${cy}" r="${r}" />`;
 
-/**
- * Radar geometry, five axes from the top at 72°, radius 24 on centre (32, 32).
- *
- * Five rather than four: an even count draws a rectangle at rest, and a
- * rectangle reads as a shape rather than as a measurement.
- */
+/** Radar geometry: five axes 72° apart starting at the top, radius 24, centre (32, 32). */
 const AXES = [-90, -18, 54, 126, 198].map((degrees) => (degrees * Math.PI) / 180);
 const CAGE_R = 24;
-/** Deliberately well inside the cage. At 0.8 the two outlines collide and the
-    mark reads as two overlapping pentagons rather than as a measurement in a
-    frame. */
+/** Profile radii as fractions of the cage. Kept well inside so the outlines stay apart. */
 const PROFILE_R = [0.62, 0.4, 0.68, 0.34, 0.52];
 
 const polar = (angle: number, radius: number): readonly [number, number] => [
@@ -66,12 +35,8 @@ const CAGE_POINTS = AXES.map((angle) => polar(angle, CAGE_R));
 const PROFILE_POINTS = AXES.map((angle, index) => polar(angle, CAGE_R * (PROFILE_R[index] ?? 0.5)));
 
 /**
- * O1 — indicators spanning environmental, circularity, economic and technical
- * performance, read against each other rather than summed.
- *
- * The cage is what every product is measured on; the uneven profile inside it is
- * one product's answer. Uneven on purpose — a regular pentagon would say the
- * criteria are already reconciled, which is the problem rather than the method.
+ * O1: multi-criteria indicators. The cage is the set of criteria and the
+ * uneven profile is one product's scores.
  */
 const indicators = `
   ${CAGE_POINTS.map(
@@ -84,13 +49,8 @@ const indicators = `
 `;
 
 /**
- * O2 — a corpus of declarations, and what is missing from it.
- *
- * Three sheets, because the objective is about reporting *across* products and a
- * single document would be about one. The front sheet carries three fields: one
- * complete, one dashed — absent — and one short, which is the inconsistency the
- * corpus is characterised for. The dash is `CandidateSet`'s and `Declaration`'s,
- * unchanged, and by the fourth appearance it needs no legend.
+ * O2: a corpus of declarations. The front sheet has a complete field, a missing
+ * (dashed) field and a short one. The dash matches `CandidateSet` and `Declaration`.
  */
 const corpus = `
   <rect class="icon-stroke icon-faint" x="22" y="8" width="32" height="40" rx="3" />
@@ -103,12 +63,8 @@ const corpus = `
 `;
 
 /**
- * O3 — compliance as a threshold taken before anything is ranked.
- *
- * Five candidates above the rule, two below it, and the two that pass are the
- * only ones tied to it. The rule is the same device the candidate-set figure
- * draws compliance on in Act I, which is the point: this objective is that rule
- * being moved to the front of the process and automated.
+ * O3: compliance prefilter. Five candidates above the rule, two pass below it.
+ * Same rule device as the Act I candidate-set figure.
  */
 const gate = `
   ${[13, 22.5, 32, 41.5, 51].map((x) => dot(x, 12)).join('')}
@@ -119,14 +75,7 @@ const gate = `
   ${dot(38, 52, 2.6)}
 `;
 
-/**
- * O4 — a candidate set ordered, with one recommendation carried out of it.
- *
- * Bars rather than a network or a node graph: the model is the method and the
- * ranking is the objective, and what the audience needs to recognise in half a
- * second is that something came out on top. The marker on the leading bar is the
- * recommendation; without it this is a bar chart.
- */
+/** O4: ranked candidates. The dot on the top bar marks the recommendation. */
 const ranking = `
   ${dot(10, 12, 2.4)}
   <line class="icon-stroke" x1="18" y1="12" x2="${BOX.max}" y2="12" />

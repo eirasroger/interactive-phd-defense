@@ -8,7 +8,7 @@ export interface CaptionContent {
   readonly eyebrow?: string;
   readonly heading: string;
   readonly body?: readonly string[];
-  /** Semantic accent for the eyebrow rule. `neutral` is the absence of a claim. */
+  /** Accent colour for the eyebrow rule. `neutral` means no accent. */
   readonly accent?: Accent;
   readonly align?: 'start' | 'center';
   /** Institutional mark above the composition. Title card only; `src` must be an import. */
@@ -21,12 +21,8 @@ export interface Caption {
 }
 
 /**
- * The standard text block.
- *
- * Scenes compose this rather than writing their own markup, which is what
- * keeps typography, rhythm and reveal timing identical everywhere. Text is
- * DOM rather than 3D: it stays crisp at any projector resolution, remains
- * selectable and accessible, and costs nothing to render.
+ * Standard DOM text block used by every scene, so typography and reveal
+ * timing stay consistent.
  */
 export function createCaption(content: CaptionContent): Caption {
   const parts: HTMLElement[] = [];

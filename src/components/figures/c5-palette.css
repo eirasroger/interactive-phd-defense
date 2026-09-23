@@ -1,26 +1,18 @@
 /*
- * C5's own chromatic identity, and the ground the model's interior is drawn on.
- *
- * The corridor arrives here through C3's indigo and C4's violet. A deep
- * cyan-teal continues that ramp into a cooler, brighter hue, so the terminal
- * station reads as arrival while staying clear of the circularity teal the
- * floor carries and of C1's four indicator families.
- *
- * The second ground is C4's device, kept deliberately: everything outside a
- * model is drawn on the white the corridor projects, and everything inside one
- * is drawn on a dark field. Two stations sharing that rule is what makes it a
- * rule instead of a decoration.
+ * C5 palette. A deep cyan-teal that continues C3's indigo and C4's violet,
+ * distinct from the floor's circularity teal and C1's indicator colours.
+ * As in C4, model internals sit on a dark field and everything else on white.
  */
 .c5 {
   --c5-accent: #0d6e80;
   --c5-accent-soft: #4aa3b4;
 
-  /* Where a candidate stands. Read at every beat that draws a score. */
+  /* Candidate standing colours. */
   --c5-lead: #0d6e80;
   --c5-contested: #b2762a;
   --c5-trailing: #8a9099;
 
-  /* The two conditioning inputs, separated because the station separates them. */
+  /* The two conditioning inputs. */
   --c5-who: #7a4f9c;
   --c5-what: #0d6e80;
 
@@ -40,8 +32,8 @@
 }
 
 /*
- * The field. Its ink tokens carry the same names as the white ground's, so a
- * component built for one reads correctly inside the other.
+ * Dark field. Uses the same ink token names as the white ground, so components
+ * work on either.
  */
 .c5-field {
   --ink: #e6f2f4;
@@ -70,7 +62,7 @@
     0 24px 60px color-mix(in srgb, var(--c-base) 24%, transparent);
 }
 
-/* The field's own texture, so an empty region still reads as part of a space. */
+/* Faint grid texture on the field. */
 .c5-field::before {
   content: '';
   position: absolute;
@@ -86,11 +78,8 @@
 }
 
 /*
- * Where a candidate stands in the set it is in.
- *
- * Three states, because the argument the station makes is that the middle of a
- * field behaves differently from either end. Every use pairs the tone with a
- * position on an axis, so the colour is never the only encoding.
+ * Candidate standing within its set: lead, contested or trailing. Always paired
+ * with an axis position, so colour is never the only encoding.
  */
 [data-standing='lead'] {
   --standing: var(--c5-lead);
@@ -110,7 +99,7 @@
   --input: var(--c5-what);
 }
 
-/* The uppercase locator every C5 panel opens with. */
+/* Uppercase label at the top of each C5 panel. */
 .c5-index {
   font-family: var(--font-label);
   font-size: 0.6875rem;
@@ -124,17 +113,17 @@
   color: var(--c5-accent-soft);
 }
 
-/* A quantity, wherever one is set at reading size. */
+/* Numeric figure at reading size. */
 .c5-figure {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
   font-weight: var(--fw-light);
   letter-spacing: var(--ls-title);
-  /* Not 1: a light-weight numeral needs more than its em box and clips at 1. */
+  /* Light-weight numerals clip at line-height 1. */
   line-height: 1.12;
 }
 
-/* A candidate, wherever the station draws one as a token. */
+/* Round candidate token. */
 .c5-token {
   display: grid;
   place-items: center;

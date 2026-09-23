@@ -28,13 +28,9 @@ export interface Corpus {
 }
 
 /**
- * The extraction, and its verification.
- *
- * Beat one is a declaration with each group of indicators lit where it sits,
- * flying into the schema field it resolves into. Beat two is that record
- * repeated across the corpus, with the manually verified sample marked through
- * it: a language model is probabilistic, so extraction accuracy is measured
- * rather than assumed.
+ * EPD extraction and its verification.
+ * Beat 1: indicator groups on a declaration fly into their schema fields.
+ * Beat 2: the full corpus, with the manually verified sample marked.
  */
 export function createCorpus(): Corpus {
   const tokens: HTMLElement[] = [];
@@ -164,9 +160,8 @@ export function createCorpus(): Corpus {
 
   const field = createCorpusField();
 
-  // The error count arrives on its own clock at the end. A second `from` on an
-  // element already carrying one resolves its destination to that tween's start
-  // value, which is zero.
+  // Excludes the error count, which gets its own `from` later. Two `from`
+  // tweens on one element would resolve the second to opacity 0.
   const arriving = [total.node, checked.node];
 
   const legendRows = CATEGORIES.map((category, rank) =>
@@ -293,9 +288,7 @@ export function createCorpus(): Corpus {
             );
         }
 
-        // The page arrives whole and unmarked, because the point is that
-        // nothing about it says which lines carry the quantities. The
-        // highlights are the reading being imposed on it.
+        // The page appears unmarked; highlights follow per indicator group.
         line
           .from(element, { opacity: 0, duration: seconds(DURATION.normal), ease: EASE.enter }, 0)
           .from(page, { opacity: 0, y: 22, duration: seconds(DURATION.slow), ease: EASE.enter }, 0)
@@ -433,8 +426,7 @@ export function createCorpus(): Corpus {
           },
           seconds(DURATION.quick),
         )
-        // The readout and the field share one clock and one easing, so the
-        // number on the left is always the number of cells standing on the right.
+        // Readout and field share one tween, so the count always matches the cells shown.
         .to(
           progress,
           {
@@ -452,7 +444,7 @@ export function createCorpus(): Corpus {
           seconds(DURATION.quick),
         );
 
-      // A legend row lights as its own band finishes laying down.
+      // Each legend row appears as its category band finishes filling.
       gsap.set(legendRows, { opacity: 0, x: -10 });
       for (const [rank, row] of legendRows.entries()) {
         line.to(

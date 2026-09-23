@@ -1,13 +1,7 @@
 /*
- * Beat 2. Where the labels came from, and what each source is worth.
- *
- * Three sources drawn as the methods they are, and then the same three read
- * twice: what each contributed against the share of the objective it carries.
- *
- * The sources carry one hue at three strengths rather than three hues.
- * Provenance here is a scale, from analytically settled through generated to
- * annotated, and the accent belongs to the end of it that is almost invisible
- * on the upper band.
+ * Beat 2: the three label sources, their methods, and label volume against
+ * share of the objective. One hue at three strengths, since provenance is a
+ * scale; full accent goes to expert labels.
  */
 .sv {
   display: grid;
@@ -48,9 +42,7 @@
 
 /* ---- The three sources -------------------------------------------------------- */
 
-/* The generated source takes more width because it takes more explaining. It is
-   the source a committee presses on, and three equal columns would give the
-   least contested one the same room as the most. */
+/* The generated source gets the widest column because it needs the most explanation. */
 .sv-sources {
   display: grid;
   grid-template-columns: 27fr 40fr 27fr;
@@ -102,12 +94,7 @@
 
 /* ---- The three method diagrams -------------------------------------------------- */
 
-/*
- * Each source carries a figure of its own labelling method at a size that can
- * actually be read. An earlier pass drew all three at 48px with 8px labels; at
- * that size a diagram is decoration, because working out what it shows costs
- * more than the sentence it replaces.
- */
+/* A diagram of each source's labelling method, large enough to read. */
 .sv-source-figure {
   align-self: center;
 }
@@ -132,7 +119,7 @@
   fill: var(--c5-accent);
 }
 
-/* A named row, so a track carries an indicator rather than an abstraction. */
+/* Indicator name at the start of each track. */
 .sv-row-name {
   font-size: 9.5px;
   text-anchor: end;
@@ -276,9 +263,7 @@
   border-top: 1px solid var(--rule);
 }
 
-/* The two bands are named beside themselves. Set above and below they read as
-   headings for the whole figure, and a reader has to work out which band each
-   one belongs to. */
+/* Band names sit in a column to the left of their bands. */
 .sv-influence-body {
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);
@@ -300,7 +285,7 @@
   color: var(--ink-muted);
 }
 
-/* Aligned to the centre of the band each one names. */
+/* Vertically centred on its band. */
 .sv-band-label {
   top: calc(0.875rem + var(--band) / 2);
 }
@@ -323,13 +308,8 @@
 }
 
 /*
- * Height stated, never inferred.
- *
- * With `inset` alone the board is an absolutely positioned replaced element
- * whose height is `auto`, so Chrome drops the `bottom` offset and resolves the
- * height from the view box's own ratio. The board came out 20px short of the
- * frame and the lower band's readouts, positioned against the frame, sat below
- * the band they belonged to. `learnings.md` §71.
+ * Explicit height. With `inset` alone Chrome sizes this absolutely positioned
+ * SVG from its viewBox ratio and ignores `bottom`. `learnings.md` §71.
  */
 .sv-ribbon-board {
   position: absolute;
@@ -349,7 +329,7 @@
   opacity: 0.34;
 }
 
-/* The readouts sit inside the block they measure. */
+/* Readouts sit inside the segment they measure. */
 .sv-legend {
   position: absolute;
   inset-inline: 0;
@@ -377,13 +357,12 @@
   color: #ffffff;
 }
 
-/* Control's block is pale enough to take ink rather than paper. */
+/* Control's segment is pale, so its readout uses dark text. */
 .sv-legend-entry[data-key='control'] {
   color: color-mix(in srgb, var(--c5-accent) 92%, var(--c-base));
 }
 
-/* Six-tenths of one percent is narrower than its own readout, so that one is
-   lifted clear of the band and hung off the end of the board. */
+/* Segments too narrow for their readout (0.6%) place it outside, at the board's end. */
 .sv-legend-entry[data-tiny='true'] {
   transform: translateX(-100%);
   padding-right: var(--s-2);

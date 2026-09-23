@@ -1,29 +1,13 @@
 import type { ObjectiveMapSpec } from '@/components/figures/ObjectiveMap';
 
 /**
- * Scene 10 — the six gaps regrouped into four objectives.
+ * Scene 10: the six gaps regrouped into four objectives. The gaps stay along
+ * the top and each objective highlights the gaps it absorbs.
  *
- * **The regrouping is shown, not glossed.** `narrative.md` is explicit that the
- * audience will count. The six gaps stand along the top for the whole scene, and
- * each objective lights the ones it is motivated by — so the fold from six to
- * four is watched rather than asserted, and the pairing is legible without a
- * line of narration.
- *
- * Titles are the thesis's own objective statements, verbatim. The `absorbs`
- * mapping is the *Motivated by Gaps …* line under each one, and is not a
- * reading: O1 ← 1, 2 · O2 ← 3 · O3 ← 4 · O4 ← 5, 6.
- *
- * **The gap labels are compressions, and the only editorial text here.** Two or
- * three words each, because a chip carrying the full gap title is the previous
- * scene printed twice. The full wording was on screen one beat ago and is what
- * the audience is being reminded of, not told.
- *
- * Gap 01's chip compresses its description rather than its title, because the
- * description is where the claim moved: the dimensions are never weighed
- * together. O1's own statement stays verbatim and carries none of that weight,
- * which is what the `indicators` mark is for. Its five axes are the five
- * dimensions, and a radar says *read against each other, not summed* in a way no
- * clause appended to a 120-character objective could.
+ * Objective titles are verbatim from the thesis. `absorbs` follows each
+ * objective's "Motivated by Gaps" line: O1: 1, 2. O2: 3. O3: 4. O4: 5, 6.
+ * Gap labels are short summaries of the previous scene's titles. Gap 01
+ * summarises its description instead (the criteria are never weighed together).
  */
 
 export const OBJECTIVES = {

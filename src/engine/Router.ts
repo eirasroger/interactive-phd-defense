@@ -1,12 +1,8 @@
 export type RouteHandler = (id: string | null) => void;
 
 /**
- * Hash-based routing.
- *
- * The hash is the single source of truth for presentation position: a
- * refresh or a crash mid-defense returns to the same scene, and the build
- * still works when opened from disk over file:// (which history routing
- * would break).
+ * Hash-based routing. The hash holds the current scene, so a reload returns to
+ * it, and the build also works when opened over file://.
  */
 export class Router {
   private handler: RouteHandler | null = null;

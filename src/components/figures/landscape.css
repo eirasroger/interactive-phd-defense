@@ -87,8 +87,7 @@
   will-change: width;
 }
 
-/* The median is a hard edge, never a fill: on the landfill row it stands at
-   30% while the bar reaches 48.9%, and that gap is the skew. */
+/* Median tick. The gap between it and the mean bar shows the skew. */
 .ls-median {
   position: absolute;
   inset-block: -3px;
@@ -98,8 +97,7 @@
   background-color: var(--ink);
 }
 
-/* How far declared values actually reach, which on several rows is all the way
-   to 100% on a mean under two. */
+/* Maximum declared value. */
 .ls-reach {
   position: absolute;
   top: 50%;
@@ -135,15 +133,14 @@
   color: var(--ink-faint);
 }
 
-/* The four pathways that are recovery by something other than recycling. They
-   are hairlines, so the label carries them. */
+/* Recovery pathways other than recycling. Their bars are hairlines, so the label is coloured. */
 .ls-row[data-beyond='true'] .ls-label,
 .ls-row[data-beyond='true'] .ls-figure {
   color: var(--worth);
   font-weight: var(--fw-medium);
 }
 
-/* The shared scale, laid out on the row grid so its rail is the row rail. */
+/* Shared axis. Uses the row grid so it lines up with the tracks. */
 .ls-axis {
   display: grid;
   grid-template-columns: 16rem minmax(0, 1fr) 4.25rem 4.5rem;
@@ -178,7 +175,7 @@
   transform: translateX(-100%);
 }
 
-/* ---- The closing reading ------------------------------------------------ */
+/* ---- Summary figures ---------------------------------------------------- */
 
 .ls-verdict {
   display: grid;

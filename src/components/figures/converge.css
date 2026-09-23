@@ -1,21 +1,8 @@
 /*
- * Beat 1. The station's establishing shot.
- *
- * The paper's overview figure drawn at scale. Four contributions deliver
- * evidence from the corridor on the left, the decision's own context plugs into
- * the underside of the model, and one pass returns an ordering on the right. The
- * model sits in the middle on the dark ground this deck reserves for the inside
- * of a model, and it is the only object on the wall carrying weight.
- *
- * Every position comes from `Converge.ts`'s board. The frame holds the board's
- * aspect ratio and every label is placed as a percentage of it, so a label and
- * the mark it names cannot drift apart at any stage size. Layout here is
- * appearance only: type, tone and the row rhythm inside the two tables.
- *
- * Nothing on the beat is counted. How many indicators a profile carries depends
- * on the product category, and the application categories are defined per
- * category, so evidence is drawn as a band with width and the two context inputs
- * are named rather than enumerated.
+ * Beat 1: overview figure. Evidence enters from the left, context plugs into
+ * the model from below, and the ranking leaves on the right.
+ * Positions come from the board in `Converge.ts`. The frame keeps its aspect
+ * ratio and labels are placed in percent, so they stay on their marks.
  */
 .cv {
   display: grid;
@@ -42,10 +29,7 @@
   pointer-events: none;
 }
 
-/*
- * Anything anchored to a board coordinate. `top` is the coordinate itself and
- * the block hangs from it, so a caption's first line sits on the point it names.
- */
+/* Blocks anchored to a board coordinate. Each hangs from its `top`. */
 .cv-frame > .cv-ledger,
 .cv-frame > .cv-card,
 .cv-frame > .cv-context,
@@ -70,10 +54,9 @@
   color: var(--ink-faint);
 }
 
-/* ---- What the corridor delivers ----------------------------------------------- */
+/* ---- Evidence sources ---------------------------------------------------------- */
 
-/* Four equal rows across the band's own height, so a contribution's centre and
-   the centre of the band leaving it are the same point by construction. */
+/* Four equal rows, so each row centre lines up with its band. */
 .cv-ledger {
   display: grid;
   grid-template-rows: repeat(4, minmax(0, 1fr));
@@ -114,15 +97,13 @@
   color: var(--ink-faint);
 }
 
-/* ---- The evidence, travelling -------------------------------------------------- */
+/* ---- Evidence flow ------------------------------------------------------------- */
 
 .cv-flow-stop {
   stop-color: var(--c5-accent);
 }
 
-/* A band, because a profile has width and the width is not a number this
-   station claims. It gains density as it approaches the model, which is the
-   direction of travel stated without an arrowhead. */
+/* Evidence band. The gradient gets denser toward the model to show direction. */
 .cv-ribbon {
   fill: url(#cv-flow);
 }
@@ -133,14 +114,8 @@
   stroke-width: 1;
 }
 
-/*
- * Light travelling with the flow.
- *
- * A lit copy of the same bands, shown through a soft-edged window that crosses
- * the lane. The window is a mask rectangle in the board's own units and it moves
- * on a CSS transform, so the wall stays alive with no timeline to own, nothing
- * to dispose of when the panel is replaced, and no dependence on path length.
- */
+/* Light sweep: a lit copy of the bands seen through a moving mask rectangle.
+   Pure CSS animation, so there is no timeline to manage or dispose. */
 .cv-ribbon-lit {
   fill: color-mix(in srgb, var(--c5-accent) 26%, transparent);
 }
@@ -168,10 +143,9 @@
   }
 }
 
-/* ---- The fittings -------------------------------------------------------------- */
+/* ---- Ports --------------------------------------------------------------------- */
 
-/* Where a flow meets the model. The band arrives somewhere rather than stopping
-   at a boundary, which is the difference between a diagram and a device. */
+/* Where a flow meets the model. */
 .cv-port {
   fill: var(--c5-accent-soft);
 }
@@ -184,8 +158,7 @@
   fill: var(--c5-lead);
 }
 
-/* The one direction nothing else on the wall uses, which is what makes context
-   read as a different kind of input from the evidence. */
+/* Vertical riser for context, the only input entering from below. */
 .cv-riser {
   stroke: var(--input, var(--c5-accent));
   stroke-width: 1.5;
@@ -193,7 +166,7 @@
   opacity: 0.72;
 }
 
-/* ---- What the model returns ------------------------------------------------------ */
+/* ---- Output ranking -------------------------------------------------------------- */
 
 .cv-leader {
   fill: none;
@@ -206,8 +179,7 @@
   stroke-width: 1.5;
 }
 
-/* The readout's anchor. Every leader terminates on it, so the column reads as
-   one instrument rather than five loose rows. */
+/* Vertical bar where every leader ends. */
 .cv-spine {
   fill: color-mix(in srgb, var(--c5-accent) 50%, transparent);
 }
@@ -217,8 +189,7 @@
   grid-template-rows: repeat(5, minmax(0, 1fr));
 }
 
-/* A ledger, so the station's product carries the weight of a readout and not of
-   a caption. The rule under each row is the one under the row above it. */
+/* Ranked rows separated by rules. */
 .cv-row {
   display: grid;
   grid-template-columns: 1.5rem 1.75rem minmax(0, 1fr);
@@ -244,8 +215,7 @@
   background-color: var(--rule);
 }
 
-/* Lengths are the standard structural column of Fig. 8. No score is printed on
-   the opening beat, so the shape carries the measurement and nothing else. */
+/* Lengths from the standard structural column of Fig. 8. No scores printed. */
 .cv-bar-fill {
   display: block;
   width: var(--extent);
@@ -270,7 +240,7 @@
   color: var(--c5-accent);
 }
 
-/* ---- The model ------------------------------------------------------------------- */
+/* ---- Model ----------------------------------------------------------------------- */
 
 .cv-card {
   display: grid;
@@ -295,7 +265,7 @@
   font-family: var(--font-display);
   font-size: 2.25rem;
   font-weight: var(--fw-light);
-  /* Not `--lh-tight`: a light-weight display line clips at that value. */
+  /* `--lh-tight` clips light display type. */
   line-height: 1.12;
   letter-spacing: var(--ls-title);
   color: var(--ink);
@@ -309,7 +279,7 @@
   color: var(--ink-muted);
 }
 
-/* ---- The context, plugging in from underneath -------------------------------------- */
+/* ---- Context input ----------------------------------------------------------------- */
 
 .cv-context {
   display: grid;
@@ -332,10 +302,9 @@
   color: var(--ink-muted);
 }
 
-/* ---- What follows ------------------------------------------------------------------ */
+/* ---- Forward index ----------------------------------------------------------------- */
 
-/* The claim, and an index of the three beats that specify it. Numbered because
-   the audience is about to walk them in this order. */
+/* The claim, plus a numbered index of the next three beats in order. */
 .cv-forward {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);

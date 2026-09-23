@@ -53,8 +53,7 @@
   color: var(--c-emphasis);
 }
 
-/* The absence of a claim, not a fourth colour. A composition that argues
-   nothing has no semantic accent to spend on its own eyebrow. */
+/* For slides with no semantic accent. */
 .caption[data-accent='neutral'] .caption-eyebrow {
   color: var(--c-text-muted);
 }

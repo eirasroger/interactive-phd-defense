@@ -13,7 +13,7 @@
   color: var(--c-text-faint);
 }
 
-/* Reserves the band the absolutely positioned readouts and chip occupy. */
+/* Padding reserves space for the absolutely positioned readouts and chip. */
 .rate-plot {
   position: relative;
   padding-block: calc(var(--t-heading) * 2.2) var(--s-16);
@@ -46,7 +46,7 @@
   box-shadow: 0 0 28px color-mix(in srgb, var(--c-circular) 50%, transparent);
 }
 
-/* The shortfall is drawn, not left as whitespace: it is the subject. */
+/* Hatched gap between current and target rate. */
 .rate-shortfall {
   transform-origin: left center;
   background-image: repeating-linear-gradient(

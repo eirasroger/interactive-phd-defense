@@ -1,8 +1,6 @@
 /*
- * One arrow, shared by the beats that carry a value across a gap.
- *
- * The head sits at the shaft's end as a sibling and keeps its own geometry, so
- * the shaft can be scaled from zero without the head deforming with it.
+ * Shared arrow. The head is a sibling of the shaft, so the shaft can scale
+ * from zero without distorting the head.
  */
 .mk-arrow {
   position: relative;

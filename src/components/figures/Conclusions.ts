@@ -7,25 +7,16 @@ import './conclusions.css';
 export interface Conclusions {
   readonly element: HTMLElement;
   /**
-   * Set the frame to beat `index`: panels up to and including it stand open,
-   * and the ones after it stand shut with their claim showing.
-   *
-   * Every beat writes the whole state rather than the difference from the one
-   * before it. A beat that trusts its predecessor renders wrong the first time
-   * the presenter steps backwards, and a defence is not walked in a straight
-   * line.
+   * Sets the frame to beat `index`: panels up to it are open, later panels are
+   * shut with their claim showing. Writes the full state so stepping backwards
+   * works.
    */
   reveal(index: number, settle: boolean): gsap.core.Timeline;
 }
 
 /* ---- Drawing helpers ---------------------------------------------------------------- */
 
-/**
- * The board every finding is drawn on.
- *
- * One size for all four, because four drawings that share a slide and do not
- * share a frame read as four pictures rather than as one set of evidence.
- */
+/** Shared SVG board size for all four drawings, so they sit in one frame. */
 const BOARD = { width: 420, height: 240 } as const;
 
 const mark = <K extends keyof SVGElementTagNameMap>(
@@ -55,23 +46,17 @@ interface Drawing {
   /** Adds this drawing's build to the beat's timeline. */
   build(timeline: gsap.core.Timeline, at: number, motion: number): void;
   /**
-   * Writes the state the drawing waits in before its panel is reached.
-   *
-   * Needed as its own operation rather than as `build` run backwards: a panel
-   * that is shut has never been built, and a beat stepped back to has to put
-   * every drawing after it back into a state that can be built again.
+   * Resets the drawing to its unbuilt state. Used for shut panels and when
+   * stepping back, so the build can run again.
    */
   clear(): void;
-  /** Everything the build writes, for one `killTweensOf` that misses nothing. */
+  /** Every element the build animates, for `killTweensOf`. */
   readonly parts: readonly Element[];
 }
 
 /**
- * Length, measured once and written as a retracted dash.
- *
- * `getTotalLength` is defined for every geometry element, but a browser that
- * disagrees should degrade to a line that fades rather than to a scene that
- * throws on entry.
+ * Measures the stroke length and sets it as a fully retracted dash. Returns 0
+ * if `getTotalLength` throws, so the line just fades in.
  */
 const retract = (node: SVGGeometryElement): number => {
   let length = 0;
@@ -87,21 +72,12 @@ const retract = (node: SVGGeometryElement): number => {
   return length;
 };
 
-/* ---- 01 · The ordering holds where the values do not -------------------------------- */
+/* ---- 01 · Relative comparison ------------------------------------------------------ */
 
 /**
- * Four candidates, drawn as what is actually known about them.
- *
- * Each one is an interval rather than a number, and the four intervals overlap
- * so heavily that no absolute reading separates them. The markers inside them
- * are ordered, and the line through the markers is monotonic. That is the whole
- * conclusion in one picture: the values cannot be resolved at this stage and the
- * comparison across them still can.
- *
- * **The intervals are not error bars and are deliberately not drawn as any.** A
- * whisker with a cap is a statistical claim about a distribution, and what is
- * being drawn is the far cruder fact that the value is somewhere in a range. A
- * plain rounded band says exactly that and no more.
+ * Four candidates as overlapping value ranges with ordered markers. The values
+ * cannot be separated, but their order can. Ranges are plain rounded bands
+ * because they are not statistical error bars.
  */
 const drawComparison = (): Drawing => {
   const element = board();
@@ -159,8 +135,7 @@ const drawComparison = (): Drawing => {
     },
 
     build(timeline, at, motion) {
-      // The band grows out of its own marker, so the interval reads as
-      // uncertainty opening around a value rather than as a bar arriving.
+      // Each band grows outward from its marker.
       bands.forEach((node, index) => {
         const row = rows[index]!;
         timeline.fromTo(
@@ -214,19 +189,12 @@ const drawComparison = (): Drawing => {
   };
 };
 
-/* ---- 02 · Admissible first, preferred second ---------------------------------------- */
+/* ---- 02 · Screening, then ranking --------------------------------------------------- */
 
 /**
- * Nine candidates, a threshold, and a ranking of what survives it.
- *
- * The two operations are drawn as two regions with a rule between them, and the
- * tokens cross it. Four do not, and they are left where they stopped in the
- * fail tone C3 declared, because a candidate that is screened out is not removed
- * from the world, it is removed from the comparison.
- *
- * The bars grow out of the tokens that reached them rather than appearing
- * beside them: the ranking is what the survivors became, and that is the
- * sequence the conclusion is about.
+ * Nine candidates, a threshold rule, and a ranking of the five that pass. The
+ * four that fail stay in place in C3's fail tone. Rank bars grow from the
+ * tokens that crossed.
  */
 const PASSING = [1, 2, 4, 6, 7] as const;
 
@@ -247,12 +215,8 @@ const drawSequence = (): Drawing => {
     y2: 222,
   });
 
-  // The socket each candidate started in, left behind when it crosses.
-  //
-  // Without them the left column loses four of its nine and reads as a sparse
-  // scatter rather than as a set that has been filtered. The sockets keep the
-  // shape of the original set on the page, which is the whole point of drawing
-  // a screening step: nothing was deleted, the comparison was narrowed.
+  // Empty sockets left behind when a token crosses, so the original set of
+  // nine stays visible.
   const sockets = Array.from({ length: 9 }, (_, index) =>
     mark('circle', {
       class: 'cc-socket',
@@ -323,9 +287,8 @@ const drawSequence = (): Drawing => {
         at + seconds(0.1) * motion,
       );
 
-      // The five that pass cross the rule and take their rank. Written to the
-      // geometry rather than to a transform, so the token's own centre is where
-      // the bar starts and the two cannot drift apart.
+      // Passing tokens move to their rank. Animating cx/cy keeps each token's
+      // centre aligned with its bar start.
       PASSING.forEach((index, order) => {
         timeline.fromTo(
           tokens[index]!,
@@ -343,8 +306,7 @@ const drawSequence = (): Drawing => {
         );
       });
 
-      // Each bar carries its own width, so the retracted state is per element
-      // and cannot be one shared value.
+      // Per-bar tweens because each bar has its own width.
       bars.forEach((bar, index) => {
         timeline.fromTo(
           bar,
@@ -361,22 +323,13 @@ const drawSequence = (): Drawing => {
   };
 };
 
-/* ---- 03 · What is missing, and what is recovered ------------------------------------ */
+/* ---- 03 · Missing and inferred values ----------------------------------------------- */
 
 /**
- * The corpus, as a field of declared and undeclared values.
- *
- * Nine fields across, five products down. The absences are drawn in the dash the
- * candidate set and the declaration have used since Act I, and they are placed
- * in the clusters the analysis found rather than scattered: the finding is that
- * missingness has structure, and noise sprinkled evenly says the opposite.
- *
- * Three of the absences resolve to an inferred value, in C4's violet and never
- * in the tone a declared value carries. A recovered attribute that looked
- * identical to a reported one would be the pipeline claiming more than it has.
- *
- * The bars under the field are how often each column is reported, which is the
- * measurement the conclusion turns on.
+ * The corpus as a grid: nine fields across, five products down. Missing cells
+ * use the Act I dash and are clustered, since missingness has structure. Three
+ * are filled with inferred values in C4's violet, kept distinct from declared
+ * values. Bars below show how often each field is reported.
  */
 const CELL = { width: 24, height: 17, pitchX: 30, pitchY: 23, x: 46, y: 26 } as const;
 const COLUMNS = 9;
@@ -477,16 +430,8 @@ const drawEvidence = (): Drawing => {
         at + seconds(0.42) * motion,
       );
 
-      // The recovered values arrive last and arrive differently, which is the
-      // only place in the drawing where the order of events is an argument.
-      //
-      // Short, and the scale barely travels. `back.out` reaches full strength in
-      // the first sixth of its duration, so over `DURATION.slow` from 0.6 the
-      // cell was solid at roughly seven tenths of its size and then crept to
-      // full for another three quarters of a second: it read as a mark that had
-      // landed in the wrong place and was correcting itself. Landing takes
-      // `DURATION.quick` from 0.88, where the overshoot still gives the arrival
-      // its snap and there is no travel left to watch.
+      // Inferred values arrive last. Short duration and small scale travel,
+      // since a longer `back.out` looks like the cell is correcting its position.
       timeline.fromTo(
         inferred as gsap.TweenTarget,
         { opacity: motion ? 0 : 1, scale: motion ? 0.88 : 1 },
@@ -500,9 +445,8 @@ const drawEvidence = (): Drawing => {
         at + seconds(1.28) * motion,
       );
 
-      // Grown from the baseline by writing the geometry rather than scaling:
-      // a scaled rect takes its corner radius with it, so a bar animated by
-      // transform arrives at a different shape than it settles on.
+      // Animates height and y so the corner radius stays constant. Scaling
+      // would distort it.
       bars.forEach((bar, index) => {
         const height = heights[index] ?? 0;
         timeline.fromTo(
@@ -520,21 +464,12 @@ const drawEvidence = (): Drawing => {
   };
 };
 
-/* ---- 04 · The same set, ranked twice ------------------------------------------------ */
+/* ---- 04 · Context-dependent ranking ------------------------------------------------- */
 
 /**
- * One candidate set, two contexts, two orders.
- *
- * A slope between two rankings is the only figure that carries the relational
- * claim without a word attached to it: the same five tokens, the same five
- * colours, a different order on the right, and the crossings are the argument.
- * Three of the five change rank and the leader changes, because a slope chart
- * where the order barely moves says preference is roughly stable, which is the
- * opposite of the conclusion.
- *
- * The two contexts are marked by a swatch over each column and nothing else. A
- * legend on a drawing this small is a paragraph explaining a picture that was
- * supposed to save one.
+ * Slope chart: the same five candidates ranked under two contexts. Three change
+ * rank, including the leader. Each context is marked only by a swatch above
+ * its column.
  */
 const SLOPE = { left: 128, right: 296, top: 52, step: 36 } as const;
 /** Where each candidate lands under the second context. */
@@ -652,15 +587,8 @@ interface Panel {
   readonly rule: HTMLElement;
   readonly drawing: Drawing;
   /**
-   * The panel's opening scalar, held as a plain object and written to the
-   * element by hand.
-   *
-   * **Not tweened as a CSS variable.** `gsap.to(element, { '--open': 1 })`
-   * builds a tween that reports a duration and a parent and then never writes
-   * anything to the property, so the panel sits at its shut height for the whole
-   * beat while the timeline around it runs normally. Nothing errors. Tweening a
-   * number and setting the property in `onUpdate` is the same gesture with no
-   * dependency on how a custom property is parsed.
+   * Opening scalar (0 to 1), written to `--open` in `onUpdate`. GSAP tweening
+   * `--open` directly on the element silently writes nothing.
    */
   readonly scalar: { value: number };
 }
@@ -683,32 +611,19 @@ const buildPanel = (panel: ConclusionPanel): Panel => {
   });
   const scalar = { value: 1 };
 
-  // The note is not in `words`, and that is load-bearing.
-  //
-  // `words` is what the beat's own tweens write, and a tween writes an inline
-  // opacity that outranks the sheet. The note is lit by `--open` in CSS so that
-  // it stays dark while its panel is shut; handed to the same stagger as the
-  // claim it arrives at full strength on a shut panel and is then clipped by the
-  // panel's own height, which looks exactly like a layout bug.
+  // The note stays out of `words`. Its opacity comes from `--open` in CSS, and
+  // an inline tween opacity would override that and show it on a shut panel.
   return { element, words: [index, lead], rule, drawing, scalar };
 };
 
 /**
- * A panel opens on one scalar, and everything about it is a function of it.
- *
- * The height, the ground, the inset hairline, the shadow, the texture and the
- * light on the note and the drawing are all derived from `--open` in the sheet.
- * Six properties on six clocks cannot be made to read as one surface opening,
- * which is the lesson the conditions card already paid for.
- *
- * **The ease is not `expo.out`.** `expo` spends about nine tenths of its
- * distance in the first quarter of its duration, which on a small element reads
- * as crisp and on a card the width of half the frame reads as a snap followed by
- * a crawl. `power2.out` answers the click at once and still settles.
+ * Panel opening timing. Height, background, hairline, shadow, texture and note
+ * opacity all derive from `--open` in CSS so they move together. `power2.out`
+ * suits a card this large; `expo.out` snaps and then crawls.
  */
 const OPENING = { seconds: 1.55, ease: 'power2.out' } as const;
 
-/** Writes the scalar to the element, which is the only place it is set. */
+/** The only place `--open` is written. */
 const writeOpen = (panel: Panel): void => {
   panel.element.style.setProperty('--open', panel.scalar.value.toFixed(4));
 };
@@ -719,22 +634,9 @@ const setScalar = (panel: Panel, value: number): void => {
 };
 
 /**
- * The closing frame: four findings, each opened on its own beat.
- *
- * **The composition is whole before the first beat.** All four panels stand on
- * the surface from the moment the scene is entered, each holding the full room
- * it will need, each showing its claim. A frame that grew a panel per click
- * would be a slide being assembled in front of the committee; a frame whose
- * architecture is visible from the start and fills in is the argument arriving
- * inside a shape that was already stated. Nothing outside a panel ever moves.
- *
- * **Every drawing is the finding, not a picture of its subject.** Four
- * overlapping intervals whose markers are still ordered *is* relative
- * comparison; a rule that four tokens do not cross *is* admissibility resolved
- * before preference; a field of declared and undeclared values with three
- * recovered *is* the evidence condition; a slope between two orders *is*
- * relational preference. None of them needs a legend, and none of them is the
- * pipeline drawn again.
+ * Closing frame: four findings, each opened on its own beat. All four panels
+ * are laid out and show their claim from the start, so the layout never moves.
+ * Each drawing depicts its finding directly and needs no legend.
  */
 export function createConclusions(): Conclusions {
   const panels = CONCLUSION_PANELS.map(buildPanel);
@@ -754,34 +656,19 @@ export function createConclusions(): Conclusions {
     ...panels.map((panel) => panel.scalar),
   ];
 
-  /** The state a panel rests in once it has been opened, written without motion. */
+  /** Sets a panel to its open state without motion. */
   const setOpen = (panel: Panel): void => {
     setScalar(panel, 1);
     gsap.set([...panel.words], { opacity: 1, y: 0 });
     gsap.set(panel.rule, { opacity: 1, scaleX: 1 });
-    // `motion: 0` collapses every tween in the build to zero duration at time
-    // zero, so the timeline it is handed describes the settled drawing.
-    //
-    // **And it is forced to render here rather than left to the next tick.** A
-    // detached timeline renders on the following frame, and the next beat opens
-    // with `killTweensOf`, so two clicks in quick succession killed these before
-    // they had written anything: the panel two beats back stayed shut with its
-    // drawing retracted. `progress(1).kill()` writes the end state now and then
-    // only releases the tween, which is the same treatment every scene gives its
-    // outgoing timeline.
+    // `motion: 0` gives zero-duration tweens. `progress(1).kill()` writes the
+    // end state now, so a fast next beat's `killTweensOf` cannot discard it.
     const written = gsap.timeline();
     panel.drawing.build(written, 0, 0);
     written.progress(1).kill();
   };
 
-  /**
-   * The state a panel rests in before its beat.
-   *
-   * Not empty. The number, the rule and the claim stay at full strength, so a
-   * panel that has not been reached is a finding waiting rather than a hole in
-   * the grid, and the audience can read the shape of the argument from the
-   * first frame.
-   */
+  /** Sets a panel to its shut state: number, rule and claim visible, drawing cleared. */
   const setShut = (panel: Panel): void => {
     setScalar(panel, 0);
     gsap.set([...panel.words], { opacity: 1, y: 0 });
@@ -820,8 +707,7 @@ export function createConclusions(): Conclusions {
           0,
         );
 
-        // Behind the opening edge, so the drawing is built in room that already
-        // exists rather than growing alongside it.
+        // Starts after the panel has partly opened, so the drawing has room.
         panel.drawing.build(timeline, seconds(0.55), 1);
       });
 

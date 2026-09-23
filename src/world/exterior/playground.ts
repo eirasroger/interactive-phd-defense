@@ -18,24 +18,10 @@ export interface Playground {
 }
 
 /**
- * The children's playground in the west park.
- *
- * Built from `park_pathway_river_general_idea_fromabove.jpeg` rather than
- * invented, and that photograph is unusually specific: a wide oval of pale
- * sand-gravel, irregular blue rubber blobs laid into it, a tan sand mound with
- * slide poles off it, a hexagonal timber sandpit, low timber climbing frames,
- * two tall raking masts, and a dark green mesh fence on slim posts around the
- * lot. Almost none of that is guessable, and all of it is what makes a
- * playground read as a playground rather than as some equipment on grass.
- *
- * Geometry rather than assets throughout. Every piece is a primitive, the whole
- * thing is four materials, and it never appears closer than about 40 m from any
- * Act I pose — which is exactly the range where a scanned asset's detail is
- * wasted and its silhouette is all that survives.
- *
- * It stands where the review row's camera cannot see it. That constraint is not
- * negotiable: the row argues about four facade options, and a climbing frame in
- * that frame is not a small defect.
+ * Children's playground in the west park, based on
+ * `park_pathway_river_general_idea_fromabove.jpeg`. Built from primitives
+ * because no Act I pose sees it closer than about 40 m. Must stay out of the
+ * review row's camera view.
  */
 export function createPlayground(): Playground {
   const object = new Group();
@@ -48,10 +34,7 @@ export function createPlayground(): Playground {
   const materials = {
     sand: new MeshStandardMaterial({ color: 0xa89a7c, roughness: 0.96, metalness: 0 }),
     mound: new MeshStandardMaterial({ color: 0xb08d5e, roughness: 0.95, metalness: 0 }),
-    // Slate green, not the blue it was. From the overview pose the playground is
-    // read in plan across a site that also holds a lake and a stream, and a blue
-    // oval among them is a swimming pool — the one thing on the site that has to
-    // not be mistaken for water.
+    // Slate green so the oval is not mistaken for water from the overview pose.
     rubber: new MeshStandardMaterial({ color: 0x4a5b52, roughness: 0.86, metalness: 0 }),
     timber: new MeshStandardMaterial({ color: 0x8f6f47, roughness: 0.88, metalness: 0 }),
     steel: new MeshStandardMaterial({ color: 0x3a4038, roughness: 0.5, metalness: 0.55 }),
@@ -80,16 +63,13 @@ export function createPlayground(): Playground {
     return seed / 0x100000000;
   };
 
-  // The surface. An oval rather than a circle, because the photograph's is an
-  // oval and because a circle in plan reads as a target from the overview pose.
+  // Oval sand surface, matching the reference photo.
   const surface = put(new CircleGeometry(PLAYGROUND.radius, 40), materials.sand, 0, 0.04, 0);
   surface.rotation.x = -Math.PI / 2;
   surface.scale.set(1, PLAYGROUND.oval, 1);
   surface.castShadow = false;
 
-  // Rubber safety blobs. Irregular and few — five reads as designed, twenty
-  // reads as a pattern, and the blue against the sand is the single strongest
-  // colour signal that this is a playground and not a car park.
+  // Five irregular rubber safety patches.
   for (let i = 0; i < 5; i += 1) {
     const angle = (i / 5) * Math.PI * 2 + random() * 0.8;
     const reach = PLAYGROUND.radius * (0.34 + random() * 0.44);
@@ -106,7 +86,7 @@ export function createPlayground(): Playground {
     blob.castShadow = false;
   }
 
-  // The sand mound, with two raking slide poles off its crown.
+  // Sand mound with two slanted slide poles.
   const mound = put(new SphereGeometry(3.4, 20, 10), materials.mound, 6.2, -2.2, -1.4);
   mound.scale.set(1, 0.42, 1);
 
@@ -121,8 +101,7 @@ export function createPlayground(): Playground {
     pole.rotation.x = lean;
   }
 
-  // Two raking masts. The tallest things here by a long way, and the only part
-  // of the playground that breaks the skyline from the promenade.
+  // Two tall slanted masts, visible above the skyline from the promenade.
   for (const side of [-1, 1]) {
     const mast = put(
       new CylinderGeometry(0.1, 0.14, PLAYGROUND.mast, 8),
@@ -147,8 +126,7 @@ export function createPlayground(): Playground {
     edge.rotation.y = -angle + Math.PI / 2;
   }
 
-  // Low climbing frames: four posts and two rails apiece, which is enough to
-  // read as apparatus at the distance this is ever seen from.
+  // Low climbing frames: four posts and two rails each.
   for (const [fx, fz, turn] of [
     [-8.5, -3.2, 0.3],
     [2.4, 6.1, -0.9],
@@ -178,10 +156,7 @@ export function createPlayground(): Playground {
     }
   }
 
-  // The fence. Slim dark posts with a mesh panel between them, and the mesh is
-  // one transparent ring rather than a woven texture — at 40 m the read is a
-  // dark haze at knee-to-waist height, which is exactly what a low-opacity band
-  // gives for two triangles per bay.
+  // Fence: slim posts plus one semi-transparent ring for the mesh panels.
   const ring = fenceRing(PLAYGROUND.radius + 1.6, PLAYGROUND.oval, PLAYGROUND.fence);
   geometries.push(ring);
   const mesh = new Mesh(
@@ -221,7 +196,7 @@ export function createPlayground(): Playground {
   };
 }
 
-/** A vertical band swept round the enclosure, open at the entrance. */
+/** Vertical band around the enclosure, open at the entrance. */
 function fenceRing(radius: number, oval: number, height: number): BufferGeometry {
   const segments = 52;
   const positions: number[] = [];
@@ -240,7 +215,7 @@ function fenceRing(radius: number, oval: number, height: number): BufferGeometry
   }
 
   for (let i = 0; i < segments; i += 1) {
-    // The gap the path enters through. A closed ring reads as a pen.
+    // Entrance gap where the path enters.
     if (i > segments * 0.44 && i < segments * 0.54) continue;
     const a = i * 2;
     indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);

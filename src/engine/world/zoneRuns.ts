@@ -1,15 +1,9 @@
 import type { SceneDefinition } from '@/engine/scene/types';
 
 /**
- * How far through its zone each scene sits, 0 to 1.
- *
- * Zone progress is derived from the deck's own order rather than declared per
- * scene, so inserting or reordering scenes redistributes the world state it
- * drives — a building's specification, a corridor's fold — without any scene
- * carrying a hand-tuned number that would silently go stale.
- *
- * Runs are contiguous: a zone revisited later in the deck is a separate run,
- * which is what makes returning to a zone start it over rather than resume it.
+ * Each scene's progress through its zone, 0 to 1, derived from deck order so
+ * reordering scenes needs no manual values. A zone revisited later is a new
+ * run and starts again from 0.
  */
 export function zoneProgressByIndex(scenes: readonly SceneDefinition[]): readonly number[] {
   const progress = new Array<number>(scenes.length).fill(0);
@@ -32,10 +26,8 @@ export function zoneProgressByIndex(scenes: readonly SceneDefinition[]): readonl
 }
 
 /**
- * Every zone the deck names, with the union of the assets its scenes declare.
- *
- * Insertion-ordered, so preparation happens in the order the talk will need
- * them and a deck interrupted mid-preparation is still ready for its opening.
+ * Each zone mapped to the union of its scenes' assets. Keeps deck order, so
+ * assets are prepared in the order the talk needs them.
  */
 export function assetsByZone(
   scenes: readonly SceneDefinition[],

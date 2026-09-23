@@ -12,12 +12,9 @@ export interface Workflow {
 }
 
 /**
- * One mark per input, drawn rather than iconified.
- *
- * Each says what shape the input arrives in: ruled rows inside a frame for a
- * closed list, ragged lines for free text, stacked sheets for a document per
- * product, a framed plan for project documentation. The four cards are
- * otherwise identical, and identical cards are what made the tier unreadable.
+ * One glyph per input type (24x24 paths): table for a closed list, lines for
+ * free text, sheet for per-product documents, framed plan for project
+ * documentation. They are the only visual difference between the cards.
  */
 const GLYPHS: Readonly<Record<string, readonly string[]>> = {
   schema: ['M3 3h18v18H3z', 'M3 9h18', 'M3 15h18', 'M9 3v18'],
@@ -44,14 +41,9 @@ const tier = (index: number, label: string, body: HTMLElement): readonly HTMLEle
 ];
 
 /**
- * Fig. 1 as three tiers over one rule.
- *
- * The rule is the composition's strongest horizontal because it is the
- * architecture's only claim: everything above it is a language model reading
- * documents, everything below it is a rule engine executing clauses, and
- * nothing crosses without an operator. Drawn as a chain of boxes and arrows
- * that separation is invisible, which is the whole reason the paper's own
- * schematic needs a caption and this does not.
+ * Fig. 1 as three tiers split by a rule. Above the rule a language model reads
+ * documents; below it a rule engine executes clauses. Nothing crosses without
+ * an operator check.
  */
 export function createWorkflow(): Workflow {
   const documents = DOCUMENTS.map((document) => {
@@ -217,8 +209,7 @@ export function createWorkflow(): Workflow {
           },
           seconds(DURATION.normal * 1.1),
         )
-        // The rule closes across the whole width in one sweep. Everything below
-        // it waits for that sweep to land.
+        // The rule sweeps across the full width before the lower tier enters.
         .fromTo(
           ruleLine,
           { scaleX: 0 },

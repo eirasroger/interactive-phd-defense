@@ -12,19 +12,13 @@ import {
 } from './site';
 
 /**
- * The centrelines the site is laid out from.
- *
- * Every other module in the zone asks this one where things run — terrain,
- * paving, bridge, lamps, planting — so none of them carries its own copy of the
- * geometry and none of them can disagree about it.
+ * Site centrelines and ground queries. Terrain, paving, bridge, lamps and
+ * planting all read their layout from here so they always agree.
  */
 
 /**
- * The land form, before any water is cut into it.
- *
- * The ground is the primary and the water is derived from it: `riverSurface`,
- * the bank tops and the bridge deck are all measurements of this rather than
- * absolute levels that have to be kept in step with the relief by hand.
+ * Ground height before water is cut in. The river level, bank tops and bridge
+ * deck are all derived from this.
  */
 export function gradeAt(x: number, z: number): number {
   const { lake, ridge } = LAND;
@@ -43,12 +37,9 @@ export function gradeAt(x: number, z: number): number {
 }
 
 /**
- * The hills, with the trigonometry and the bounds each one implies worked out
- * once. `dome` runs a few million times while the zone builds, and `Math.cos`
- * of a constant is not free at that count.
- *
- * `area` is the mass's plan ellipse, which is what the scatters apply a density
- * to; `reach` is how far from the centre it can disturb the ground at all.
+ * Hills with their trig and bounds precomputed, since `dome` runs millions of
+ * times. `area` is the plan ellipse area used for scatter density. `reach` is
+ * the furthest distance from the centre the hill affects.
  */
 export const HILL_PLOTS = HILLS.masses.map((mass) => ({
   ...mass,
@@ -61,23 +52,14 @@ export const HILL_PLOTS = HILLS.masses.map((mass) => ({
 type Plot = (typeof HILL_PLOTS)[number];
 
 /**
- * No mass may stand over the stream.
- *
- * `buildProfile` scans `gradeAt` along the channel to derive the water level, so
- * ground raised over the centreline lifts the stream with it — silently, and for
- * a long way either side of the mistake. Nothing downstream complains: the banks
- * are derived from the same ground, so the freeboard still checks out and the
- * only symptom is a brook running through a wood at the wrong height.
- *
- * One scan, once, at module load. It turns a landform sited twenty metres wrong
- * into a message naming the place instead of an afternoon.
+ * Fails at load if any hill sits over the stream. The water level is derived
+ * from the ground along the channel, so a hill there would silently raise the
+ * river.
  */
 for (let x = LAND.lake.west; x > -320; x -= 2) {
   const z = riverAt(x);
   for (const [index, plot] of HILL_PLOTS.entries()) {
-    // A tolerance rather than zero, because a smootherstep skirt is
-    // asymptotically small rather than exactly absent — this is how much the
-    // water may be lifted before anyone could see it, not a fudge factor.
+    // Small tolerance: the hill's edge falloff never reaches exactly zero.
     const over = dome(x, z, plot) * plot.height;
     if (over > 0.05) {
       throw new Error(
@@ -89,20 +71,14 @@ for (let x = LAND.lake.west; x > -320; x -= 2) {
   }
 }
 
-/**
- * How high the hills stand above the park here, in metres.
- *
- * Masses taken as a **maximum rather than a sum**. Added, they put a bulge in
- * every saddle where two overlap, which is the one place a landform must not
- * have one — the same argument `heightAt` makes about the channel and the basin.
- */
+/** Hill height here in metres. Takes the max of all hills so overlaps do not bulge. */
 export function hillAt(x: number, z: number): number {
   let height = 0;
   for (const plot of HILL_PLOTS) height = Math.max(height, dome(x, z, plot) * plot.height);
   return height;
 }
 
-/** How far up a hill a point stands: 0 off them all, 1 at a summit. */
+/** 0 off all hills, 1 at a summit. */
 export function hillShare(x: number, z: number): number {
   let share = 0;
   for (const plot of HILL_PLOTS) share = Math.max(share, dome(x, z, plot));
@@ -110,22 +86,11 @@ export function hillShare(x: number, z: number): number {
 }
 
 /**
- * How much bedrock shows on the hills: 0 turf, 1 bare rock.
+ * Bare rock on the hills: 0 grass, 1 rock. Based on soil thinness, which is
+ * higher near summits, on steep slopes, and varies with noise.
  *
- * A threshold on **how thin the soil is** — thin high on the form, thin where it
- * is steep, and drifting over a few metres — rather than a shape painted on a
- * hill. Cross that one quantity against a fixed pair of edges and the result is
- * a bare crest, turf in the hollows and a ragged boundary nobody had to author;
- * retune a hill and the rock follows it.
- *
- * **Three modules read this and none of them owns it.** The ground shades from
- * it, the outcrop slabs are scattered by it, and every woodland scatter is
- * refused by it — so the treeline, the rock and the stones are one edge rather
- * than three descriptions that have to be kept in step by hand.
- *
- * The steepness is the *hills' own*, differenced from `hillAt` rather than read
- * off the finished ground. Cheaper, and more correct: the ground is also steep
- * at a river bank, and a river bank is not where bedrock belongs.
+ * Ground shading, rock slabs and woodland placement all use this, so they share
+ * one edge. Steepness comes from `hillAt` only, so river banks never show rock.
  */
 export function outcropAt(x: number, z: number): number {
   const share = hillShare(x, z);
@@ -141,16 +106,9 @@ export function outcropAt(x: number, z: number): number {
 }
 
 /**
- * One mass's profile: 0 off it, 1 at its summit.
- *
- * An ellipse turned off the axes so the contours are not a circle, its outline
- * displaced by noise at two wavelengths so the skirt and the crest are both
- * ragged, and a smootherstep profile — zero gradient at both ends, so the summit
- * is domed and the skirt meets the park without a crease to catch the light.
- *
- * The bounding-box reject is not an optimisation detail: `gradeAt` is evaluated
- * something like a million times while the zone builds, and off the hills this
- * costs two comparisons per mass.
+ * One hill's profile: 0 off it, 1 at the summit. A rotated ellipse with a noisy
+ * outline and a smootherstep falloff, so the edge blends into flat ground.
+ * The bounding-box check up front keeps this cheap across millions of calls.
  */
 function dome(x: number, z: number, plot: Plot): number {
   const [cx, cz] = plot.centre;
@@ -171,11 +129,8 @@ function dome(x: number, z: number, plot: Plot): number {
 }
 
 /**
- * Rolling relief in four octaves, eased where people walk.
- *
- * The first octave is three times the wavelength of the others and twice the
- * amplitude: without a landform octave the ground has texture but no shape, and
- * even corrugation is as flat compositionally as a plane.
+ * Rolling ground from four noise octaves, flattened along paths. The first
+ * octave is large and strong so the ground has overall shape.
  */
 function relief(x: number, z: number): number {
   const { swell } = LAND;
@@ -190,11 +145,9 @@ function relief(x: number, z: number): number {
 }
 
 /**
- * Ground that must stay level whatever the relief says: 1 pinned, 0 free.
- *
- * The forecourt, because the building's AO was baked against level ground and
- * its paving is a flat plate; and the review row's patch, because the candidate
- * panels are exported at fixed heights in `facade-candidates.glb`.
+ * Ground that must stay flat: 1 flat, 0 free. Covers the forecourt (AO was
+ * baked on flat ground) and the review row (panels are exported at fixed
+ * heights).
  */
 function pinned(x: number, z: number): number {
   const { core } = LAND;
@@ -213,11 +166,8 @@ function pinned(x: number, z: number): number {
 }
 
 /**
- * How much of a walked route is at this point: 1 on the paving, easing out to 0.
- *
- * The relief is damped along a route rather than removed — a dead-level strip
- * through undulating ground reads as a causeway. Faded in and out along its
- * length as well as across it, or the damping ends on a step.
+ * 1 on a path, fading to 0 away from it. Used to soften the relief along paths.
+ * Also fades at the path ends to avoid a step.
  */
 function walked(x: number, z: number): number {
   const avenue = offAvenue(x, z);
@@ -233,46 +183,31 @@ function walked(x: number, z: number): number {
 }
 
 /**
- * Where the river's centre is, at a given distance across the site.
- *
- * Three terms: a fundamental setting the meander wavelength, a third harmonic
- * that runs the bends long through the crossing and tight round the bend, and
- * long-wavelength noise so the bends are not identical copies.
- *
- * Single-valued in x by construction, which forbids a meander tight enough to
- * double back. That is the right trade: every reader measures itself against
- * this function, and each would need a search rather than an evaluation.
+ * River centreline z at a given x: a base sine, a third harmonic to vary bend
+ * shape, and slow noise so the bends differ. One z per x keeps lookups cheap.
  */
 export function riverAt(x: number): number {
   const { river } = LAND;
   return river.z + meander(x) * river.wander + valley(x) * river.wander * 0.55;
 }
 
-/** The bends themselves, as a multiple of `wander`. */
+/** Bend offset, in units of `wander`. */
 function meander(x: number): number {
   const u = x / LAND.river.wave;
   return Math.sin(u) + 0.22 * Math.sin(3 * u + 1.9);
 }
 
-/** The floodplain the bends sit in, wandering at four times their wavelength. */
+/** Slow drift of the whole valley. */
 function valley(x: number): number {
   return wave(x / 190 + 5.3, 2.6);
 }
 
 /**
- * Where the riverside walk runs: a **slackened** river rather than a parallel
- * offset of it.
+ * Riverside walk centreline: the river curve with reduced amplitude. A true
+ * parallel offset would fold on itself at tight bends. Going below 0.7 pushes
+ * the walk into the water.
  *
- * A curve offset by more than its own radius of curvature folds through a cusp
- * and crosses itself — the meander's radius drops to about 25 m and the walk
- * stands 15 m off, so a true offset is not safely constructible. The slack
- * factor is bounded below too: at 0.3 the gap closed to 4.7 m on the crossings,
- * inside the bank top, and the paving ran into the water.
- *
- * Both ends turn onto the promenade, eased with a smoothstep so the walk leaves
- * the meander tangentially rather than with a visible kink. The two turns are a
- * maximum rather than a sum: they are two hundred metres apart, so only ever one
- * of them is doing anything.
+ * Both ends ease onto the promenade with a smoothstep.
  */
 export function riversideAt(x: number): number {
   const { river } = LAND;
@@ -283,71 +218,46 @@ export function riversideAt(x: number): number {
   return along + (PROMENADE_Z - along) * onto;
 }
 
-/** The promenade's centreline — the mid-line of the band `REALM` describes. */
 export const PROMENADE_Z = (REALM.forecourtFar + REALM.promenadeFar) / 2;
 
-/**
- * How fast the centreline moves sideways, per metre along. Differenced rather
- * than differentiated, so the meander's terms live in one place.
- */
+/** River centreline slope (dz/dx), by finite difference. */
 export function riverSlope(x: number): number {
   return (riverAt(x + 0.5) - riverAt(x - 0.5)) / 1;
 }
 
-/** Where the avenue crosses the water, and therefore where the bridge stands. */
+/** Where the avenue crosses the river, which is where the bridge stands. */
 export const CROSSING = { x: 0, z: riverAt(0) } as const;
 
 /**
- * How long the span has to be: bank to bank **measured along the deck**, plus a
- * bearing at each end.
- *
- * The deck is aligned with the avenue, so it meets the channel at the meander's
- * angle and a span quoted across the channel is short by its secant. At this
- * crossing's 39° skew that put both abutments inside the top of the bank.
- *
- * It stands here rather than at the foot of the file because `offAvenue` needs
- * it while the water profile below is being built. **Declaration order is
- * load-bearing** — a `const` read before its own line is a `ReferenceError`.
+ * Bridge length: bank to bank measured along the skewed deck, plus a bearing
+ * at each end. Must be declared before the water profile is built, since
+ * `offAvenue` reads it.
  */
 export const SPAN =
   2 * bankReach(CROSSING.x) * Math.hypot(1, riverSlope(CROSSING.x)) + 2 * BRIDGE.bearing;
 
-/**
- * The avenue's full extent, **both sides of the crossing**. Exported so the
- * paving and the clearance rules cannot disagree about where the route runs.
- */
+/** The avenue's full length, both sides of the bridge. */
 export const AVENUE_RUN = {
-  // Through the promenade to the forecourt's edge, not up to it. A route that
-  // stops on the far kerb of the one it meets has no junction — nothing
-  // constructs a mouth, so the promenade's kerb ran straight across the head of
-  // the avenue. Crossing it makes the meeting a crossing, which `junctions.ts`
-  // already knows how to build.
+  // Runs through the promenade so `junctions.ts` builds a proper crossing there.
   from: REALM.forecourtFar,
   to: CROSSING.z + SPAN / 2 + 24,
 } as const;
 
-/**
- * Where the avenue's centre is. A half sine of amplitude `wander`, which is
- * currently zero; both junctions stay square whatever the amplitude.
- */
+/** Avenue centreline x: a half sine of amplitude `wander` (currently zero). */
 export function avenueAt(z: number): number {
   const t = clamp01((z - AVENUE.from) / (CROSSING.z - AVENUE.from));
   return Math.sin(t * Math.PI) * AVENUE.wander;
 }
 
-/** How far a point is from the avenue's paved edge. Zero when on it. */
+/** Distance to the avenue's paved edge. Zero on it. */
 export function offAvenue(x: number, z: number): number {
   if (z < AVENUE_RUN.from || z > AVENUE_RUN.to) return Infinity;
   return Math.max(0, Math.abs(x - avenueAt(z)) - AVENUE.halfWidth);
 }
 
 /**
- * How much of the river's section is at this point: 1 mid-channel, 0 at the top
- * of the bank.
- *
- * Measured perpendicular to the centreline. Down the z axis instead, a meander
- * running at 50° overstates the distance by more than half, so the channel would
- * swell through every bend and pinch on the crossings.
+ * 1 mid-channel, 0 at the bank top. Measured perpendicular to the centreline
+ * so the channel keeps its width through bends.
  */
 export function riverDepth(x: number, z: number): number {
   const reach = riverReach(x);
@@ -357,42 +267,31 @@ export function riverDepth(x: number, z: number): number {
   return (1 - smoothstep(half, half + swaleAt(x), across)) * reach;
 }
 
-/**
- * How far into the outlet this point is: 0 along the run, 1 at the lake.
- *
- * The channel widens and lays its banks back over these last metres, and both
- * are the same event so they run off one number.
- */
+/** 0 along the stream, 1 at the lake. Drives both the widening and the bank slope at the outlet. */
 export function mouthProgress(x: number): number {
   const { lake, river } = LAND;
   return smoothstep(lake.west - river.mouth.reach, lake.west - 2, x);
 }
 
-/** How much wider the channel's section is here than its nominal width. */
+/** Channel width multiplier at the outlet. */
 export function mouthFlare(x: number): number {
   return 1 + LAND.river.mouth.widen * mouthProgress(x);
 }
 
-/** Half the wetted width of the channel here, mouth included. */
+/** Half the water width here, including the outlet flare. */
 export function channelHalf(x: number): number {
   return LAND.river.halfWidth * mouthFlare(x);
 }
 
-/**
- * How far the bank stands above the water here: the stream's freeboard along the
- * run, easing to the lake's own shore height through the outlet.
- */
+/** Bank height above the water. Eases from the stream's value to the lake's at the outlet. */
 export function bankHeight(x: number): number {
   const { lake, river } = LAND;
   return river.freeboard + (lake.shore - river.freeboard) * mouthProgress(x);
 }
 
 /**
- * How far the bank takes to climb from the water back to grade.
- *
- * The mouth's value is derived from the lake's beach, not chosen: the bank there
- * falls `shore + depth` and has to do it at the slope `shore / beach`, so the
- * two shores meet at the same angle and follow each other if either is retuned.
+ * Distance from the water's edge to the bank top. At the outlet it is derived
+ * from the lake beach slope so both shores meet at the same angle.
  */
 export function swaleAt(x: number): number {
   const { lake, river } = LAND;
@@ -400,18 +299,15 @@ export function swaleAt(x: number): number {
   return river.swale + (shore - river.swale) * mouthProgress(x);
 }
 
-/** How far from the centreline the swale reaches the top of the bank. */
+/** Distance from the centreline to the bank top. */
 export function bankReach(x: number): number {
   return channelHalf(x) + swaleAt(x);
 }
 
 /**
- * Where the bed of the channel is: `river.depth` below the water, falling away
- * by `mouth.scour` through the outlet.
- *
- * On `drownProgress` rather than `mouthProgress`, because the widening and the
- * deepening happen at different stations — the channel flares approaching the
- * shore and goes on deepening past it.
+ * Channel bed height: `river.depth` below the water, deepening by `mouth.scour`
+ * at the outlet. Uses `drownProgress` because the deepening continues past the
+ * shore.
  */
 export function channelBed(x: number): number {
   const { river } = LAND;
@@ -419,45 +315,35 @@ export function channelBed(x: number): number {
 }
 
 /**
- * How far into the drowning the channel is: 0 out along the run, 1 well inside
- * the basin, straddling the shoreline.
- *
- * Measured against `lakeReach` rather than x, because the bays bend the
- * waterline by tens of metres and a scour keyed on x would start under dry sand
- * on one stretch and in open water on the next.
+ * 0 along the stream, 1 well inside the lake. Uses `lakeReach` so it follows
+ * the uneven shoreline.
  */
 export function drownProgress(x: number): number {
   const { mouth } = LAND.river;
   return smoothstep(mouth.reach, -mouth.drown, lakeReach(x, riverAt(x)));
 }
 
-/** Distance from the centreline measured square to it, which is what a section is. */
+/** Perpendicular distance from the river centreline. */
 export function riverAcross(x: number, z: number): number {
   return Math.abs(z - riverAt(x)) / Math.hypot(1, riverSlope(x));
 }
 
 /**
- * How much stream there is here: 1 up to the outlet, tapering away inside the
- * lake.
- *
- * The taper is long because fading a channel out lerps its bed back up to the
- * ground it is cut into. Run far enough into the basin the channel is simply
- * *buried* instead — `heightAt` takes the deeper of the channel and the bowl.
+ * 1 up to the outlet, fading out inside the lake. The fade is long so the
+ * channel ends buried under the lake bed (`heightAt` takes the deeper of the two).
  */
 export function riverReach(x: number): number {
   return 1 - smoothstep(LAND.lake.west, LAND.lake.west + 110, x);
 }
 
-/** The top of the bank, which is the level the park stands at beside the water. */
+/** Bank top height. */
 export function bankAt(x: number): number {
   return riverSurface(x) + bankHeight(x);
 }
 
 /**
- * Water level in the stream, derived from the ground it runs through rather than
- * given as absolute levels. Three things are enforced by `buildProfile`: the
- * water is below its own banks everywhere, it never runs uphill, and it has a
- * gradient.
+ * Stream water level, derived from the ground. `buildProfile` keeps it below
+ * the banks and always flowing downhill.
  */
 export function riverSurface(x: number): number {
   const t = clamp01((PROFILE.head - x) / (PROFILE.head - PROFILE.tail)) * (PROFILE.level.length - 1);
@@ -466,27 +352,19 @@ export function riverSurface(x: number): number {
   return PROFILE.level[index]! * (1 - fraction) + PROFILE.level[index + 1]! * fraction;
 }
 
-/** Metres between samples of the water profile, and how far it is averaged over. */
+/** Sample spacing and smoothing window of the water profile, in metres. */
 const PROFILE_STEP = 4;
 const PROFILE_SMOOTH = 60;
 
 /**
- * How fast the water may fall, per metre travelled.
- *
- * The minimum stops the running minimum producing dead-level plateaus, which
- * read as a canal. The maximum stops it chasing every hollow in the relief.
- * Capping the fall lets the water sit above the raw ground in places, which is
- * fine — the terrain eases to the bank top either side over `river.plain`.
+ * Allowed water drop per metre. The minimum avoids flat canal-like stretches.
+ * The maximum stops the water following every dip in the ground.
  */
 const PROFILE_FALL = { min: 0.0022, max: 0.02 };
 
 const PROFILE = buildProfile();
 
-/**
- * The grade is averaged over `PROFILE_SMOOTH` metres first: a running minimum
- * over an unsmoothed signal latches onto the deepest hollow it passes and
- * incises the rest of the stream to match it.
- */
+/** Smooths the ground first so one deep hollow does not drag the whole stream down. */
 function buildProfile(): { head: number; tail: number; level: Float32Array } {
   const head = LAND.lake.west;
   const tail = -320;
@@ -500,7 +378,7 @@ function buildProfile(): { head: number; tail: number; level: Float32Array } {
   }
 
   const level = new Float32Array(count);
-  // Seeded at the lake: the stream leaves the basin at the basin's level.
+  // Starts at the lake level.
   let running: number = LAND.lake.surface;
 
   for (let i = 0; i < count; i += 1) {
@@ -522,24 +400,15 @@ function buildProfile(): { head: number; tail: number; level: Float32Array } {
   return { head, tail, level };
 }
 
-/**
- * How much of the lake is at this point: 1 in open water, 0 past the shore.
- *
- * Cut over seven metres. The shore *profile* is the bed's business — see
- * `heightAt` — so this only has to say where the water stops.
- */
+/** 1 in open water, 0 past the shore. The shore shape itself is in `heightAt`. */
 export function lakeDepth(x: number, z: number): number {
   return 1 - smoothstep(0, 7, lakeReach(x, z));
 }
 
 /**
- * How far past the lake's water this point is. **Negative inside it** — the bed
- * is cut from how far in a point is, so this must stay signed.
- *
- * The basin is a rectangle, so the distance is perturbed at two wavelengths
- * before anything blends on it: a long one for bays and headlands, a short one
- * so the waterline is not a clean curve at close range. Bay amplitude is capped
- * by the stream — past about 44 m a bay floods the outlet corridor from the side.
+ * Signed distance past the lake edge, negative inside. The rectangular basin
+ * is warped by noise to form bays. Bays deeper than about 44 m would flood the
+ * river outlet.
  */
 export function lakeReach(x: number, z: number): number {
   const { lake } = LAND;
@@ -549,13 +418,9 @@ export function lakeReach(x: number, z: number): number {
 }
 
 /**
- * How the two water surfaces divide the outlet: 1 the stream draws it, 0 the
- * lake does. **Both bodies read this**, so neither can stop on a boundary the
- * other does not know about.
- *
- * It reaches past the shore on the stream side because the lake's alpha ends on
- * what is effectively a hard cut, and the only way that cannot be seen is for
- * the stream to have full authority on both sides of it.
+ * Split of the outlet between the two water meshes: 1 stream, 0 lake. Both
+ * read it so they meet cleanly. The stream extends past the shore to cover the
+ * lake's hard alpha edge.
  */
 export const HANDOVER = { lake: -24, stream: 6 } as const;
 
@@ -563,30 +428,20 @@ export function streamShare(x: number, z: number): number {
   return smoothstep(HANDOVER.lake, HANDOVER.stream, lakeReach(x, z));
 }
 
-/**
- * How close to open water this point is: 1 in it, 0 well clear of any bank. A
- * proxy for distance rather than a measurement — true distance to a meandering
- * centreline needs a search, and every caller only wants "how wet is it here".
- */
+/** 1 in water, 0 well clear of any bank. A cheap approximation of distance to water. */
 export function wetness(x: number, z: number): number {
   return Math.max(riverDepth(x, z), lakeDepth(x, z));
 }
 
-/** Freeboard reported where no water body governs. Larger than any real bank. */
+/** Height above water reported where there is no water nearby. */
 export const DRY = 99;
 
 /**
- * How far this point stands above the water that governs it. Negative below the
- * surface, `DRY` where there is no water to be above.
+ * Height above the nearest water body. Negative below the surface, `DRY` far
+ * from water. `terrain.ts` uses this for the bank shading bands (gravel, silt,
+ * damp grass, grass).
  *
- * The whole bankside read — gravel, silt line, damp tussock, grass — is a
- * function of this one number, interpolated across the ground and banded per
- * pixel in `terrain.ts`.
- *
- * Which body governs is chosen by **proximity, not depth**: on the bank both
- * depths are zero, so a depth test falls through to whichever is listed first.
- * Both are faded out rather than switched off at a radius, or the boundary draws
- * its own ring of beach across the meadow.
+ * The nearer body wins. Both fade out gradually to avoid a visible ring.
  */
 export function freeboardAt(x: number, z: number, y: number): number {
   const { river, lake } = LAND;
@@ -595,8 +450,7 @@ export function freeboardAt(x: number, z: number, y: number): number {
   const stream =
     riverReach(x) *
     (1 - smoothstep(bankTop + river.plain * 0.55, bankTop + river.plain, riverAcross(x, z)));
-  // Full authority over open water: the lake is read *through* where it is
-  // shallow, so the bed under it has to be shaded as bed and not as meadow.
+  // Covers open water too, since the bed is visible through shallow water.
   const basin = Math.max(
     lakeDepth(x, z),
     1 - smoothstep(lake.apron * 0.55, lake.apron, lakeReach(x, z)),
@@ -607,18 +461,14 @@ export function freeboardAt(x: number, z: number, y: number): number {
   return y - level + (1 - Math.max(stream, basin)) * DRY;
 }
 
-/**
- * How much the playground has levelled the ground. Lives here because the
- * terrain has to ask it and the playground has to ask the terrain where it
- * stands; only one of the two can own the other.
- */
+/** How much the playground flattens the ground. Here to avoid a circular import with the terrain. */
 export function pitch(x: number, z: number): number {
   const [cx, cz] = PLAYGROUND.centre;
   const reach = Math.hypot(x - cx, (z - cz) / PLAYGROUND.oval);
   return 1 - smoothstep(PLAYGROUND.radius, PLAYGROUND.radius + 14, reach);
 }
 
-/** How far a point is from the E–W promenade's paved edge. */
+/** Distance to the east-west promenade's paved edge. */
 export function offPromenade(x: number, z: number): number {
   if (Math.abs(x) > REALM.run / 2) return Infinity;
   const near = REALM.forecourtFar;
@@ -627,31 +477,24 @@ export function offPromenade(x: number, z: number): number {
   return z < near ? near - z : z - far;
 }
 
-/**
- * How far a point is from the riverside walk's paved edge, measured square to
- * the centreline — the paving is swept on the true normal, and the walk's west
- * end runs 50° off axis.
- */
+/** Distance to the riverside walk's paved edge, perpendicular to its centreline. */
 export function offRiverside(x: number, z: number): number {
   if (x < RIVERSIDE.from || x > RIVERSIDE.to) return Infinity;
   const across = Math.abs(z - riversideAt(x)) / Math.hypot(1, riversideSlope(x));
   return Math.max(0, across - RIVERSIDE.halfWidth);
 }
 
-/** How fast the walk's centreline moves sideways, per metre along. */
+/** Riverside walk slope (dz/dx). */
 export function riversideSlope(x: number): number {
   return riversideAt(x + 0.5) - riversideAt(x - 0.5);
 }
 
-/** How far this point is from *any* paved route. One question, asked in one place. */
+/** Distance to the nearest paved path. */
 export function offPaths(x: number, z: number): number {
   return Math.min(offAvenue(x, z), offPromenade(x, z), offRiverside(x, z));
 }
 
-/**
- * How far this point is from any ground the site has already spent: paving to
- * its gutter edge, the plate the building stands on, and the playground.
- */
+/** Distance to any built ground: paths with their gutters, forecourt, playground, pavilion. */
 export function offBuilt(x: number, z: number): number {
   return Math.min(
     Math.max(0, offPaths(x, z) - PATH_EDGE_WIDTH),
@@ -662,21 +505,15 @@ export function offBuilt(x: number, z: number): number {
 }
 
 /**
- * Whether this point stands in the shot the review row's camera needs. Derived
- * from `REVIEW` so the corridor moves when the row does — every scatter on the
- * site reads this. It reaches a little past the camera, because a plant just
- * behind it is a leaf across the lens.
+ * Whether a point is inside the review row camera's view, which must stay free
+ * of planting. Extends slightly behind the camera.
  */
 export function inReviewShot(x: number, z: number): boolean {
   const [cx, , cz] = REVIEW.centre;
   return Math.abs(x - cx) < REVIEW.clear && z > cz - 8 && z < cz + REVIEW.standoff + 6;
 }
 
-/**
- * The pavilion and its apron, measured in the building's own frame — it is
- * turned to face the walk, and an axis-aligned box round a rotated building
- * either haloes it with bare ground or grows shrubs through its corners.
- */
+/** Distance to the pavilion and its clear zone, in the pavilion's rotated frame. */
 export function offPavilion(x: number, z: number): number {
   const [cx, cz] = PAVILION.centre;
   const cos = Math.cos(pavilionYaw());
@@ -692,12 +529,12 @@ export function offPavilion(x: number, z: number): number {
   );
 }
 
-/** The pavilion's bearing, which is the walk's where it passes. */
+/** Pavilion rotation, matching the walk beside it. */
 export function pavilionYaw(): number {
   return Math.atan2(riversideSlope(PAVILION.centre[0]), 1);
 }
 
-/** The granite plate, and the building standing on it. */
+/** Distance to the forecourt and building. */
 function offForecourt(x: number, z: number): number {
   return Math.max(
     Math.abs(x) - REALM.halfWidth,
@@ -707,7 +544,7 @@ function offForecourt(x: number, z: number): number {
   );
 }
 
-/** The playground, out to its fence line. */
+/** Distance to the playground fence. */
 function offPlayground(x: number, z: number): number {
   const [cx, cz] = PLAYGROUND.centre;
   const reach = Math.hypot(x - cx, (z - cz) / PLAYGROUND.oval);
@@ -715,9 +552,8 @@ function offPlayground(x: number, z: number): number {
 }
 
 /**
- * The planting beds either side of the entrance path — the one place on the site
- * where built ground is *for* plants, so an exception to `offBuilt` rather than a
- * hole in it. They arrive in `exterior-planting.glb`.
+ * The planting beds beside the entrance path. Plants are allowed here even
+ * though it is built ground. Their plants come from `exterior-planting.glb`.
  */
 export function inBeds(x: number, z: number): boolean {
   return (
@@ -728,13 +564,7 @@ export function inBeds(x: number, z: number): boolean {
   );
 }
 
-/**
- * Whether a plant may stand here, given how much clear ground it needs.
- *
- * `clearance` is the caller's business: a tree stands back by a fraction of its
- * crown so the canopy overhangs the walk, a verge shrub is planted hard against
- * the gutter on purpose.
- */
+/** Whether a plant can go here with `clearance` metres of free ground around it. */
 export function plantable(x: number, z: number, clearance = 0): boolean {
   if (wetness(x, z) > 0.12) return false;
   if (inBeds(x, z)) return true;
@@ -746,12 +576,8 @@ export function clamp01(value: number): number {
 }
 
 /**
- * Deterministic value noise, and the −1..1 form most callers want.
- *
- * It lives here rather than in `terrain.ts` because the shorelines need it and
- * the terrain imports this module. Seeded arithmetic rather than `Math.random`:
- * a defence is rehearsed, and a coastline that differs between run-throughs is
- * something the speaker has to absorb mid-sentence.
+ * Deterministic value noise in 0..1 (`wave` gives -1..1). Deterministic so the
+ * scene looks the same on every run.
  */
 export function noise(x: number, z: number): number {
   const xi = Math.floor(x);

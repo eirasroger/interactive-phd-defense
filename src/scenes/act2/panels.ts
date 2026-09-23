@@ -36,11 +36,8 @@ import { GWP_BY_CATEGORY, WORDINGS } from '@/content/c2';
 import type { SlidePanel } from './StationScene';
 
 /**
- * What each station puts on its wall.
- *
- * Panels are built per mount rather than shared, because a panel holds measured
- * geometry and animation state for one live composition. The registry is keyed
- * by scene id so `index.ts` composes a station without knowing what is in it.
+ * Panels for each station, keyed by scene id. Built fresh on every mount
+ * because each panel holds its own measured geometry and animation state.
  */
 
 const FAMILY = {
@@ -90,13 +87,7 @@ const c1Takeaway: readonly TakeawayCard[] = [
   },
 ];
 
-/**
- * What C2 establishes for the contributions that follow.
- *
- * Each card has to change something downstream. The selective-reporting and
- * service-life findings are real, and they were on the wall until it became
- * clear neither of them tells a model what to do; both are now spoken instead.
- */
+/** C2 findings that the later contributions build on. */
 const c2Takeaway: readonly TakeawayCard[] = [
   {
     tint: WORTH.recovery,

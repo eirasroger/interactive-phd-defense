@@ -1,14 +1,7 @@
 /*
- * Cross-cutting theme 1 — the backbone.
- *
- * A spine the width of the frame, and four vertebrae hanging off it that look
- * nothing like each other. That is the whole slide.
- *
- * **Difference is the design.** The claim is that one technology takes a
- * different form at every stage, so the four shapes have to be different before
- * anything on the slide is read. What they share is the blue, which has meant
- * *learned* since Act I, and the line they hang from. Amber appears once, at the
- * one place a person stands in the pipeline, and nowhere else.
+ * Cross-cutting theme 1: the backbone. A full-width spine with four distinct
+ * shapes hanging off it, one per stage. All blue (learned); amber appears once,
+ * where a person is in the pipeline.
  */
 .bb {
   --bb-accent: var(--c-ai);
@@ -20,8 +13,7 @@
   min-height: 0;
 }
 
-/* The frame carries the board's aspect ratio, so the drawing and the words
-   anchored to it scale together and land on the same points at any stage size. */
+/* Matches the board's aspect ratio so the SVG and its HTML labels scale together. */
 .bb-frame {
   position: relative;
   width: 100%;
@@ -64,11 +56,8 @@
 }
 
 /*
- * The one piece of continuous motion on the slide.
- *
- * Keyframes rather than a timeline: the presenter stands here for half a minute
- * and the frame has to stay alive for all of it, with nothing for a beat to own
- * and nothing to dispose of when the scene is left.
+ * Light travelling along the spine. CSS keyframes so it loops for as long as
+ * the slide is up with nothing to clean up on exit.
  */
 .bb-glint {
   transform-box: view-box;
@@ -90,14 +79,7 @@
   fill: var(--bb-faint);
 }
 
-/*
- * The pulse that runs down a riser as it draws, once.
- *
- * It used to loop, and four verticals twitching for the whole half minute the
- * presenter stands here is motion with nothing to say. It fires with the riser
- * now and the frame is still afterwards, which leaves the spine's own light as
- * the only thing still moving.
- */
+/* Pulse that runs down a riser once, as the riser draws. */
 .bb-drop {
   fill: var(--bb-accent);
   filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c-ai) 65%, transparent));
@@ -105,7 +87,7 @@
 
 /* ---- The vertebrae --------------------------------------------------------------- */
 
-/* Many arriving, one leaving. Thin, because the count is not the point. */
+/* Incoming strands, kept thin. */
 .bb-strand {
   fill: none;
   stroke: var(--bb-faint);
@@ -113,7 +95,7 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* The one strand an ordering puts on top. */
+/* The top-ranked strand. */
 .bb-strand-lead {
   stroke: var(--bb-accent);
   stroke-width: 2;
@@ -126,7 +108,7 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* What arrived incomplete. The only broken line on the board. */
+/* Incomplete input. The only dashed line on the board. */
 .bb-gap {
   fill: none;
   stroke: var(--bb-soft);
@@ -144,8 +126,7 @@
   fill: color-mix(in srgb, var(--c-ai) 45%, transparent);
 }
 
-/* An ordering, drawn as rows. Length carries the standing and the top row is the
-   only one lit, so the arrangement reads before any of it is measured. */
+/* Ranking drawn as rows. Length shows rank and only the top row is lit. */
 .bb-row {
   fill: color-mix(in srgb, var(--c-ai) 30%, transparent);
 }
@@ -174,24 +155,15 @@
   filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c-ai) 60%, transparent));
 }
 
-/*
- * The only warm mark on the slide.
- *
- * Amber is reserved for the one place a person stands in the pipeline, so it
- * appears exactly once and never as decoration. It is taller than the channel it
- * crosses, because what stops here is not a property of the channel.
- */
+/* Human gate: the only amber mark, drawn taller than the channel it crosses. */
 .bb-gate {
   fill: var(--c-emphasis);
   filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c-emphasis) 45%, transparent));
 }
 
 /*
- * How sure the model is, breathing.
- *
- * Three rings on one slow cycle, offset so the spread reads as a spread rather
- * than as a target. This is the vertebra that returns a distribution, and it is
- * the only one that is still moving once the build is over.
+ * Uncertainty rings. Three rings pulse on one slow cycle, offset by `--ring`,
+ * to show a distribution.
  */
 .bb-ring {
   fill: none;
@@ -218,15 +190,7 @@
 
 /* ---- What each vertebra is asked to do -------------------------------------------- */
 
-/*
- * Which family of model answers here.
- *
- * Set in the accent, directly under the riser, because it is what the spine is
- * delivering to this stage. Read across, the four are the argument on their own:
- * a language model, the same driven as an agent with a person in it, supervised
- * deep learning, and supervised deep learning whose labels a language model
- * wrote.
- */
+/* Model family used at this stage, in the accent directly under the riser. */
 .bb-family {
   font-family: var(--font-label);
   font-size: 0.75rem;

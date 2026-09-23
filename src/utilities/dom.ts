@@ -2,7 +2,7 @@ interface ElementOptions {
   className?: string;
   text?: string;
   attrs?: Record<string, string>;
-  /** `Element` rather than `HTMLElement`, so a composition can hold an `svg`. */
+  /** Typed as `Element` so children can include SVG. */
   children?: readonly Element[];
 }
 
@@ -28,11 +28,8 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
- * The SVG counterpart of `el`.
- *
- * SVG elements need `createElementNS`; created with `createElement` they parse,
- * append and render nothing at all, which is a failure with no error attached
- * to it. Every attribute is a string here because SVG has no property mirror.
+ * SVG version of `el`. Uses `createElementNS`, since SVG made with
+ * `createElement` silently renders nothing.
  */
 export function svg<K extends keyof SVGElementTagNameMap>(
   tag: K,

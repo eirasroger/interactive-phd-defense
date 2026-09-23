@@ -1,18 +1,9 @@
-/*
- * C2's own chromatic identity.
- *
- * C1 reads as four indicator families. C2 reads as a record with several kinds
- * of field in it, and as a flow with a direction, so it needs two scales rather
- * than one and neither of them is C1's.
- */
+/* C2 palette: field groups, material destinations and lifecycle stages. */
 
 /*
- * The record's field groups. Five slots, assigned in this fixed order and never
- * cycled. Validated on the projected white ground: lightness band, chroma
- * floor, normal-vision separation and contrast all pass. The one adjacent pair
- * in the 6–8 CVD band (composition against environmental) is legal because
- * every group is direct-labelled with its name and separated by a gap, which is
- * the secondary encoding that check requires.
+ * Record field groups, five fixed slots. Validated on the white ground. The
+ * composition/environmental pair sits in the 6-8 CVD band, which is allowed
+ * because every group is direct-labelled and separated by a gap.
  */
 [data-group='identity'] {
   --group: #2b6ca3;
@@ -30,16 +21,14 @@
   --group: #a8720c;
 }
 
-/* Readable from a descendant that carries no `data-group` of its own. */
+/* For descendants without a `data-group`. */
 .cp {
   --group-circularity: #a8720c;
 }
 
 /*
- * Where the material goes, ordered by what is left of it. `recovery` returns
- * the material to use, whether as itself or as feedstock; `energy` keeps the
- * calories and destroys the material; `loss` keeps nothing. `origin` is
- * upstream and belongs to none of them.
+ * Material destinations, from most to least retained: `recovery` (reuse or
+ * feedstock), `energy` (burned), `loss`. `origin` is the upstream source.
  */
 [data-worth='origin'] {
   --worth: #2b6ca3;
@@ -54,15 +43,12 @@
   --worth: #8f5324;
 }
 
-/* Recovery that is something other than recycling, which is nearly none of it. */
+/* Recovery routes other than recycling. */
 [data-beyond='true'] {
   --worth: #1a8a6d;
 }
 
-/*
- * Lifecycle stages, in the paper's own Fig. 5 encoding so a reader of the paper
- * recognises the spine on sight.
- */
+/* Lifecycle stages, using the paper's Fig. 5 colours. */
 [data-stage='product'] {
   --stage: #1f5f8f;
 }

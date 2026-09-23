@@ -1,32 +1,20 @@
 import { ADAPTIVE } from '@/config/presentation';
 
 /**
- * A frame longer than this is an event rather than a frame rate: a zone
- * mounting, a shader compiling, a tab returning to the foreground. Averaging
- * one into the window is what turns a single hitch into a permanent step down.
+ * Frames longer than this (seconds) are one-off stalls such as a zone mount or
+ * shader compile. They are dropped so one hitch cannot trigger a step down.
  */
 const STALL_SECONDS = 0.5;
 
 /**
- * Seconds of running deck to discard after loading ends.
- *
- * The frames immediately after a load are the most expensive the talk will ever
- * draw and the least representative: the zone mounts, every material compiles
- * its program against the scene's light count, and tens of megabytes of texture
- * upload. Measured, that is over two seconds of blocked main thread — see
- * `learnings.md` §39 — which is three sample windows of "under fifteen fps" and
- * enough to walk the ladder to its floor before the first word is spoken.
+ * Seconds to ignore after loading ends. Shader compiles and texture uploads
+ * block the main thread for over two seconds (`learnings.md` §39).
  */
 const SETTLE_SECONDS = 2.5;
 
 /**
- * Watches frame rate and gives up quality when the machine cannot keep up.
- *
- * What it gives up, and in what order, belongs to `QualityLadder`. This decides
- * only *when*, which is one sustained sample under the threshold: a single slow
- * frame is a shader compiling or a texture uploading, and stepping down for one
- * of those would cost the talk its resolution over an event that has already
- * finished.
+ * Calls `onSag` when a full sample window averages below the fps threshold.
+ * `QualityLadder` decides what to reduce.
  */
 export class PerformanceMonitor {
   private accumulated = 0;
@@ -42,11 +30,8 @@ export class PerformanceMonitor {
   }
 
   /**
-   * Driven by the deck's own loading state rather than by a clock of ours.
-   *
-   * Watching is off while anything is loading, because a load is not a frame
-   * rate, and it restarts the settle each time so a mid-talk zone build is
-   * covered by the same rule as the first one.
+   * Set from the deck's loading state: inactive while loading. Each change
+   * restarts the settle period.
    */
   setActive(active: boolean): void {
     if (active === this.active) return;
@@ -58,17 +43,8 @@ export class PerformanceMonitor {
 
   update(dt: number): void {
     /*
-     * A hidden tab is not a slow machine.
-     *
-     * Chrome throttles `requestAnimationFrame` to about one frame a second in a
-     * backgrounded tab, and the first frame after coming back carries the whole
-     * gap as one `dt`. Both read as a sag. A presenter who alt-tabs to their
-     * notes during setup, or whose laptop lid is closed while the projector is
-     * found, would return to a deck that had quietly walked to the bottom of
-     * the ladder and stays there, because degradation is one-way.
-     *
-     * The sample is discarded rather than paused, so the window after a return
-     * is measured from scratch instead of averaging the stall into it.
+     * Reset the sample while hidden or after a stall. Browsers throttle rAF in
+     * background tabs, and degradation is one-way, so those frames must not count.
      */
     if (!this.active || document.hidden || dt > STALL_SECONDS) {
       this.accumulated = 0;

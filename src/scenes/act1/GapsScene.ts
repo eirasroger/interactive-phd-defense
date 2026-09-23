@@ -6,12 +6,8 @@ import type { SceneContext, SceneInstance } from '@/engine/scene/types';
 import { el } from '@/utilities/dom';
 
 /**
- * Scene 9 — the six research gaps.
- *
- * One beat per gap, and no more. A seventh that released the accent so the six
- * rested equal was tried and cut: the click after the last gap is the click that
- * leaves for the objectives, so a beat spent un-highlighting card 06 is a beat
- * the audience watches nothing happen in.
+ * Scene 9: the six research gaps. One beat per gap. The click after the last
+ * gap moves on to the objectives.
  */
 const BEATS = GAPS.cards.items.length;
 
@@ -19,7 +15,7 @@ export class GapsScene implements SceneInstance {
   readonly beats = BEATS;
 
   private cards: GapCards | null = null;
-  /** Everything the entry timeline animates, so a killed entry can be settled. */
+  /** Elements the entry timeline animates, reset if the entry is killed. */
   private head: HTMLElement[] = [];
 
   private motion: gsap.core.Timeline | null = null;
@@ -39,10 +35,8 @@ export class GapsScene implements SceneInstance {
       el('div', { className: 'gaps-composition', children: [headBlock, cards.element] }),
     );
 
-    // Only now is there a layout to read line breaks off. If the webfont has not
-    // resolved the text will rewrap when it does, so measure again on that —
-    // guarded by the scene's signal, because a scene that has already exited must
-    // not be writing to its own dead DOM.
+    // Measure line breaks now that layout exists, and again once webfonts load
+    // (unless the scene has already exited).
     cards.measure();
     if (document.fonts.status !== 'loaded') {
       void document.fonts.ready.then(() => {
@@ -61,10 +55,8 @@ export class GapsScene implements SceneInstance {
         ease: EASE.enter,
         stagger: seconds(STAGGER),
       })
-      // Staggered in reading order, but at 45ms — fast enough that the six
-      // still land as one field rather than as six arrivals the audience counts
-      // through, and slow enough that the field is built rather than switched
-      // on. The whole sweep takes a quarter of a second.
+      // 45ms stagger in reading order, so the six cards arrive together as one
+      // group in about a quarter of a second.
       .from(
         cards.frames,
         {
@@ -84,9 +76,8 @@ export class GapsScene implements SceneInstance {
     const cards = this.cards;
     if (!cards) return;
 
-    // The deck calls this for beat 0 immediately after `enter`, which kills the
-    // entry timeline while its `from` tweens are still at their start values —
-    // an invisible composition. Settling the head is what puts them back.
+    // Beat 0 runs right after `enter` and kills the entry timeline while its
+    // `from` tweens are still hidden, so reset the head to visible.
     this.motion?.kill();
     gsap.set(this.head, { opacity: 1, y: 0 });
 

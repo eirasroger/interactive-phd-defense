@@ -32,9 +32,8 @@ const OUTCOME = [
 const surface = (): HTMLElement => el('span', { className: 'fw-card-surface' });
 
 /**
- * `expo.out` leaves at full speed from a standstill, which on a travelling
- * object reads as a snap however long it runs. The move eases in and out at
- * both ends instead, and the card follows the row rather than racing it.
+ * Timings for the row-to-card move. Uses an in-out ease because `expo.out`
+ * makes a travelling object snap. The card opens slightly after its row.
  */
 const MOVE = {
   travel: DURATION.cinematic * 0.62,
@@ -60,10 +59,9 @@ export interface Framework {
 }
 
 /**
- * The overview and the indicator set are one panel because they are one move.
- * The four rows listed inside the indicator-set card are the four card headers
- * of the next beat: those rows travel out to their columns, and each card wipes
- * open downward underneath the row that has just landed on it.
+ * Overview and indicator set in one panel. In beat 2 the four family rows in
+ * the indicator-set card travel to become the headers of four family cards,
+ * and each card wipes open below its row.
  */
 export function createFramework(): Framework {
   const chips = el('div', {
@@ -399,7 +397,7 @@ export function createFramework(): Framework {
           at + seconds(MOVE.lag),
         );
 
-        // Identical geometry, so the swap between the two is not visible.
+        // Swap the row for the header. Same geometry, so the swap is invisible.
         timeline.to(
           leg.head,
           { opacity: 1, duration: seconds(DURATION.instant), ease: 'none' },

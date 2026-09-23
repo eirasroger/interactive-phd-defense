@@ -27,54 +27,38 @@ RENDERS = WORK / "renders"
 ASSET_DIR = WORK / "assets"
 DETAIL_DIR = WORK / "detail"
 
-# Conifers, not the island trees. `tree_small_02` was dropped: it ships no LOD2,
-# so the cheapest rung it has is 376k triangles for a 4.5 m tree — the worst
-# value in the library by an order of magnitude, and the park now instances
-# whatever is here rather than shipping trees of its own.
 TREE_ASSETS = ("fir_tree_01", "fir_tree_01", "fir_tree_01", "pine_tree_01")
-# `pine_sapling_medium` is not here, and its absence is worth 6.9 M triangles.
-# Its cheapest usable rung is 145k for an 11.5 m tree, and it was being planted
-# 76 times at 1.3–2.1 m as hedge — a third of the whole site's geometry spent on
-# waist-high shrubs, invisible because scaling to metres hides how big the
-# source is. `fir_sapling_medium` is the same plant at 6k.
+# Keep hedge templates cheap: they are planted many times.
 HEDGE_ASSETS = ("shrub_02", "fir_sapling_medium")
 GROUND_ASSETS = ("shrub_01", "shrub_03", "shrub_04", "fern_02", "celandine_01", "nettle_plant")
 GRASS_ASSETS = ("grass_medium_02", "grass_medium_01")
 
 ASSET_LOD = "LOD1"
 
-# Trees drop a rung. The park instances these rather than shipping its own, so a
-# template is now paid for ~90 times instead of ~10.
+# Trees are instanced ~90 times by the park.
 ASSET_LOD_BY_NAME = {"fir_tree_01": "LOD2", "pine_tree_01": "LOD2"}
 
-# Object-name fragments that mark a component of a plant rather than a whole one.
+# Object-name fragments that mark a plant component (trunk, leaf, etc.).
 PART_NAMES = (
     "trunk", "twig", "needle", "branch", "leaves", "leaf",
     "stem", "root", "frond", "blossom", "cone",
 )
 
-# Above this a template is flagged in the build log. Not enforced: a specimen
-# tree is legitimately expensive and a hedge plant is not, and only the call
-# site knows which this is.
+# Triangle count above which a template is flagged in the log.
 TEMPLATE_BUDGET = 60_000
 
-# Poly Haven ships trees at two resolutions and neither is a web budget: the whole-tree mesh is half a million vertices, so eight of them are four million before anything else is in the scene.
+# Optional per-asset decimation ratio.
 LOD_RATIO: dict[str, float] = {}
 
 COLLECTION = "exterior"
 SCENE = "exterior_build"
 
-# Sized for the finished presentation, not for a fast turnaround.
 BAKE_SIZE = 4096
 CANDIDATE_BAKE = 2048
-# A door leaf is 2.1 x 3.2 m of mostly glass. Anything larger is atlas spent on
-# the four metal edges that carry its only occlusion.
 DOOR_BAKE = 1024
 BAKE_SAMPLES = 320
 
-# How far occlusion reaches. Sized to the ground-floor setback, so the soffit
-# under the oversail darkens across its full depth rather than only in the
-# corners, without the whole elevation picking up a sky-visibility gradient.
+# AO distance in metres, sized to the ground-floor setback.
 AO_DISTANCE = 4.5
 GLTF_SETTINGS = "glTF Material Output"
 
@@ -114,20 +98,18 @@ SLOT = {
     "board": 0.09,
 }
 
-# The options stand well west of the building on open promenade, square to a camera that has turned its back on the elevation.
+# Facade candidate review row, west of the building.
 REVIEW = {
-    # Far west, well clear of the building.
     "centre": -95.0,
     "y": -27.0,
     "spacing": 5.6,
     "base": 0.06,
     "standoff": 30.0,
-    # How far west of the row the camera aims, which is what puts the panels in
-    # the right of frame and leaves the left for the caption column.
+    # Camera aim offset west of the row, leaving the left of frame for captions.
     "lead": 4.0,
 }
 
-# The wedge between the review camera and the row. Enforced in `place_asset()`.
+# Kept free of plants between review camera and row. Enforced in `place_asset()`.
 REVIEW_CLEAR = {
     "x": (-118.0, -72.0),
     "y": (-62.0, -22.0),
@@ -135,10 +117,9 @@ REVIEW_CLEAR = {
 
 CANDIDATE = {
     "width": BAY - 0.1,
-    # Two storeys, not one.
     "height": 7.2,
     "thickness": 0.30,
-    # Deliberately not the building's 75 mm course and 225 mm unit.
+    # Differs from the building's 75 mm course and 225 mm unit on purpose.
     "course": 0.22,
     "unit": 0.50,
     "relief": 0.10,
@@ -157,108 +138,34 @@ SCAFFOLD = {
 }
 
 ENTRANCE = {
-    # Two full bays. It was 6.4 — a width derived independently of the column
-    # rhythm, which is the same fault `build_ground` already works around by
-    # skipping any column that lands inside the doorway. Two bays makes the
-    # opening a fact about the module instead of a hole punched through it, and
-    # the jamb columns then stand exactly on the bay lines and frame it.
+    # Two bays, so the jamb columns stand on bay lines.
     "width": BAY * 2,
-    # Unchanged, and constrained rather than chosen: the canopy hangs at
-    # `height + frame + thickness/2` and the oversail soffit begins at
-    # `GROUND_H - 0.17`, so anything above ~3.2 drives the two through each
-    # other. Raising the opening means raising `GROUND_H`, which moves the whole
-    # upper mass and rebakes every Act I framing — a bigger change than the
-    # transition needs. The opening is widened instead, which suits a 16:9 frame
-    # and a deep oversail better than height would have.
+    # Max ~3.2 before the canopy hits the oversail soffit.
     "height": 3.2,
     "leaf_gap": 0.06,
     "canopy_proud": 1.4,
-    # 0.18, not 0.26, and this is a clearance rather than a taste.
-    #
-    # The canopy hangs off `height + frame` and the oversail soffit starts at
-    # `GROUND_H - 0.34` = 3.66. At 0.26 its top landed at 3.68 — *inside* the
-    # soffit — so the one element whose whole job is to break the unbroken
-    # horizontal of the oversail was welded to it, and had been since it was
-    # written. 0.18 leaves a 60 mm shadow gap. What reads at distance is the
-    # 1.4 m projection, not the gap, but the projection only reads as separate
-    # if there is a gap at all.
+    # Leaves a 60 mm gap below the oversail soffit (starts at 3.66).
     "canopy_thickness": 0.18,
     "frame": 0.22,
     "clear_bays": (2, 3, 4, 5),
-    # Fixed glazing at each end of the frame, and the pocket its active leaf
-    # parks over when open.
-    #
-    # **Leaf width must equal sidelight width**, and that is arithmetic rather
-    # than taste. A bi-parting slider covers `width - 2*sidelight` when shut and
-    # each leaf retracts by its own width, so it only clears the opening if it
-    # lands squarely on the fixed panel beside it: `2*leaf = width - 2*sidelight`
-    # with `leaf = sidelight` gives `sidelight = width/4`. Any other split either
-    # leaves the opening part-blocked or slides a leaf out past the jamb and
-    # across the shopfront glazing in the next bay, which reads as a mistake.
+    # Must equal leaf width (width/4) so an open leaf parks over its sidelight.
     "sidelight": BAY / 2.0,
 }
 
-# Where the doors lead.
-#
-# There was no vestibule and, despite the docstring, no lobby either: the
-# emissive `lobby` panel sat 1.4 m behind the door line, and the entrance
-# boolean only cuts 0.3 m into `core_ground`, so the panel has always been
-# buried in solid brick. The opening read as a shallow dark recess because that
-# is exactly what it was.
-#
-# It is a real room now, because the camera goes through it. Two things about it
-# are load-bearing for the transition rather than for the architecture:
-#
-# **The ceiling is above the door head.** Passing under a 3.2 m opening into a
-# 3.9 m space is what makes the entry read as arriving somewhere rather than as
-# entering a tunnel, and it is visible from outside the moment the leaves part.
-#
-# **The back recess is deliberately unresolved.** It is a dark opening that says
-# the space continues, and it is where the corridor's mouth lands once the
-# pipeline plan exists. Until then it is depth rather than a hole to the sky.
+# Room behind the entrance that the camera passes through.
 VESTIBULE = {
-    # Nine metres, and the depth is doing three jobs rather than one.
-    #
-    # It is what stops the back of the room being the whole picture: at 6.0 the
-    # far opening subtended most of the frame from the threshold and the lit
-    # side walls had nowhere to be, so the shot was a black rectangle with a
-    # bright edge. Depth is the only lever that shrinks the far wall without
-    # shrinking the way on.
-    #
-    # It is also real travel *inside* before the corridor starts, which is what
-    # the exterior needs in order to be released somewhere the audience cannot
-    # see it go.
     "depth": 9.0,
     "height": 3.9,
     "width": 11.0,
     "lining": 0.08,
-    # The finished floor, and it is thicker than the lining for a reason that is
-    # entirely about the runtime. The forecourt granite is rebuilt in Three.js
-    # as one plate that runs eight metres *under* the building so there is no
-    # seam at the facade, and its top face sits at 0.11. A vestibule floor at the
-    # lining's 0.08 loses to it, and what the camera sees on the way in is
-    # external paving carried straight through the lobby.
-    #
-    # 0.14 puts the interior floor above both the granite and the 0.12 doorstep,
-    # which is also what a real building does with its finished floor level.
+    # Above the runtime forecourt plate (top at 0.11) and the 0.12 doorstep.
     "floor": 0.14,
-    # A hole reads as an opening only when the wall around it is narrower than
-    # the hole. 5.0 x 3.0 in an 11 m room read as a fireplace; 7.2 x 3.45 read
-    # as the back wall having been removed. This is the middle, and it is the
-    # depth above that does most of the work.
     "recess": {"width": 6.2, "height": 3.2, "depth": 3.0},
-    # A slot in the ceiling rather than a lit panel. What has to read from
-    # outside is the *wash* down the side walls — a bright rectangle floating in
-    # the dark reads as a screen, and a lit wall reads as a room.
+    # Ceiling light slots near the side walls.
     "wash": {"inset": 1.1, "width": 0.5},
 }
 
-# The two glazing planes of the entrance, both inside the 0.35 m reveal.
-#
-# The active leaf runs *outboard* of the fixed panel, which is how a slider is
-# actually built and is also the only way the leaf can cross the sidelight
-# without intersecting it. 0.14 m apart is enough for that at every angle Act I
-# reads the elevation from.
+# Entrance glazing planes. The sliding leaf runs outboard of the sidelight.
 SIDELIGHT_Y = GROUND_Y - 0.10
 DOOR_Y = GROUND_Y - 0.24
 
@@ -289,56 +196,29 @@ PALETTE = {
     "hoarding": ((0.055, 0.115, 0.185, 1.0), 0.62, 0.0),
     "bark": ((0.062, 0.052, 0.044, 1.0), 0.92, 0.0),
     "foliage": ((0.062, 0.132, 0.038, 1.0), 0.84, 0.0),
-    # Muted, not emerald. A saturated green tint applied across a whole ground
-    # plane reads as artificial turf, and it is the one surface large enough
-    # that its hue sets the mood of every frame.
+    # Muted green. Saturated green looks like artificial turf.
     "grass": ((0.098, 0.121, 0.064, 1.0), 0.90, 0.0),
-    # Pale, and much paler than anything else the building is made of. Nothing
-    # reaches inside the vestibule but the hemisphere ambient and its own wash,
-    # and albedo is the only term left to lift it with: brick at 0.078 in there
-    # is black. Read from full daylight it will still be dark, which is correct
-    # and is what makes the exposure lift on entry legible.
+    # Pale, since the vestibule gets little light.
     "vestibule": ((0.52, 0.505, 0.485, 1.0), 0.72, 0.0),
     "vestibule_floor": ((0.16, 0.157, 0.152, 1.0), 0.36, 0.0),
-    # The far recess. Dark, but not the near-black it started at: a surface at
-    # 0.022 cannot show a falloff, and a falloff is the only thing that makes
-    # the opening read as depth rather than as a rectangle painted on the back
-    # wall. Still a fifth of the vestibule's albedo, which is the contrast that
-    # matters.
+    # Dark, but light enough to show a light falloff.
     "recess": ((0.085, 0.088, 0.098, 1.0), 0.90, 0.0),
 }
 
 LOBBY_COLOR = (1.0, 0.86, 0.66)
 LOBBY_STRENGTH = 1.8
 
-# The vestibule's ceiling slots. Warmer and far stronger than `LOBBY_*`, which
-# only ever lit a panel nobody could see. This is a real light source in the
-# Cycles bake and an emissive surface in the browser, and it is the whole reason
-# there is anything to look at through the opening leaves.
+# Vestibule ceiling slots: a light in the bake, emissive at runtime.
 WASH_COLOR = (1.0, 0.88, 0.72)
 WASH_STRENGTH = 24.0
 
-# How much of the vestibule comes through the doors. Low enough that the glass
-# is still glass and still catches the sky, high enough that the lit back wall
-# is legible from the avenue.
 ENTRANCE_GLASS_ALPHA = 0.34
 
-# The far end of the recess, barely lit.
-#
-# Unlit, the recess read as a dark rectangle *painted on* the back wall — a
-# screen, not an opening, because a uniform black field seen square-on carries
-# no depth cue at all. A dim source at the far end is the cheapest one there is,
-# and it is cool against the vestibule's warm wash, which is the second cue: two
-# light temperatures in one frame say two spaces.
-#
-# Deliberately weak. This has to read as somewhere further on, not as a
-# destination, and the corridor's own look is not designed yet.
+# Dim cool light at the far end of the recess.
 GLOW_COLOR = (0.72, 0.80, 1.0)
 GLOW_STRENGTH = 7.0
 
-# Poly Haven map, real-world tile in metres, and how hard to pull the source
-# photograph toward the palette hue. The tile is the asset's own published
-# coverage, so a brick reads at the size a brick actually is.
+# (Poly Haven map, tile size in metres, tint strength toward palette hue).
 DETAIL = {
     "brick": ("brick_wall_10", 1.9, 0.75),
     "backing": ("concrete_wall_005", 1.15, 0.55),
@@ -646,11 +526,7 @@ def build_ground(parts: Parts, target) -> None:
         (0.0, FRONT_Y + GROUND_SETBACK / 2.0, GROUND_H - 0.17),
     ))
 
-    # Strictly inside, so the columns standing *on* the entrance's own bay lines
-    # survive and frame it. With the opening at one bay wide and off-module this
-    # had to clear a margin either side; at two bays the jamb columns are the
-    # ones at x = ±BAY, and skipping them would leave the widest opening in the
-    # elevation with nothing holding up the mass above it.
+    # Keeps the jamb columns at x = +/-BAY.
     clear = ENTRANCE["width"] / 2.0 - 0.05
     for index in range(BAYS + 1):
         x = -WIDTH / 2.0 + BAY * index
@@ -666,9 +542,7 @@ def build_ground(parts: Parts, target) -> None:
         (0.0, GROUND_Y - SKIN / 2.0, GROUND_H / 2.0),
     ))
 
-    # The bays either side of the entrance stay solid. A door set in a
-    # continuous run of identical shop glazing is not an entrance, it is one
-    # more pane — which is exactly how it read before, at every distance.
+    # Bays beside the entrance stay unglazed.
     for index in range(BAYS):
         if index in ENTRANCE["clear_bays"]:
             continue
@@ -681,11 +555,7 @@ def build_entrance(parts: Parts, target) -> None:
     w = ENTRANCE["width"]
     h = ENTRANCE["height"]
 
-    # Two cuts, not one. The doorway is a slot through the skin at door height;
-    # the vestibule is a room behind it, taller and wider, and the camera passes
-    # from one into the other. Cutting them with a single box would make the
-    # vestibule's section the doorway's section, which is precisely the tunnel
-    # the taller ceiling exists to avoid.
+    # Doorway cut. The taller vestibule is cut in `build_vestibule`.
     cutter = add_box(
         target, "entrance_cutter", (w, SKIN + 0.6, h),
         (0.0, GROUND_Y - SKIN / 2.0, h / 2.0),
@@ -708,28 +578,18 @@ def build_entrance(parts: Parts, target) -> None:
         (0.0, GROUND_Y - SKIN / 2.0, h + frame / 2.0),
     ))
 
-    # The one element that projects past the column line. It throws a hard
-    # shadow across the recess and breaks the unbroken horizontal of the
-    # oversail, which is what separates a doorway from a shopfront at distance.
     proud = ENTRANCE["canopy_proud"]
     depth = GROUND_Y - (FRONT_Y - proud)
     parts.put("soffit", add_box(
         target, "entrance_canopy", (w + 3.0, depth, ENTRANCE["canopy_thickness"]),
         (0.0, GROUND_Y - depth / 2.0, h + frame + ENTRANCE["canopy_thickness"] / 2.0),
     ))
-    # The hangers are gone. They were 0.62 m rods rising from the canopy top,
-    # which put them at 3.66–4.28 — entirely inside the soffit slab, invisible
-    # from every pose in the act, and paying for themselves in an atlas that is
-    # already 70% interior faces.
 
     parts.put("paving", add_box(
         target, "threshold", (w + 3.4, 3.2, 0.14), (0.0, GROUND_Y - 1.6, 0.05),
     ))
 
-    # The fixed half of the entrance: a glazed panel at each end of the frame,
-    # with a mullion where it meets the clear opening. These are what the active
-    # leaves park over, so they are not decoration — remove them and the doors
-    # have nowhere to go. See `ENTRANCE["sidelight"]`.
+    # Fixed sidelights and mullions. See `ENTRANCE["sidelight"]`.
     side_w = ENTRANCE["sidelight"]
     for side, offset in (("l", -1.0), ("r", 1.0)):
         parts.put("entrance_glass", add_box(
@@ -741,22 +601,13 @@ def build_entrance(parts: Parts, target) -> None:
             (offset * (w / 2.0 - side_w), SIDELIGHT_Y, h / 2.0),
         ))
 
-    # The track the leaves run on, and the only thing that says *sliding* while
-    # the doors are shut. It spans the whole frame because the leaves travel the
-    # whole frame.
     parts.put("metal", add_box(
         target, "entrance_track", (w - 0.04, 0.16, 0.11),
         (0.0, DOOR_Y, h - 0.055),
     ))
 
 def build_vestibule(parts: Parts, target) -> None:
-    """The room behind the doors, and the far half of the Act I → Act II cut.
-
-    Cut out of `core_ground` and then lined, rather than left as raw boolean
-    faces. The lining costs six boxes and buys the one thing the cavity cannot
-    have on its own: its own materials. Brick at 0.078 albedo in an unlit room
-    is black, and this room is looked into from full daylight.
-    """
+    """Room behind the doors, cut from `core_ground` and lined."""
     front = GROUND_Y
     depth = VESTIBULE["depth"]
     height = VESTIBULE["height"]
@@ -764,10 +615,7 @@ def build_vestibule(parts: Parts, target) -> None:
     back = front + depth
     recess = VESTIBULE["recess"]
 
-    # The bore carries the corridor through to the rear elevation. It starts at
-    # the recess mouth rather than its far end: flush with the cavity's own end
-    # face is two coplanar faces, which the boolean silently declines to
-    # resolve. See `learnings.md` §37.
+    # Bore starts at the recess mouth to avoid coplanar faces. See `learnings.md` §37.
     bore_from = back
     bore_to = BACK_Y + 2.0
     cuts = (
@@ -799,9 +647,6 @@ def build_vestibule(parts: Parts, target) -> None:
             (offset * (width - lining) / 2.0, front + depth / 2.0, height / 2.0),
         ))
 
-    # The back wall, built as four pieces around the recess for the same reason
-    # `punched()` exists — a boolean here would cut the one surface whose edges
-    # the eye is actually on.
     jamb = (width - recess["width"]) / 2.0
     for side, offset in (("l", -1.0), ("r", 1.0)):
         parts.put("vestibule", add_box(
@@ -813,8 +658,6 @@ def build_vestibule(parts: Parts, target) -> None:
         (0.0, back - lining / 2.0, (height + recess["height"]) / 2.0),
     ))
 
-    # Open at the far end: the corridor is what is on the other side. The floor
-    # is the exterior's for the length of the recess and the corridor's beyond it.
     for name, size, location in (
         ("floor", (recess["width"], recess["depth"], floor),
          (0.0, back + recess["depth"] / 2.0, floor / 2.0)),
@@ -823,13 +666,7 @@ def build_vestibule(parts: Parts, target) -> None:
     ):
         parts.put("recess", add_box(target, f"vestibule_recess_{name}", size, location))
 
-    # A concealed strip at the far end, not a lit end wall.
-    #
-    # Lighting the end wall itself put a uniform bright rectangle square-on to
-    # the camera, which is a screen — the exact failure the glow was added to
-    # fix, arriving from the other side. A source you cannot see, throwing a
-    # gradient down a wall you can, is the only version of this that reads as
-    # distance.
+    # Concealed light strip at the far end.
     parts.put("glow", add_box(
         target, "vestibule_recess_glow", (recess["width"] - 1.6, 0.30, 0.05),
         (0.0, back + recess["depth"] - 0.55, recess["height"] - lining - 0.02),
@@ -841,8 +678,6 @@ def build_vestibule(parts: Parts, target) -> None:
              back + recess["depth"] / 2.0, recess["height"] / 2.0),
         ))
 
-    # Two slots in the ceiling, set in from the side walls so what reads is the
-    # light down the walls rather than the fitting itself.
     wash = VESTIBULE["wash"]
     for side, offset in (("l", -1.0), ("r", 1.0)):
         parts.put("wash", add_box(
@@ -851,22 +686,7 @@ def build_vestibule(parts: Parts, target) -> None:
         ))
 
 def build_doors(target) -> Parts:
-    """The two active leaves, and nothing else.
-
-    Their own asset because they move, and because the building is one joined
-    mesh: `join_all` welds every part into a single object per export, so a leaf
-    left in `build_geometry` is unreachable from the runtime however carefully it
-    was named. `docs/blender/exterior_building.md` claimed the runtime could
-    swing two named leaves for as long as that has been false.
-
-    Exported closed and slid open at runtime, so the travel is `sidelight` in x
-    — outward for each leaf. The origin is the world origin, like every other
-    export, which is what lets the runtime translate them without first working
-    out where Blender thought their centres were.
-
-    Returned per leaf rather than as one group, because each is joined and baked
-    on its own — the same shape as `build_candidates`.
-    """
+    """The two sliding door leaves, exported closed with a world-origin pivot."""
     h = ENTRANCE["height"]
     leaf = ENTRANCE["sidelight"]
     gap = ENTRANCE["leaf_gap"]
@@ -880,9 +700,6 @@ def build_doors(target) -> Parts:
             target, f"door_{side}_pane", (leaf - gap, 0.05, h - 0.20),
             (centre, DOOR_Y, h / 2.0 - 0.01),
         ))
-        # A perimeter rather than a single stile. The meeting edge is what the
-        # eye tracks while the leaves part, and a bare glass edge has nothing to
-        # track — the whole animation reads as the reflection changing.
         parts.put("metal", add_box(
             target, f"door_{side}_meet", (0.07, 0.09, h - 0.14),
             (offset * gap / 2.0, DOOR_Y, h / 2.0),
@@ -896,8 +713,6 @@ def build_doors(target) -> Parts:
                 target, f"door_{side}_{level}", (leaf - gap, 0.09, 0.10),
                 (centre, DOOR_Y, z),
             ))
-        # The pull. It is 3 cm of geometry and it is the only thing in the frame
-        # that states the leaf is a door rather than a pane of glass.
         parts.put("metal", add_box(
             target, f"door_{side}_pull", (0.05, 0.14, 1.05),
             (offset * (leaf - 0.28), DOOR_Y - 0.09, 1.06),
@@ -1020,7 +835,7 @@ def split_lod(name: str) -> tuple[str, str]:
 _VARIANTS: dict[str, list] = {}
 
 def is_part(name: str) -> bool:
-    """Whether this object is a component of a plant rather than a whole one."""
+    """Whether this object is a plant component, per `PART_NAMES`."""
     return any(hint in name for hint in PART_NAMES)
 
 def asset_variants(name: str) -> list:
@@ -1043,14 +858,6 @@ def asset_variants(name: str) -> list:
                 picked.append(lods[key])
                 break
 
-    # A whole tree is one that is not a component of one. The previous test was
-    # `split_lod(obj.name)[0] == name`, which never matched: Poly Haven's
-    # variants are `fir_tree_01_a_LOD1`, whose base is `fir_tree_01_a` and not
-    # `fir_tree_01`. So every asset fell through to the height fallback below,
-    # which happily admitted `fir_tree_01_trunk_c` — a 13 m bare trunk with no
-    # foliage on it at all. Those were planted on the site as trees and
-    # photographed onto the woodland belt's billboards as species, which is
-    # where the dead-looking sticks in the park came from.
     whole = [obj for obj in picked if not is_part(obj.name)]
     if not whole and picked:
         tallest = max(obj.dimensions.z for obj in picked)
@@ -1058,10 +865,6 @@ def asset_variants(name: str) -> list:
         print(f"[exterior] {name}: no assembled variant; falling back to "
               f"{[o.name for o in whole]}", file=sys.stderr)
 
-    # Reported, because a template's cost is otherwise invisible at the call
-    # site: `place_asset` scales to a height in metres, so a 257k-triangle
-    # 11.5 m pine and a 6k fir look identical written as "1.6 m of hedge". One
-    # of those was planted 76 times before anybody counted.
     for obj in whole:
         faces = len(obj.data.polygons)
         flag = "  <-- heavy" if faces > TEMPLATE_BUDGET else ""
@@ -1098,7 +901,7 @@ def blocks_review(name: str, x: float, y: float) -> bool:
 
 def place_asset(site: Parts, target, name: str, location, rotation: float,
                 metres: float, rng) -> None:
-    """Place one plant at a height in metres, not at a multiple of its own size."""
+    """Place one plant scaled to a height in metres."""
     if blocks_review(name, location[0], location[1]):
         print(f"[exterior] skipped {name} at {location[0]:.1f},{location[1]:.1f}: review sightline")
         return
@@ -1121,7 +924,7 @@ def place_asset(site: Parts, target, name: str, location, rotation: float,
     site.put("flora", obj)
 
 def spread(site: Parts, target, assets, count: int, bounds, height, rng) -> None:
-    """`height` is a range in metres — the height the plant should stand."""
+    """`height` is a (min, max) range in metres."""
     x0, x1, y0, y1 = bounds
     low, high = height
     for _ in range(count):
@@ -1142,11 +945,7 @@ def scatter_planting(site: Parts, target, rng) -> None:
         spread(site, target, HEDGE_ASSETS, 38, bounds, (1.3, 2.1), rng)
         spread(site, target, GROUND_ASSETS, 150, bounds, (0.35, 0.85), rng)
 
-    # Nothing may stand between PROMENADE_NEAR and BED_NEAR: that band is the
-    # pedestrian route, and a tree planted in it reads as an obstacle rather
-    # than as landscape. Trees go in the beds, in the verges, or on open grass.
-    # Heights in metres. A park conifer beside a five-storey slab is roughly
-    # half its height; taller and the building stops being the subject.
+    # No trees on the promenade (PROMENADE_NEAR to BED_NEAR). Heights in metres.
     verge = PROMENADE_NEAR - VERGE_DEPTH / 2.0
     for x, y, metres in (
         (-23.5, BED_NEAR + 1.2, 9.5),
@@ -1165,8 +964,7 @@ def scatter_planting(site: Parts, target, rng) -> None:
             rng.uniform(0.0, math.tau), metres, rng,
         )
 
-    # Widened past the building's own frontage: the review camera stands out at
-    # x = -95 and had nothing but bare lawn in its foreground.
+    # Extends west to cover the review camera's foreground.
     spread(
         site, target, GRASS_ASSETS, 900,
         (-135.0, 90.0, MEADOW_NEAR, PROMENADE_NEAR - VERGE_DEPTH - 0.5), (0.25, 0.55), rng,
@@ -1229,12 +1027,9 @@ def build_trees(site: Parts, target, rng) -> None:
         add_tree(site, target, f"tree_{index}", x, y, height, rng)
 
 FLORA_TEXTURE = 1024
-# Normal is worth its payload under real-time light — it is what stops a canopy
-# reading as a flat cut-out. Roughness is not: a leaf is matte, the map is
-# nearly constant, and it was 14 textures for no visible difference.
 FLORA_KEEP = ("Base Color", "Alpha", "Normal")
 
-# Poly Haven's plants are photographed in whatever season they were scanned in, and several of them are late-summer dry.
+# Tint toward summer green. Some scans are late-summer dry.
 FOLIAGE_SUMMER = (0.086, 0.176, 0.055)
 FOLIAGE_TINT = 0.45
 FOLIAGE_NAMES = (
@@ -1275,7 +1070,7 @@ def simplify_flora(objects) -> None:
                     continue
                 images.add(image.name)
 
-                # Colour space is the discriminator, not graph position.
+                # Only colour (sRGB) maps are tinted.
                 if foliage and image.colorspace_settings.name != 'Non-Color':
                     apply_tint(image, FOLIAGE_SUMMER, FOLIAGE_TINT, relevel=True)
                     image.pack()
@@ -1391,11 +1186,7 @@ def build_scaffold(parts: Parts, target) -> None:
             ))
 
 def build_hoarding(parts: Parts, target) -> None:
-    """Encloses the active work zone at the east end only.
-
-    A run across the whole frontage would stand between the camera and the
-    mock-up panels, which are the thing Act I is actually looking at.
-    """
+    """Hoarding around the east-end work zone only, clear of the mock-up panels."""
     y = APRON["near"] - 0.6
     for index in range(8):
         x = 2.6 + index * 2.45
@@ -1445,7 +1236,7 @@ def candidate_place(index: int) -> float:
     return REVIEW["centre"] - span / 2.0 + index * REVIEW["spacing"]
 
 def candidate_frame(parts: Parts, target, name: str, x: float) -> tuple[float, float]:
-    """A thin carrier edge so each option reads as a discrete panel."""
+    """Thin steel edge around a candidate panel."""
     width = CANDIDATE["width"]
     height = CANDIDATE["height"]
     thickness = CANDIDATE["thickness"]
@@ -1528,7 +1319,7 @@ def candidate_screen(parts: Parts, target, name: str, x: float) -> None:
             ))
 
 def candidate_demountable(parts: Parts, target, name: str, x: float) -> None:
-    """Panelised and unbonded: the option that can be taken back off."""
+    """Unbonded tiles clipped to a subframe, so the panel can be taken apart."""
     base, _ = candidate_frame(parts, target, name, x)
     width, height = CANDIDATE["width"], CANDIDATE["height"]
     gap = 0.18
@@ -1588,11 +1379,7 @@ def build_candidates(target) -> list[Parts]:
     return panels
 
 def build_slot_fill(target) -> Parts:
-    """The cladding that fills the vacant bay once it has been specified.
-
-    Act IV only. It is the neighbouring pier bay's own treatment, so the filled
-    elevation reads as the building always intended rather than as a patch.
-    """
+    """Cladding for the slot bay, matching the pier bays."""
     parts = Parts()
     for level in range(UPPER):
         pier_bay(parts, target, SLOT_BAY, level)
@@ -1628,8 +1415,7 @@ def build_geometry(target) -> Parts:
     build_entrance(parts, target)
     build_roof(parts, target)
 
-    # `wash` joins `glass` in skipping the bevel: the slots are 50 mm thick and
-    # the default 20 mm width would eat most of that from both sides.
+    # No bevel on glass or the 50 mm light slots.
     for key, group in parts.items():
         if key in ("glass", "entrance_glass", "wash", "glow"):
             continue
@@ -1686,7 +1472,7 @@ def detail_image(key: str, slot: str, tint: float, colour: bool):
     return image
 
 def detail_material(key: str):
-    """Surface detail as a tiling map on a real UV set, not as a baked atlas."""
+    """Tiling detail map on the `detail` UV set."""
     asset, tile, tint = DETAIL[key]
     base_color, roughness, metallic = PALETTE[key]
     material = principled(key, base_color, roughness, metallic)
@@ -1730,7 +1516,7 @@ def tint_node(tree, source, color, amount: float):
     return mix.outputs[2]
 
 def textured_material(name: str, texture: str, tile: float, fallback, tint: float = 0.0):
-    """Ground surfaces, tiled in world metres so the scale is not guesswork."""
+    """Ground surface tiled in world metres."""
     root = ASSET_DIR / texture
     diffuse = next(root.glob("Diffuse.*"), None)
     if diffuse is None:
@@ -1788,7 +1574,7 @@ def emissive_material(name: str, color, strength: float):
     return material
 
 def glazing_material(name: str, strength: float):
-    """Near-mirror, because glass reads by what it reflects."""
+    """Near-mirror glazing with a faint interior glow."""
     material = principled(name, (0.032, 0.045, 0.062, 1.0), 0.06)
     bsdf = material.node_tree.nodes["Principled BSDF"]
     bsdf.inputs["Emission Color"].default_value = (*INTERIOR_COLOR, 1.0)
@@ -1796,22 +1582,7 @@ def glazing_material(name: str, strength: float):
     return material
 
 def entrance_glazing(name: str):
-    """The one glass in the building you are meant to see *through*.
-
-    A window at fifty metres reads by what it reflects, which is why the rest of
-    the elevation is a dark mirror and should stay one. The entrance is read
-    from three metres with a lit room behind it, and a dark mirror there is the
-    difference between a way in and a grey panel — which is exactly how the
-    rebuilt entrance came back from its first render.
-
-    **Alpha, not transmission**, and the reason is that this asset has to be two
-    things at once. Alpha renders as real transparency in Cycles, so the preview
-    tells the truth about what is visible through the doors; and it exports as
-    glTF `alphaMode: BLEND`, which three.js draws as an ordinary transparent
-    material. Transmission would be truer and would cost a separate render
-    target and a pass over the whole frame, for a difference no projector
-    resolves.
-    """
+    """See-through entrance glass. Alpha blend, so Cycles and three.js agree."""
     material = principled(name, (0.055, 0.070, 0.082, 1.0), 0.08)
     bsdf = material.node_tree.nodes["Principled BSDF"]
     bsdf.inputs["Alpha"].default_value = ENTRANCE_GLASS_ALPHA
@@ -1826,8 +1597,6 @@ def assign(objects, material) -> None:
 SPECIAL_MATERIALS = {
     "glass": lambda: glazing_material("glass", INTERIOR_STRENGTH),
     "entrance_glass": lambda: entrance_glazing("entrance_glass"),
-    # `lobby` is gone with the panel it lit. It was emissive geometry buried in
-    # solid brick — see `VESTIBULE`. `wash` replaces it and is a real source.
     "wash": lambda: emissive_material("wash", WASH_COLOR, WASH_STRENGTH),
     "glow": lambda: emissive_material("glow", GLOW_COLOR, GLOW_STRENGTH),
     "brick": lambda: detail_material("brick"),
@@ -1836,10 +1605,7 @@ SPECIAL_MATERIALS = {
     "stock": lambda: detail_material("stock"),
     "soil": lambda: textured_material("soil", "park_dirt", 2.0, PALETTE["soil"]),
     "grass": lambda: textured_material("grass", "leafy_grass", 2.5, PALETTE["grass"], tint=0.85),
-    # On the detail path rather than the site path: the entrance threshold is
-    # part of the building asset, and the site's raw 2K library maps rode into
-    # the GLB with it — 6.8 MB of a 9.9 MB export, for a strip of paving under
-    # the doors.
+    # Detail path keeps the threshold's textures web-sized in the building GLB.
     "paving": lambda: detail_material("paving"),
 }
 
@@ -1854,10 +1620,7 @@ def apply_palette(parts: Parts) -> None:
             base_color, roughness, metallic = PALETTE[key]
             assign(group, principled(key, base_color, roughness, metallic))
 
-        # Projected here rather than only at bake time so the preview renders
-        # the same surface the browser will. A preview that shows flat colour
-        # where the asset ships tiling detail sends you looking for a fault in
-        # the material — see `learnings.md` §4.
+        # Project now so the preview matches the browser. See `learnings.md` §4.
         for obj in group:
             project_detail_uv(obj)
 
@@ -1964,10 +1727,7 @@ ENTRANCE_POSE = {
     "fov": 38.0,
 }
 
-# The transition's own frame: on the entrance axis at eye height, close enough
-# that the opening is most of the picture and the vestibule beyond it is
-# readable. This is the shot the whole rebuild is for, so it gets a pose rather
-# than being judged off an elevation study taken from 20 m.
+# Eye-height view on the entrance axis, looking into the vestibule.
 THRESHOLD_POSE = {
     "location": Vector((0.0, -13.0, 1.9)),
     "target": Vector((0.0, -6.4, 1.9)),
@@ -1980,9 +1740,7 @@ SCAFFOLD_POSE = {
     "fov": 40.0,
 }
 
-# Square to the review row and close, aimed `lead` metres west of it. Derived
-# rather than typed: the row's own position decides where the camera stands.
-# Mirrored by the `practice` pose in src/scenes.
+# Derived from `REVIEW`. Mirrored by the `practice` pose in src/scenes.
 CANDIDATES_POSE = {
     "location": Vector((REVIEW["centre"], REVIEW["y"] - REVIEW["standoff"], 4.2)),
     "target": Vector((REVIEW["centre"] - REVIEW["lead"], REVIEW["y"], 3.5)),
@@ -2062,9 +1820,7 @@ def preview() -> Parts:
     apply_palette(construction)
     for panel in candidates:
         apply_palette(panel)
-    # `--open` previews the leaves parked over their sidelights, which is the
-    # state the transition spends most of its length in and the only one where
-    # the sidelight/leaf split can be judged at all.
+    # `--open` previews the leaves parked over their sidelights.
     parked = "--open" in sys.argv
     for _, leaf in doors:
         apply_palette(leaf)
@@ -2143,7 +1899,7 @@ def unwrap_occlusion(obj) -> None:
         raise RuntimeError(f"{obj.name}: detail UVs must be first, got {mesh.uv_layers[0].name}")
 
 def gltf_settings_tree():
-    """The one node group Blender's glTF exporter reads occlusion out of."""
+    """Node group the glTF exporter reads occlusion from."""
     tree = bpy.data.node_groups.get(GLTF_SETTINGS)
     if tree:
         return tree
@@ -2186,11 +1942,7 @@ def bake_into(obj, image) -> None:
     scene.cycles.samples = BAKE_SAMPLES
     scene.cycles.use_denoising = True
     scene.render.bake.margin = 10
-    # Bleed along mesh adjacency rather than outward in image space. The mesh is
-    # built from overlapping boxes, so many islands are interior faces baking to
-    # solid black; an image-space margin walks that black across whatever island
-    # the packer happened to put next to it. Widening the gap instead only trades
-    # the artifact for wasted atlas.
+    # Stops black interior faces bleeding into neighbouring islands.
     scene.render.bake.margin_type = 'ADJACENT_FACES'
     scene.world.light_settings.distance = AO_DISTANCE
 
@@ -2207,7 +1959,7 @@ def bake_image(name: str, size: int = BAKE_SIZE):
     return bpy.data.images.new(name, size, size)
 
 def report_levels(name: str, image) -> None:
-    """What an occlusion bake is worth checking for."""
+    """Print occlusion bake statistics."""
     import numpy
 
     pixels = numpy.empty(len(image.pixels), dtype=numpy.float32)
@@ -2276,7 +2028,7 @@ def verify_export(destination: Path) -> None:
         raise RuntimeError(f"{destination.name}: occlusion reads TEXCOORD {sorted(coords)}, want 1")
 
 def bake_surface(obj, name: str, size: int = BAKE_SIZE):
-    """Bake what real-time light cannot reach, and only that."""
+    """Bake ambient occlusion only."""
     project_detail_uv(obj)
     unwrap_occlusion(obj)
     isolate_materials(obj)
@@ -2330,10 +2082,7 @@ def build_asset() -> None:
     export(scaffold, CONSTRUCTION_OUTPUT)
     bpy.data.objects.remove(scaffold, do_unlink=True)
 
-    # Baked in place, so each leaf carries the reveal's occlusion, then removed
-    # before the building bake for the reason the scaffold is: they move. A door
-    # that slides open leaving its own shadow painted on the jamb behind it is
-    # the same class of fault as a struck scaffold whose shadow stays.
+    # Leaves move, so remove them before the building bake (like the scaffold).
     leaves = []
     for side, leaf in doors:
         obj = join_all(leaf.all(), f"door_{side}")
@@ -2347,10 +2096,6 @@ def build_asset() -> None:
     bake_surface(building, "exterior")
     export(building, OUTPUT)
 
-    # Planting ships unbaked, with its own library materials. Unwrapping and
-    # lightmapping thousands of alpha-mapped leaf cards would cost far more
-    # than lighting them in the browser, and their leaf shadow is already in
-    # the building's bake because they stood in the scene while it ran.
     export_planting(site)
 
 def requested_views() -> list[str]:
@@ -2359,10 +2104,7 @@ def requested_views() -> list[str]:
         views = ["exterior"]
     return views
 
-# The zone's ground and paving maps are written by `tools/web_textures.py`.
-# They used to be written here, which meant resizing six JPEGs required
-# launching Blender and building an entire apartment block first — and none of
-# the step ever needed `bpy`.
+# Ground and paving web textures are written by `tools/web_textures.py`.
 LUMA = (0.2126, 0.7152, 0.0722)
 
 def apply_tint(image, color, amount: float = 1.0, relevel: bool = False) -> None:
@@ -2394,10 +2136,7 @@ def export_planting(site: Parts) -> None:
     flora = site.get("flora", [])
     if not flora:
         return
-    # Unbaked, and so carrying no occlusion. Unwrapping and baking thousands of
-    # alpha-mapped leaf cards would cost far more than lighting them in the
-    # browser, and their leaf shadow already reaches the building through the
-    # real-time shadow map.
+    # Unbaked: too many leaf cards. Lit in the browser.
     simplify_flora(flora)
     export(flora, PLANTING_OUTPUT, occluded=False)
 

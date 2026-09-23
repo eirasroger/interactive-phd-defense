@@ -1,17 +1,10 @@
 import type { CameraPose } from '@/engine/camera/types';
 
-/**
- * Global presentation constants. Values that scenes are expected to share
- * live here rather than being restated per scene.
- */
+/** Global presentation constants shared by all scenes. */
 
 /**
- * The design surface. Every scene is composed against exactly these pixels and
- * the whole stage is scaled to fit the display, so a hall's resolution and
- * aspect change the size of the presentation and nothing else about it.
- *
- * 16:9. A 16:10 or 4:3 projector letterboxes, which costs some screen and buys
- * the guarantee that nothing reflows between rehearsal and the defence.
+ * Design surface in pixels. The stage scales to fit the display, so layout
+ * never reflows. Non-16:9 displays letterbox.
  */
 export const STAGE = {
   width: 1920,
@@ -33,36 +26,24 @@ export const ORIGIN_POSE: CameraPose = {
 
 export const TRANSITION = {
   /**
-   * Camera travel between adjacent scenes, **paced by the move** rather than
-   * fixed.
-   *
-   * One duration for every transition is the reason the act made people
-   * queasy. Act I's moves range from a five-metre step down the avenue to a
-   * ninety-metre glide over the lake and a hundred-degree turn out of the
-   * park, so one fixed duration runs the long moves four times faster than the
-   * short ones. The eye tracks *angular* rate, so a fast pan is more
-   * disorienting than a fast dolly: the two are budgeted separately and
-   * whichever needs longer wins.
-   *
-   * Both rates are deliberately unhurried. 34 m/s is a low pass rather than a
-   * flight, and 24°/s is about as fast as a camera can turn before the scene
-   * smears rather than sweeps.
+   * Camera travel between adjacent scenes, timed by distance and turn angle.
+   * Each rate gives a duration and the longer one wins, so long moves and
+   * fast pans stay comfortable to watch.
    */
   camera: {
     metresPerSecond: 34,
     degreesPerSecond: 24,
-    /** Nothing snaps and nothing outstays the presenter. */
+    /** Clamp on the computed duration. */
     minSeconds: 1.8,
     maxSeconds: 4.5,
   },
   /**
-   * The composition brackets the camera move: the old scene leaves at once,
-   * the camera travels through an empty frame, the new one arrives as it
-   * settles. Mirrored by `--d-content` in tokens.css.
+   * Old content leaves at once and new content arrives as the camera settles.
+   * `seconds` must match `--d-content` in tokens.css.
    */
   content: {
     seconds: 0.55,
-    /** Seconds before the camera stops, not a share of the move. */
+    /** Seconds before the camera stops. */
     settle: 0.25,
     minLeadSeconds: 0.2,
   },
@@ -70,11 +51,7 @@ export const TRANSITION = {
   jumpSeconds: 0.7,
 } as const;
 
-/*
- * Background, fog and lighting are no longer global constants. They belong to
- * whichever zone is mounted — see `world/zones.ts` — because a dusk exterior
- * and a lit interior cannot share one set of values.
- */
+/* Background, fog and lighting are set per zone in `world/zones.ts`. */
 
 /** Sustained FPS below this triggers an automatic quality step-down. */
 export const ADAPTIVE = {

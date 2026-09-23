@@ -11,60 +11,33 @@ export interface ZoneContext {
   readonly world: World;
   readonly renderer: WebGLRenderer;
   /**
-   * The camera the zone is looked at with.
-   *
-   * Held rather than passed to `update`, because what needs it is level of
-   * detail — the park swaps modelled trees for cards by distance — and that is
-   * a property of the zone's own content rather than of a frame. One reference
-   * taken once cannot go stale: `CameraRig` owns exactly one camera for the
-   * length of the deck.
+   * The deck camera, used for level of detail (e.g. park tree billboards).
+   * Safe to hold: `CameraRig` owns one camera for the whole deck.
    */
   readonly camera: PerspectiveCamera;
   readonly quality: QualitySettings;
-  /**
-   * Assets are already resolved: scenes declare what their zone needs, and the
-   * scene director loads them before the zone is entered.
-   */
+  /** Already loaded by the scene director before the zone is entered. */
   readonly assets: AssetLoader;
 }
 
 export interface ZoneInstance {
   /**
-   * How far through the zone's scene run the presentation has reached, 0 to 1.
-   *
-   * World state is derived from position in the deck rather than owned by
-   * scenes, so navigating backwards restores it without any scene knowing that
-   * it happened. `animate` is false for direct navigation, mirroring the
-   * snap-versus-move split the camera already uses.
+   * Progress through the zone's scenes, 0 to 1. World state is derived from
+   * deck position, so backward navigation restores it. `animate` is false for
+   * direct jumps.
    */
   setProgress?(progress: number, animate: boolean): void;
   /**
-   * The presentation is leaving this zone through a designed threshold.
-   *
-   * Distinct from `setProgress`, which is world state derived from the deck and
-   * is true for as long as the scene is. This is a one-off event with a
-   * duration: the doors of a building opening as the camera comes down the
-   * avenue. `seconds` is the length of the camera move it happens inside, so a
-   * zone can phase itself against the move rather than against a clock of its
-   * own — and `seconds <= 0` means set the open state without animating, for a
-   * jump.
+   * One-off exit event, such as building doors opening as the camera
+   * approaches. `seconds` is the length of the camera move; `seconds <= 0`
+   * sets the state without animating.
    */
   setThreshold?(open: boolean, seconds: number): void;
   setBeyond?(present: boolean): void;
   /**
-   * This zone is now the one being *looked at*, so it owns the sky.
-   *
-   * Background and environment map are global and there is exactly one of each,
-   * so they belong to whichever zone the camera is in — which during a crossing
-   * is still the one being left, for as long as it is still on screen. Called
-   * on mount for an ordinary zone change, and **deferred to the release** for a
-   * crossing, alongside the shadow rig and for the same reason: taking the sky
-   * off the exterior at the start of the move strips it while the whole of it
-   * is still in frame.
-   *
-   * A zone with nothing to install still implements this — clearing is a state,
-   * not an absence, and inheriting the last zone's sky is what happens to
-   * anything that declines to say.
+   * Installs this zone's background and environment map. Called on mount, or
+   * at the release point during a crossing so the outgoing sky stays while it
+   * is on screen. A zone with no sky should implement this to clear it.
    */
   takeSky?(): void;
   update?(dt: number): void;
@@ -73,28 +46,17 @@ export interface ZoneInstance {
 }
 
 /**
- * A designed crossing between two zones, declared by the scene being entered.
- *
- * Without one, a zone change is a cut: the outgoing world is released, the new
- * one is mounted, and light and air are set rather than eased, because there is
- * nothing on screen for a tween to be continuous with. That is the right
- * default and it is what every zone boundary in the deck used to be.
- *
- * A crossing says the opposite is true — that the camera travels from one world
- * into the other through geometry that belongs to both, and that for a couple
- * of seconds they are the same place.
+ * A continuous camera move between two zones, declared by the scene being
+ * entered. Both zones stay mounted during the move. Without a crossing, a zone
+ * change is a cut.
  */
 export interface ZoneCrossing {
   /** Length of the camera move this happens inside. */
   readonly seconds: number;
   /**
-   * World z the camera passes through, at which the outgoing zone is released.
-   *
-   * A plane, not a moment, because what makes the release invisible is *where*
-   * the camera is and not how long it has been travelling: it has to be far
-   * enough inside that the outgoing world is behind the doorway. The whole deck
-   * is traversed along −Z, so the plane is crossed when the camera's z falls
-   * below this.
+   * World z at which the outgoing zone is released, once it is behind the
+   * doorway. The deck travels along -Z, so this fires when camera z drops
+   * below it.
    */
   readonly releaseAtZ: number;
 }
@@ -105,6 +67,6 @@ export interface ZoneDefinition {
   readonly atmosphere: Atmosphere;
   /** Shadow frustum sized to this zone's content. */
   readonly shadow: { readonly radius: number; readonly far: number };
-  /** Zones with no built content — the demo span — declare atmosphere only. */
+  /** Omitted by zones with no built content (the demo span). */
   create?(context: ZoneContext): ZoneInstance;
 }

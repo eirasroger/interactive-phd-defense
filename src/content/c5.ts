@@ -1,23 +1,11 @@
 /**
- * C5 — context-adaptive recommender. Data of record.
+ * C5: context-adaptive recommender. All values come from the paper. Where prose
+ * and a figure differ, the prose value is used (the figures are box plots).
  *
- * Everything printed at this station is read from the paper. Where the paper
- * states a value in prose and draws it in a figure, the prose value governs,
- * because the figure is a box plot over perturbed inputs and its median is a
- * different quantity from the average the text quotes.
- *
- * Two things are deliberately drawn without numbers. Fig. 7's stakeholder
- * scores are only legible off the chart, so the stakeholder beat draws the
- * bands and the two crossings the text names and prints nothing. Fig. 8 labels
- * every cell, so the application beat prints all twenty.
- *
- * `assertPublished` checks the arithmetic that the wall asserts: the feature
- * count against its parts, the corpus against its sources and its split, every
- * model score against the expert band the paper says it falls inside, and the
- * one ranking crossing the application beat exists to show.
+ * `assertPublished` checks the printed arithmetic against the paper at load.
  */
 
-/* ---- What the corridor hands over ----------------------------------------- */
+/* ---- Inputs from earlier contributions ------------------------------------ */
 
 export interface Upstream {
   readonly key: string;
@@ -53,7 +41,7 @@ export const UPSTREAM: readonly Upstream[] = [
   },
 ];
 
-/* ---- The context the model is given ---------------------------------------- */
+/* ---- Context inputs --------------------------------------------------------- */
 
 export const CONDITIONING = {
   archetypes: 8,
@@ -65,22 +53,13 @@ export interface ContextInput {
   readonly key: string;
   readonly label: string;
   readonly note: string;
-  /**
-   * Which conditioning channel the palette gives it. `who` is the actor, `what`
-   * is the use. The opening beat introduces the two tones and the stakeholder
-   * and application beats spend them, so the wall teaches the code once.
-   */
+  /** Colour channel: `who` is the actor, `what` is the use. Reused by later beats. */
   readonly channel: 'who' | 'what';
 }
 
 /**
- * The two inputs that carry the decision rather than the product.
- *
- * Neither is counted here. The archetypes are a fixed set, but the application
- * categories are defined per product category and the four used for concrete
- * were chosen as representative rather than exhaustive, so a count on the
- * opening beat would assert a taxonomy the work does not claim. The numbers
- * belong to the beats that evaluate them.
+ * The two decision inputs. No counts shown here: the four applications used
+ * for concrete are a representative sample of a per-category set.
  */
 export const CONTEXT_INPUTS: readonly ContextInput[] = [
   {
@@ -102,26 +81,20 @@ export const OUTPUT = {
   note: 'Every score is formed against the others in the set',
 } as const;
 
-/** The two locators the opening beat writes over its incoming and its context. */
+/** Opening-beat labels over the upstream inputs and the context inputs. */
 export const OPENING = {
   upstream: 'From the preceding contributions',
   context: 'Supplied with each decision',
 } as const;
 
-/**
- * The stage this contribution builds.
- *
- * Named on the wall before any of its mechanism is drawn, because the opening
- * beat has to say what the station is. The corridor's own pipeline ends here
- * and C3 already calls this stage by this name.
- */
+/** The pipeline stage this contribution builds. C3 uses the same name. */
 export const STAGE = {
   index: 'The remaining stage',
   name: 'Recommendation',
   line: 'Turning the evidence into an ordering that fits the decision',
 } as const;
 
-/** The approach, named here and specified at the architecture beat. */
+/** The approach in brief. Detailed at the architecture beat. */
 export const APPROACH = {
   claim:
     'The model learns this relationship from labelled decisions, so it adapts to each context without being re-specified for it.',
@@ -134,18 +107,11 @@ export const APPROACH = {
 
 /* ---- Why the relation is learned -------------------------------------------- */
 
-/**
- * The heading of the supervision beat, read by `act2.ts`.
- *
- * It names the method, because nothing else in the station does: the relation
- * is conditioned on context and formed across an incomplete, unordered set, and
- * those three properties together are what a deep model is applied to. The
- * architecture that carries it is drawn at the beat after this one.
- */
+/** Supervision beat heading, read by `act2.ts`. */
 export const LEARNED_CLAIM =
   'No benchmark data set exists for this task, and the deep model applied to it is trained on labelled decisions.';
 
-/** What was done about it, and the line the beat opens on. */
+/** Opening line of the supervision beat. */
 export const CORPUS_CLAIM =
   'The corpus was built from three sources, each labelled by a different method.';
 
@@ -157,17 +123,11 @@ export interface LabelSource {
   readonly count: number;
   /** Share of the group-weighted loss. §3.3.2 gives 2/5, 2/5, 1/5. */
   readonly weight: number;
-  /** The provenance, set as the card's micro-label. */
+  /** Provenance, shown as the card's micro-label. */
   readonly produced: string;
-  /**
-   * The one fact the diagram beside it cannot draw.
-   *
-   * Each card carries a figure of its own labelling method, so a line restating
-   * that method is a line the reader has already read. Where the figure says
-   * everything, the card carries no fact at all.
-   */
+  /** Extra fact the card's diagram cannot show. Omitted when the diagram covers it. */
   readonly fact?: string;
-  /** What the group puts into the trained model. */
+  /** What the group adds to the trained model. */
   readonly contributes: string;
 }
 
@@ -202,11 +162,8 @@ export const SOURCES: readonly LabelSource[] = [
 ];
 
 /**
- * How the generated set was sampled, §4.2.
- *
- * The archetype mix is the part a committee tends to ask about: a tenth of the
- * scenarios carry more than one priority, and those are the ones that put
- * conflicting objectives in front of the model deliberately.
+ * How the generated set was sampled, §4.2. A tenth of the scenarios combine
+ * several priorities, which gives the model conflicting objectives.
  */
 export const GENERATION = {
   model: 'gpt-4.1',
@@ -222,9 +179,8 @@ export const GENERATION = {
 export const CORPUS = { total: 42874, train: 30011, test: 12863 } as const;
 
 /**
- * Table 1. The split is 70/30 drawn separately inside each source, which is
- * what makes the test partition answerable: all three label types sit on both
- * sides of it, and the five cross-validation folds preserve those proportions.
+ * Table 1. A 70/30 split made inside each source, so all three label types
+ * appear in train and test. The five CV folds keep the same proportions.
  */
 export const SPLIT = {
   train: 0.7,
@@ -238,12 +194,8 @@ export const SPLIT = {
 } as const;
 
 /**
- * What a group's weight is worth against what it contributed.
- *
- * The expert group is 0.63% of the scenarios and a fifth of the objective, and
- * the ratio between those two is the argument for weighting by source at all.
- * Derived from the counts above rather than written as a constant, so the two
- * cannot drift apart.
+ * Each source's share of the data against its share of the loss. The expert
+ * group is 0.63% of the data and 20% of the loss. Derived from `SOURCES`.
  */
 export interface Influence {
   readonly key: string;
@@ -253,7 +205,7 @@ export interface Influence {
   readonly amplification: number;
 }
 
-/** What the two bands are, written beside them rather than above and below. */
+/** Labels for the two influence bands. */
 export const INFLUENCE_BANDS = {
   volume: 'How much data each source supplied',
   objective: 'How much each source weighs in training',
@@ -282,20 +234,14 @@ export const FEATURES = {
 } as const;
 
 /**
- * The eighteen attributes a concrete alternative carries, §3.1.1 and §4.1.
- *
- * Eleven are sustainability indicators and hold for any construction product;
- * the seven performance properties are drawn from EN 206 and are the reason the
- * case study is concrete rather than something else. A different product
- * category keeps the first eleven and derives its own seven.
- *
- * `assertPublished` checks the count against `FEATURES.attributes`, so the list
- * and the arithmetic printed beside it cannot drift.
+ * The 18 attributes of a concrete alternative, §3.1.1 and §4.1. Eleven are
+ * generic sustainability indicators. Seven are concrete-specific performance
+ * properties from EN 206. Count checked against `FEATURES.attributes`.
  */
 export interface AttributeFamily {
   readonly key: string;
   readonly label: string;
-  /** The standard the family is derived from, where it is derived from one. */
+  /** Source standard, if any. */
   readonly source?: string;
   readonly attributes: readonly string[];
 }
@@ -348,18 +294,12 @@ export const ATTRIBUTE_FAMILIES: readonly AttributeFamily[] = [
   },
 ];
 
-/** What the left register is, named above the vector it lists. */
+/** Label above the input vector list. */
 export const CASE_STUDY = {
   label: 'The input vector for a concrete alternative',
 } as const;
 
-/**
- * The heading of the architecture beat, read by `act2.ts`.
- *
- * It describes the pass that produces a recommendation, in the order the pass
- * runs, because that order is the contribution: a score exists only relative to
- * the set the alternative arrived in.
- */
+/** Architecture beat heading, read by `act2.ts`. Lists the forward pass in order. */
 export const ARCHITECTURE_CLAIM =
   'The model encodes every alternative, compares them against each other, and scores each one against the whole set.';
 
@@ -392,7 +332,7 @@ export const PIPELINE: readonly Layer[] = [
   },
 ];
 
-/** Stated once under the board, because the input strips cannot say it. */
+/** Note under the architecture board. */
 export const SHARED_CONTEXT =
   'The stakeholder archetype and the application are the same for every alternative in the set.';
 
@@ -412,7 +352,7 @@ export const MODEL = {
 export interface Judgement {
   readonly id: string;
   readonly expert: number;
-  /** δ(1 − c) on the reported confidence, as the paper's own footnote defines. */
+  /** δ(1 − c) on the reported confidence, as defined in the paper's footnote. */
   readonly uncertainty: number;
   readonly model: number;
 }
@@ -426,19 +366,12 @@ export const PANEL: readonly Judgement[] = [
   { id: 'E', expert: 0.05, uncertainty: 0.11, model: 0.06 },
 ];
 
-/**
- * The model's own interval, printed in Table 3 beside every score.
- *
- * Both sides of the comparison are intervals: the experts carry δ(1 − c) on
- * their reported confidence, and the model carries its mean absolute error. A
- * figure that drew the model as a point would claim a precision the paper does
- * not.
- */
+/** Model interval (its mean absolute error), printed in Table 3 beside every score. */
 export const MODEL_UNCERTAINTY = 0.05;
 
 /**
- * §5.1. The scenario in `PANEL` is one of the thirty-two; these are the figures
- * across all of them, except the mean deviation, which belongs to that scenario.
+ * §5.1. Figures across all 32 scenarios, except the mean deviation, which is
+ * for the `PANEL` scenario only.
  */
 export const AGREEMENT = {
   experts: 6,
@@ -474,7 +407,7 @@ export const AGREEMENT = {
     'What distance remains is concentrated in the mid-ranked alternatives, where the experts also parted from each other.',
 } as const;
 
-/** The three things the beat separates, named where each one begins. */
+/** Section labels of the validation beat. */
 export const VALIDATION_BLOCKS = {
   panel: 'Validation against the expert panel',
   behaviour: 'Model behaviour under context',
@@ -482,12 +415,8 @@ export const VALIDATION_BLOCKS = {
 } as const;
 
 /**
- * The two conditioning inputs, segmented because they do different work.
- *
- * §5.3 finds stakeholder priority modest and margin-level; §5.4 finds
- * application context capable of genuinely reordering the mid-tier. Drawn side
- * by side under one heading they read as one effect, so each carries its own
- * heading and its own one-line reading.
+ * The two conditioning inputs, each with its own heading. Stakeholder priority
+ * shifts margins (§5.3). Application context can reorder the mid-tier (§5.4).
  */
 export const BEHAVIOUR_STUDIES = {
   stakeholder: {
@@ -500,7 +429,7 @@ export const BEHAVIOUR_STUDIES = {
   },
 } as const;
 
-/** What the whole beat comes to, set under it. */
+/** Summary line under the behaviour beat. */
 export const BEHAVIOUR_TAKEAWAY = 'Indicator weighting changes dynamically with context.';
 
 export const VALIDATION_CLAIM =
@@ -509,9 +438,8 @@ export const VALIDATION_CLAIM =
 /* ---- Who is deciding -------------------------------------------------------- */
 
 /**
- * §5.3 without numbers. Fig. 7's values are only readable off the chart, and
- * the claim needs none of them: three tiers hold across all eight archetypes,
- * and the only thing that moves is the gap inside the middle tier.
+ * §5.3: three tiers hold across all eight archetypes. Only the gap inside the
+ * middle tier moves.
  */
 export const TIERS = [
   { key: 'upper', label: 'Upper tier', members: ['D', 'C'], note: 'Holds across all eight' },
@@ -546,14 +474,8 @@ export const ARCHETYPES: readonly Archetype[] = [
 ];
 
 /**
- * Fig. 7 in full: eight stakeholder archetypes, five products, forty scores.
- *
- * The earlier pass drew this without values, on the grounds that the figure
- * prints none. It prints none as *labels*, but it is a bar chart on a 0–1 axis
- * and every bar is legible against its gridlines, so the values below are read
- * from it at chart precision. Drawn as bars they carry the paper's own reading:
- * D and C hold the upper tier and E stays near zero under every archetype,
- * while the distance inside the contested pair opens and closes.
+ * Fig. 7: eight archetypes by five products. The figure has no value labels,
+ * so scores (0 to 1) are read off the bars at chart precision.
  */
 export interface StakeholderScenario {
   readonly code: string;
@@ -572,7 +494,7 @@ export const STAKEHOLDER_SCENARIOS: readonly StakeholderScenario[] = [
   { code: 'S8', label: 'Pragmatic contractor', scores: { A: 0.603, B: 0.503, C: 0.822, D: 0.942, E: 0.067 } },
 ];
 
-/** The two archetypes §5.3 names, and the boundary each one sits on. */
+/** The two archetypes named in §5.3: smallest and largest A-B gap. */
 export const STAKEHOLDER_MARKED = ['S3', 'S5'] as const;
 
 export const STAKEHOLDER_CLAIM =
@@ -635,7 +557,7 @@ export interface Salience {
   readonly concentration: string;
 }
 
-/** The indicator names, so a slope line can follow one indicator across columns. */
+/** Indicator names by key, so a slope line can follow one indicator across columns. */
 export const INDICATORS = {
   cost: 'Life cycle costs',
   gwp: 'Global warming potential',
@@ -710,18 +632,9 @@ export const SALIENCE: readonly Salience[] = [
 ];
 
 /**
- * Fig. 10's bar lengths, read from the chart against its 0.00 and 0.01 gridlines.
- *
- * The ordering is published and exact; these magnitudes are the figure's shape
- * at the precision the figure supports, which is what the beat needs. What they
- * carry is §5.5's distinction: thermal insulation and architectural finish fall
- * away steeply after their top three, and the standard structural application
- * spreads importance across many indicators instead.
- *
- * `remaining` is the aggregated contribution of the seven indicators outside the
- * top ten, which the paper plots as its own bar. It is small where importance is
- * concentrated and large where it is not, so it is the reading rather than a
- * footnote.
+ * Fig. 10 bar lengths, read off the chart at gridline precision. The order is
+ * exact. Per §5.5, thermal and finish drop steeply after the top three, while
+ * standard structural spreads importance across many indicators.
  */
 export interface SalienceWeight {
   readonly key: IndicatorKey;
@@ -755,34 +668,31 @@ export const SALIENCE_WEIGHTS: Readonly<Record<string, readonly SalienceWeight[]
   ],
 };
 
-/** The seven indicators outside the top ten, plotted as one bar in Fig. 10. */
+/**
+ * Combined weight of the seven indicators outside the top ten (one bar in
+ * Fig. 10). Small where importance is concentrated.
+ */
 export const SALIENCE_REMAINING: Readonly<Record<string, number>> = {
   standard: 0.0072,
   thermal: 0.0012,
   finish: 0.0038,
 };
 
-/** The widest bar any panel draws, so the three share one scale. */
+/** Widest bar across all panels, so the three share one scale. */
 export const SALIENCE_MAX = 0.015;
 
-/** How many ranks a column draws before an indicator drops to the muted lane. */
+/** Ranks shown per column before an indicator moves to the muted lane. */
 export const SHOWN_RANKS = 5;
 
 export const SALIENCE_CLAIM =
   'These orderings came out of the labelled data, and they agree with what the experts said they do.';
 
-/* ---- Recommending on what a project actually holds --------------------------- */
+/* ---- Robustness to missing data ---------------------------------------------- */
 
 /**
- * Table 4. Whole categories of evidence removed for every alternative at once.
- *
- * The conditions land on family blocks, which is why the drawing can extinguish
- * them as blocks: the cost condition is the economic family, the EPD condition
- * is the environmental and circularity families together, and the performance
- * condition is the seven EN 206 properties. Product health is masked by none of
- * the three and stays lit, which the drawing shows rather than hides.
- *
- * `topChanged` is 0 in all three rows. That is the result the beat exists for.
+ * Table 4. Each condition removes whole attribute families for every
+ * alternative. Health is never masked. `topChanged` is 0 in every row: the
+ * top recommendation never changes.
  */
 export interface Masking {
   readonly key: string;
@@ -843,15 +753,8 @@ export const ROBUSTNESS = {
 /* ---- What the contribution enables --------------------------------------------- */
 
 /**
- * The three things a person should carry out of this station.
- *
- * Not a summary of the beats behind it. Each one is what the tool lets a
- * practitioner do, and each is drawn on the same diagram rather than
- * illustrated beside it: the evidence read, the context supplied, and the
- * evidence that is missing.
- *
- * `caption` is the beat heading, read by `act2.ts`, so the wall and the heading
- * are one sentence written once.
+ * The three closing claims: what the tool lets a practitioner do.
+ * `caption` is also the beat heading, read by `act2.ts`.
  */
 export interface Enablement {
   readonly key: string;
@@ -891,32 +794,21 @@ export const ENABLES: readonly Enablement[] = [
 export const ENABLES_EYEBROW = 'What this contribution enables';
 
 /**
- * The closing cards are a showcase, not a reproduction of the case study.
- *
- * The orderings below are arranged to demonstrate what the tool does: a
- * cost-led shortlist that puts the cheapest alternative first, and a
- * recommendation that promotes a different one once the whole profile is read.
- * They carry no values on the wall and assert nothing about the concrete
- * evaluation, which is drawn in full at the beats before this one.
+ * Illustrative orderings for the closing cards. They demonstrate the tool's
+ * behaviour and are separate from the case study results.
  */
 export const SHOWCASE = {
   cost: ['A', 'D', 'C', 'B', 'E'] as readonly ProductId[],
   recommended: ['D', 'C', 'A', 'B', 'E'] as readonly ProductId[],
-  /** The alternative cost puts second and the full profile puts first. */
+  /** Second by cost, first by the full profile. */
   promoted: 'D' as ProductId,
   scores: { A: 0.61, B: 0.42, C: 0.83, D: 0.96, E: 0.06 } as Readonly<Record<ProductId, number>>,
-  /**
-   * Where the scores land once whole categories of evidence are removed. Every
-   * one moves a little and the ordering is unchanged, which is the point.
-   */
+  /** Scores with evidence categories removed. Each moves slightly; the order holds. */
   uncertain: { A: 0.65, B: 0.39, C: 0.79, D: 0.93, E: 0.09 } as Readonly<Record<ProductId, number>>,
 
   /**
-   * Four decision contexts and the ordering each one produces.
-   *
-   * The leading alternative changes three times across them, because a card
-   * that keeps the same winner under every setting shows nothing. `who` and
-   * `what` are the dial positions the setting corresponds to.
+   * Four decision contexts and their orderings. The leader changes three times.
+   * `who` and `what` are dial positions.
    */
   contexts: [
     { who: 6, what: 0, order: ['D', 'C', 'A', 'B', 'E'] },
@@ -928,10 +820,10 @@ export const SHOWCASE = {
 
 export const COST_LABELS = { cost: 'Cost only', model: 'Full picture' } as const;
 
-/** The masking condition the third card draws: it takes two whole families off. */
+/** Masking condition shown on the third card (removes two families). */
 export const CLOSING_CONDITION = 'epd';
 
-/** The context change the second card draws, from Fig. 8. */
+/** Context change shown on the second card, from Fig. 8. */
 export const CONTEXT_MOVE = {
   who: 'Balanced optimiser',
   from: CROSSING.from,
@@ -980,8 +872,7 @@ function assertPublished(): void {
     throw new Error(`C5: the group weights sum to ${weight.toFixed(3)} and a loss needs 1.`);
   }
 
-  // Table 1, read both ways: every source's split has to reconstruct its own
-  // count, and the three splits together have to reconstruct the partition.
+  // Table 1: each source's split sums to its count, and all splits sum to the corpus split.
   let trained = 0;
   let tested = 0;
   for (const source of SOURCES) {
@@ -1018,8 +909,7 @@ function assertPublished(): void {
     );
   }
 
-  // Fig. 7 is read off a chart, so the readings are checked against what §5.3
-  // states about it rather than trusted.
+  // Fig. 7 values are read off a chart, so check them against the claims in §5.3.
   for (const scenario of STAKEHOLDER_SCENARIOS) {
     const { A, B, C, D, E } = scenario.scores;
     if (!(D > C && C > A && C > B && E < 0.1)) {
@@ -1067,8 +957,8 @@ function assertPublished(): void {
     throw new Error(`C5: the archetype mix covers ${(mix * 100).toFixed(1)}% of the scenarios.`);
   }
 
-  // §5.1: every model score falls inside the expert band, and the model's own
-  // interval is narrower than the expert's on every product.
+  // §5.1: every model score is inside the expert band, and the model interval
+  // is narrower than the expert interval for every product.
   for (const entry of PANEL) {
     if (MODEL_UNCERTAINTY >= entry.uncertainty) {
       throw new Error(

@@ -14,8 +14,8 @@
   color: var(--ink);
 }
 
-/* Two independent layers over one cell, so the state that is leaving cannot
-   resize the state that is arriving. Same reason as `framework.css`. */
+/* Both beats stack in one cell so the outgoing one cannot resize the incoming
+   one. Same pattern as `framework.css`. */
 .cp-method,
 .cp-scale {
   position: absolute;
@@ -32,7 +32,7 @@
   color: var(--accent);
 }
 
-/* ---- Beat 0: one declaration, read ------------------------------------- */
+/* ---- Beat 0: one declaration ------------------------------------------- */
 
 .cp-method {
   display: grid;
@@ -47,11 +47,7 @@
   align-content: center;
 }
 
-/*
- * The page is drawn rather than quoted. A wall of transcribed excerpts asks the
- * room to read; a document with the answers lit where they sit shows the
- * problem in one look, which is that they sit nowhere in particular.
- */
+/* A schematic document page with the extracted fields highlighted in place. */
 .cp-page {
   position: relative;
   aspect-ratio: 1 / 1.31;
@@ -72,7 +68,7 @@
   background-color: color-mix(in srgb, var(--c-base) 30%, transparent);
 }
 
-/* Body copy as texture: the words are never the point, the layout is. */
+/* Body text drawn as grey lines. */
 .cp-page-body {
   height: 44%;
   background-image: repeating-linear-gradient(
@@ -107,8 +103,7 @@
   will-change: transform;
 }
 
-/* Inside the highlight, because the page clips and a label hung off the right
-   edge was cut in half on every one of them. */
+/* Placed inside the highlight because the page clips overflow. */
 .cp-highlight-locus {
   position: absolute;
   right: var(--s-2);
@@ -123,7 +118,7 @@
   white-space: nowrap;
 }
 
-/* The travelling mark, parked on its highlight's right edge until it is flown. */
+/* Moving dot. Rests on its highlight's right edge until animated. */
 .cp-token {
   position: absolute;
   right: -0.28rem;
@@ -139,7 +134,7 @@
   will-change: transform;
 }
 
-/* One real sentence, because the point lands harder with something to read. */
+/* One real example sentence from a declaration. */
 .cp-exemplar {
   padding-left: var(--s-3);
   border-left: 2px solid color-mix(in srgb, var(--group-circularity) 50%, transparent);
@@ -204,8 +199,7 @@
   max-width: 11rem;
   padding: var(--s-2);
   border-radius: 6px;
-  /* The rail runs the full height behind this, so the note carries its own
-     ground rather than being read through a line. */
+  /* Opaque ground hides the rail line behind the note. */
   background-color: color-mix(in srgb, #ffffff 82%, transparent);
   font-size: 0.6875rem;
   line-height: var(--lh-snug);
@@ -318,8 +312,7 @@
   color: var(--accent);
 }
 
-/* The colour the verified cells wear in the field, so the number and the marks
-   are one statement and the field needs no key of its own. */
+/* Matches the verified cells in the field, so the field needs no key. */
 .cp-readout[data-tone='checked'] .cp-figure {
   color: #c07a12;
 }
@@ -352,8 +345,8 @@
   min-width: 0;
 }
 
-/* Sized from `CorpusField`'s own geometry constants, so the cells never land
-   on a fractional device pixel. */
+/* Must match the geometry constants in `CorpusField` so cells align to whole
+   device pixels. */
 .cp-canvas-frame {
   width: 797.5px;
   height: 412.5px;
@@ -366,8 +359,7 @@
   height: 100%;
 }
 
-/* All eleven, ordered by size, with the count and the share beside each. A
-   wrapping chip list hid the tail behind an "and six more". */
+/* All eleven categories by size, each with its count and share. */
 .cp-legend {
   display: grid;
   gap: var(--s-2);

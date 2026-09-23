@@ -14,7 +14,7 @@
   line-height: var(--lh-tight);
   letter-spacing: var(--ls-display);
 
-  /* Without tabular figures the count-up jitters sideways as digits change width. */
+  /* Tabular figures keep the count-up from jittering sideways. */
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }

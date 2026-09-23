@@ -7,42 +7,24 @@ export interface Building {
 }
 
 /**
- * How hard the baked occlusion bites.
- *
- * Not 1. Occlusion is a visibility term, not a light transport one — it says
- * how much sky a point can see, and says nothing about the light that arrives
- * by bouncing off the ground and the reveals. At full strength the vacant bay
- * went black: it is a recess, so its occlusion is near zero, and the bounce
- * that lit its insulation panels in Blender has no counterpart here.
+ * Baked occlusion strength (0-1). Kept below 1 because occlusion ignores
+ * bounce light, so deep recesses such as the vacant bay would go black.
  */
 const OCCLUSION = 0.65;
 
 /**
- * The exterior, lit here rather than painted in Blender.
- *
- * What arrives is the material itself: tiling brick and concrete on a
- * world-scale UV set, so surface detail is as sharp at the entrance as from the
- * establishing pose, plus one baked occlusion map on a second UV set carrying
- * what real-time light cannot work out — the soffit under the oversail, the
- * window reveals, the undersides of the balcony boxes.
- *
- * **An exterior asset is a hierarchy, not a mesh.** Blender joins each asset
- * into one object carrying a material slot per palette entry, and glTF stores
- * that as one primitive per material, which `GLTFLoader` expands into one child
- * mesh per material. Reducing an asset to a single mesh keeps one material and
- * silently discards the rest.
+ * The building exterior, lit in real time. Tiling materials use world-scale
+ * UVs. A baked occlusion map on a second UV set covers soffits, reveals and
+ * balcony undersides. Each asset is a hierarchy with one child mesh per
+ * material, so it must be kept whole.
  */
 export function createBuilding(gltf: GLTF): Building {
   return createBakedPart(gltf.scene);
 }
 
 /**
- * The meshes an exported object carries a given material on.
- *
- * The exporter writes one primitive per material, so a material name is the only
- * handle a part has once it is inside a glTF — and a name that stops matching
- * has to fail here rather than quietly return nothing, because what it is used
- * for is *hiding* something. See `learnings.md` §7e.
+ * Meshes whose material name starts with `material`. Throws when none match,
+ * since callers use this to hide parts. See `learnings.md` §7e.
  */
 export function findByMaterial(object: Object3D, material: string): Object3D[] {
   const found: Object3D[] = [];
@@ -59,12 +41,8 @@ export function findByMaterial(object: Object3D, material: string): Object3D[] {
 }
 
 /**
- * One exported object, with every material it carries.
- *
- * Cloned rather than reparented: the GLTF belongs to the asset cache and is
- * handed out again on every later visit to the zone, so its own hierarchy has
- * to stay intact. `Object3D.clone()` copies the tree and shares geometry and
- * materials by reference, which is what makes this cheap.
+ * Clones an exported object with all its materials. Cloning keeps the cached
+ * GLTF intact for later visits. Geometry and materials are shared by reference.
  */
 export function createBakedPart(source: Object3D): Building {
   const object = source.clone(true);
@@ -76,9 +54,7 @@ export function createBakedPart(source: Object3D): Building {
     meshes += 1;
     configure(mesh.material);
     mesh.castShadow = true;
-    // The elevation shadows itself: the balcony boxes project 1.45 m and at a
-    // 28 degrees sun throw the band across the facade that reads as a real sun.
-    // That shading is not in the bake any more, so it has to be cast.
+    // Balcony boxes cast shadow bands on the facade. This shading is not baked.
     mesh.receiveShadow = true;
   });
 
@@ -97,11 +73,8 @@ function configure(material: Material | Material[]): void {
 }
 
 /**
- * The top-level objects of an asset — one per object exported from Blender.
- *
- * Not the meshes. The candidates GLB holds four panels and each is a dozen
- * primitives, so traversing to meshes returns nearer fifty objects and loses
- * which panel each belongs to.
+ * Top-level objects of an asset, one per object exported from Blender. Each
+ * can hold many meshes.
  */
 export function findParts(gltf: GLTF, expected: number): Object3D[] {
   const parts = [...gltf.scene.children];
@@ -112,12 +85,8 @@ export function findParts(gltf: GLTF, expected: number): Object3D[] {
 }
 
 /**
- * Raises anisotropy on every map the exterior ships.
- *
- * Brick tiles at half a metre per repeat and is read at grazing angles from
- * every pose in the act, which is precisely the case trilinear filtering
- * handles worst — it is also where the facade turned to mush at distance.
- * Applied per zone rather than at load, because it is a quality-tier decision.
+ * Sets anisotropic filtering on every map, so tiled brick stays sharp at
+ * grazing angles. Called per zone because it depends on the quality tier.
  */
 export function sharpen(gltf: GLTF, anisotropy: number): void {
   const seen = new Set<Texture>();

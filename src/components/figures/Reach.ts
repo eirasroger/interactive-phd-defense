@@ -11,29 +11,26 @@ export interface Reach {
   play(step: number, settle: boolean): gsap.core.Timeline | null;
 }
 
-/** The ring's circumference, so the two arcs are written as shares of it. */
+/** Circumference of the r = 22 ring. Arc lengths are fractions of it. */
 const RING = 2 * Math.PI * 22;
 
-/** Where the funnel's wide end sits, and therefore where its wipe starts. */
+/** The funnel's wide end, where its wipe starts. */
 const FUNNEL_ORIGIN = '9px 32px';
 
 interface Glyph {
   readonly element: SVGSVGElement;
   /** Scaled up into place. */
   readonly pops: readonly SVGElement[];
-  /** Wiped open from the left, for a shape whose meaning is a direction. */
+  /** Wiped open from the left. */
   readonly wipes: readonly SVGElement[];
   /** Drawn along their own length. */
   readonly strokes: readonly SVGElement[];
 }
 
 /**
- * One mark per claim, drawn rather than illustrated.
- *
- * The ring closes the gap it opened with, because the claim beside it is about
- * a record being completed. The funnel is the encoder's own shape and it opens
- * from its wide end, because the claim beside it is about three hundred
- * coefficients arriving and fifty leaving.
+ * The icon for one claim. The ring closes its gap (a record completed). The
+ * funnel is the encoder shape and opens from its wide end (300 inputs, 50
+ * outputs).
  */
 function glyphFor(kind: Settlement['glyph']): Glyph {
   const board = svg('svg', { class: 'rh-glyph', viewBox: '0 0 64 64' });
@@ -81,18 +78,11 @@ function glyphFor(kind: Settlement['glyph']): Glyph {
 }
 
 /**
- * What the contribution settles.
+ * What the contribution settles: the headline claims, plus a fan showing the
+ * model applies to any attribute correlated with composition. End-of-life
+ * circularity is the one measured here.
  *
- * The headline is the reason the station exists, and the reach beside it is the
- * reason the contribution generalises: the model reads a composition and is
- * pointed at an attribute, and end-of-life circularity is the attribute it was
- * pointed at here. That claim is drawn at full size rather than listed, because
- * a mechanism tied to one attribute and a mechanism that takes any attribute
- * correlated with composition are two different contributions.
- *
- * Everything with a surface of its own enters as part of the build. A card that
- * is only ever faded with the panel arrives as an empty rectangle a beat before
- * anything is in it, which is what the swap into this beat used to look like.
+ * Each card animates in with its own content, so no empty card shows first.
  */
 export function createReach(): Reach {
   const source = el('div', {
@@ -226,7 +216,7 @@ export function createReach(): Reach {
             { opacity: 0, y: 14, duration: seconds(DURATION.slow), ease: EASE.enter },
             seconds(DURATION.normal * 0.85),
           )
-          // The card arrives with its heading, never before it.
+          // The card arrives together with its heading.
           .from(
             reach,
             {
@@ -271,8 +261,7 @@ export function createReach(): Reach {
             },
             seconds(DURATION.slow * 1.3),
           )
-          // Each branch is drawn out to the attribute it carries, and the
-          // attribute lands on the end of it.
+          // Each branch grows out, then its attribute lands at the end.
           .fromTo(
             branches,
             { scaleX: 0 },

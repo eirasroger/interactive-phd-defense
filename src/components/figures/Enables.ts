@@ -44,7 +44,7 @@ interface Art {
   readonly element: SVGSVGElement;
   build(line: gsap.core.Timeline, at: number): void;
   settle(): void;
-  /** Nothing drawn, because this card's beat has not been reached. */
+  /** Hides everything, for a card whose beat has not been reached. */
   clear(): void;
 }
 
@@ -72,11 +72,8 @@ const comb = (width: number, gap: number, familyGap: number) => {
 /* ---- 01. Beyond cost and availability -------------------------------------------- */
 
 /**
- * Two movements. The cost bar splits into the eighteen indicators the
- * recommendation reads, and what that leaves behind heads a comparison: the
- * shortlist cost alone produces against the one the model produces. The
- * cheapest alternative is second in the recommendation's own column, and the
- * one it promotes to first is what the card exists to show.
+ * The cost bar splits into the eighteen indicators, then two columns compare
+ * the ranking by cost alone with the model's ranking.
  */
 function profileArt(): Art {
   const element = art();
@@ -144,14 +141,7 @@ function profileArt(): Art {
   const from = SHOWCASE.cost;
   const to = SHOWCASE.recommended;
 
-  /*
-   * Two marks carry colour and nothing else does.
-   *
-   * On the left, the alternative cost would pick. On the right, the one the
-   * full picture picks. Every other token on either side is the same neutral,
-   * because a column that tints three of its five says the ordering is about
-   * those three when it is about the one at the top.
-   */
+  // Only the top pick in each column is coloured. All other tokens stay neutral.
   const costPick = from[0]!;
   const modelPick = to[0]!;
 
@@ -178,33 +168,22 @@ function profileArt(): Art {
   const rightNodes = to.map((id, rank) => nodeFor(id, COL_RIGHT, rank, 'model'));
 
   /*
-   * Centre to centre, with the tokens painted opaque on top of the links.
-   *
-   * Ending a connector on the circumference leaves the join at the mercy of the
-   * stroke width, the anti-aliasing and the rounding of the scale factor, and
-   * it showed as a gap on one side and an overshoot on the other. Running the
-   * line into the middle of each token and letting the token cover the rest
-   * makes the two ends identical by construction: what is visible emerges
-   * exactly at the rim, on both sides, at every row.
+   * Links run centre to centre and the opaque tokens cover the ends. This
+   * keeps both joins clean at the rim at any scale.
    */
   const LINK_X1 = COL_LEFT;
   const LINK_X2 = COL_RIGHT;
   const MIDLINE = (LINK_X1 + LINK_X2) / 2;
 
   /*
-   * The two connectors that carry a choice are drawn as a gradient along their
-   * own span: the cost pick leaves its colour behind on the way across, and
-   * the model's pick takes its colour on. Everything else stays neutral.
+   * The two top-pick links get a gradient: the cost pick fades out left to
+   * right, the model pick fades in.
    */
   const gradients = svg('defs');
 
   /**
-   * A ramp that fades a colour out to nothing along the span.
-   *
-   * The accent is an overlay, so where it reaches zero the neutral connector
-   * underneath is all that is left. That is what makes the far end of a
-   * carrying link identical to every other link, in weight as well as tone: a
-   * stroke cannot taper, but an overlay that disappears can.
+   * Gradient that fades a colour to zero opacity along the link span. It is
+   * drawn over the neutral link, so the faded end matches the other links.
    */
   const rampFor = (id: string, colour: string, towards: 'right' | 'left'): string => {
     const ramp = svg('linearGradient', {
@@ -237,8 +216,7 @@ function profileArt(): Art {
     return `M ${LINK_X1} ${start} C ${MIDLINE} ${start} ${MIDLINE} ${end} ${LINK_X2} ${end}`;
   };
 
-  // Every connector is the same neutral line. Two of them carry an accent on
-  // top of it, and the accent is what fades.
+  // Neutral links for all, plus a fading accent overlay on the two top picks.
   const links = from.map((id) => svg('path', { class: 'en-link', d: pathFor(id) }));
 
   const accents = [costPick, modelPick].map((id) => {
@@ -250,9 +228,8 @@ function profileArt(): Art {
   const promoted = rightNodes[to.indexOf(SHOWCASE.promoted)]!;
 
   /*
-   * The connectors are revealed by a clip rectangle in the board's own units,
-   * never by `stroke-dasharray`: on a scaled board the dash unit and the
-   * reported path length disagree and the line stops short of its end.
+   * Links are revealed with a clip rectangle. `stroke-dasharray` stops short
+   * of the path end on a scaled board.
    */
   const wipe = createWipe(element, CARD.width, CARD.height, 'x');
   const linkGroup = svg('g', { class: 'en-links', 'clip-path': wipe.clip });
@@ -361,7 +338,7 @@ function profileArt(): Art {
         compare + seconds(DURATION.quick),
       );
 
-    // One left-to-right gesture, because the two columns are formed together.
+    // One left-to-right wipe for all links.
     const cross = compare + seconds(DURATION.slow);
     line.fromTo(
       wipe.rect,
@@ -371,13 +348,8 @@ function profileArt(): Art {
     );
 
     /*
-     * One tween per token, and never two on the same one at once.
-     *
-     * The promoted token used to take an entry tween and an overlapping pulse.
-     * The shorter of the two finished first and left the longer one to end on
-     * a value it had recorded mid-flight, so the token came to rest away from
-     * its row and only snapped back when the next beat settled the card. It
-     * now lands once, with the overshoot carried by the ease.
+     * One tween per token. Overlapping tweens on the same token leave it off
+     * its row, so the promoted token's overshoot comes from the ease.
      */
     const landing = cross + seconds(DURATION.slow * 0.9);
     line.fromTo(
@@ -476,11 +448,8 @@ const dialAt = (cx: number, cy: number, radius: number, count: number, label: st
 };
 
 /**
- * Two settings, and the same candidates re-routing into different rank slots.
- *
- * The alternatives stay where they are on the left and the ribbons move, so
- * what the card shows is the ordering being a function of the two dials rather
- * than a property of the products.
+ * Two dials set the context. The products stay fixed on the left and their
+ * ribbons re-route to new rank slots as the dials turn.
  */
 function decisionArt(): Art {
   const element = art();
@@ -494,7 +463,7 @@ function decisionArt(): Art {
   const rowY = (index: number): number => ROW_TOP + index * ROW_STEP;
   const TOKEN_X = 22;
   const SLOT_X = 298;
-  // Centre to centre, covered at both ends by the mark that sits on top.
+  // Ribbons run centre to centre. The marks on top cover the ends.
   const MIDLINE = (TOKEN_X + SLOT_X) / 2;
 
   const slots = PRODUCTS.map((_, index) => {
@@ -670,8 +639,7 @@ function decisionArt(): Art {
         );
       }
 
-      // A path cannot be tweened directly, so each ribbon carries the rank slot
-      // it is heading for and redraws itself as that number travels.
+      // Tween the target y and redraw the ribbon path on each update.
       const held = previous.order;
       for (const [index, token] of tokens.entries()) {
         const carrier = { y: rowY(held.indexOf(token.id)) };
@@ -699,9 +667,8 @@ function decisionArt(): Art {
 /* ---- 03. Designed for uncertainty -------------------------------------------------- */
 
 /**
- * Nine of the eighteen indicators go dark. Every score moves a little and the
- * ordering does not: the uncertainty is carried in the scores rather than
- * hidden, and the recommendation still stands.
+ * Nine of the eighteen indicators are removed. Each score shifts slightly and
+ * the ranking stays the same.
  */
 function incompleteArt(): Art {
   const element = art();
@@ -711,9 +678,8 @@ function incompleteArt(): Art {
   const strip = comb(SLAB.width, SLAB.gap, SLAB.familyGap);
 
   /*
-   * Each indicator is two marks in the same place: the value, and the outline
-   * that is left once the value is gone. Removal crossfades between them from
-   * the top down, so the evidence dissolves instead of switching off.
+   * Each indicator is a filled value and an outline at the same place.
+   * Removal crossfades from value to outline.
    */
   const slabs = strip.slots.map((slot) => {
     const shared = {
@@ -743,7 +709,7 @@ function incompleteArt(): Art {
     const group = svg('g', { class: 'en-row' });
     group.dataset['standing'] = rank === 0 ? 'lead' : 'rest';
 
-    // The interval the score is known to within, once the evidence is gone.
+    // Score uncertainty interval after the indicators are removed.
     const spread = svg('rect', {
       class: 'en-spread',
       x: String(BAR_X),
@@ -845,8 +811,7 @@ function incompleteArt(): Art {
         );
     }
 
-    /* The value drains downward and the outline it leaves rises in behind it,
-       one indicator after the next, slowly enough to be watched. */
+    /* Each removed value shrinks down while its outline grows in, staggered. */
     const removal = start + seconds(DURATION.cinematic * 0.9);
     const drain = { each: seconds(STAGGER * 1.5) } as const;
 
@@ -877,7 +842,7 @@ function incompleteArt(): Art {
         removal + seconds(DURATION.normal * 0.7),
       );
 
-    // Every score moves a little, and not one of them moves past its neighbour.
+    // Scores shift slightly. The ranking does not change.
     const drift = removal + seconds(DURATION.cinematic * 0.85) + gone.length * seconds(STAGGER * 1.5);
     for (const row of rows) {
       const before = SHOWCASE.scores[row.id];
@@ -928,10 +893,8 @@ function incompleteArt(): Art {
 /* ---- The panel -------------------------------------------------------------------- */
 
 /**
- * Three cards over three beats on one held composition.
- *
- * The three cards arrive together on the first beat and never move again. Each
- * later beat runs exactly one figure and touches nothing else on the wall.
+ * Three cards over three beats. All cards enter on the first beat, and each
+ * beat animates one card's figure.
  */
 export function createEnables(): Enables {
   const arts = [profileArt(), decisionArt(), incompleteArt()];

@@ -1,30 +1,13 @@
 import type { GapCardsSpec } from '@/components/figures/GapCards';
 
 /**
- * Scene 9 — the six research gaps.
+ * Scene 9: the six research gaps. All six numbered cards show from the start
+ * and fill one at a time.
  *
- * Six cards, one per gap, filled one at a time. The six frames stand from the
- * first frame with only their numbers in them, so the count is established
- * before the first is spoken and the audience is never wondering how many are
- * coming.
+ * Titles and descriptions are verbatim from the thesis, except gap 01's body,
+ * which names the dimensions so it does not overlap gaps 03 and 05.
  *
- * **The text is the thesis's own wording and is not to be paraphrased here.**
- * Titles are verbatim, and so is every description but the first.
- *
- * Gap 01's description is the one deliberate departure. The thesis phrases it as
- * comparison under incomplete and uncertain information, which is true and is
- * also what gaps 03 and 05 are each about, so on a slide the three read as one
- * gap stated three times. What is missing at 01 is that the dimensions are never
- * brought together in a single comparison, so the description names them. The
- * uncertainty half of the thesis wording is carried by 03 and 05, where it is
- * the subject rather than a qualifier.
- *
- * **No gap carries an accent of its own.** An earlier pass tinted circularity
- * green, the ML gap blue and integration amber, on the reasoning that each
- * should recall the stream it came from. On screen it read as a ranking — three
- * gaps lit and three not — which is a claim the thesis does not make. Colour now
- * belongs to the moment rather than to the card: whichever gap is being spoken
- * about carries it, and hands it on.
+ * Cards have no fixed accent colour. The accent follows the gap being discussed.
  */
 
 export const GAPS = {

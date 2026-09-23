@@ -30,31 +30,18 @@ interface Departing {
 }
 
 /**
- * Owns the built world's lifetime.
- *
- * A zone is mounted when the presentation enters its run of scenes and taken out
- * of the scene graph when it leaves, which is a far coarser cadence than scene
- * changes.
- *
- * **Teardown is immediate unless the scene declares a crossing.** The original
- * reasoning was that a zone boundary is always a designed transition — walking
- * through a door — so there is nothing to dissolve. Half of that is right and
- * half is exactly backwards: walking through a door is the one case where both
- * worlds are on screen at once, and the frame in which the outside can stop
- * being drawn is a place in the geometry rather than a moment on a clock. A
- * `ZoneCrossing` is what says which case this is.
- *
- * A zone is built once and then parked, never rebuilt. Parking removes the group
- * from the scene graph and leaves the instance alive; `dispose` is the end of
- * the deck. See `learnings.md` §39.
+ * Owns the lifetime of each zone. A zone is mounted when the deck enters its
+ * scenes and parked when it leaves. Teardown is immediate unless the scene
+ * declares a `ZoneCrossing`, which keeps the old zone until the camera passes a
+ * given z. Zones are built once and never rebuilt. See `learnings.md` §39.
  */
 export class ZoneDirector {
   private active: ActiveZone | null = null;
   private readonly built = new Map<string, ActiveZone>();
   private departing: Departing | null = null;
-  /** The zone standing behind the current one, waiting to be walked into. */
+  /** Next zone, mounted behind the current one before it is entered. */
   private warmed: ActiveZone | null = null;
-  /** The zone a crossing is leaving, held only long enough to route through it. */
+  /** Zone a crossing is leaving. Cleared once its atmosphere is used. */
   private leaving: ZoneDefinition | null = null;
 
   constructor(
@@ -64,10 +51,8 @@ export class ZoneDirector {
     private readonly atmosphere: AtmosphereDirector,
     private readonly assets: AssetLoader,
     /**
-     * Read to decide when a departing zone is safely out of shot — both where
-     * the camera is and whether it is still travelling. The director rather
-     * than the bare camera, because "the move has finished" is not something a
-     * `Object3D` can answer and a clock of our own gets it wrong.
+     * Used to release a departing zone: camera position plus `isMoving`, which
+     * a bare camera cannot report.
      */
     private readonly camera: CameraDirector,
   ) {}
@@ -80,21 +65,14 @@ export class ZoneDirector {
     crossing: ZoneCrossing | null = null,
     air: ((base: Atmosphere) => Atmosphere) | null = null,
     /**
-     * The camera move this happens inside, when the scene designed one.
-     *
-     * Air paced independently of the move it belongs to finishes early and the
-     * last seconds of a descent play in weather that has already settled — or
-     * worse, opens the world while a dissolve is still half up, which reads as
-     * a veil over a sharp picture rather than as cloud. Defaults to the rate
-     * limit every ordinary hop is paced by.
+     * Duration of the camera move, so the atmosphere eases over the same time.
+     * Defaults to the standard hop limit.
      */
     travelSeconds: number = TRANSITION.camera.maxSeconds,
   ): void {
     const changed = this.active?.definition.id !== definition.id;
 
-    // A second navigation while one crossing is still in flight abandons it.
-    // The camera has already been taken over by the new move, so the world the
-    // release was waiting on is no longer the one being left.
+    // A new navigation during a crossing abandons it: the camera has a new move.
     if (changed || !crossing) this.releaseDeparting();
 
     if (changed) {
@@ -102,8 +80,7 @@ export class ZoneDirector {
       this.active = null;
 
       if (outgoing && crossing && animate) {
-        // Opened *before* the new zone mounts, so the doors start moving on the
-        // same frame the camera does.
+        // Opened before the new zone mounts so the doors start with the camera.
         outgoing.instance?.setThreshold?.(true, crossing.seconds);
         this.leaving = outgoing.definition;
         this.departing = { zone: outgoing, releaseAtZ: crossing.releaseAtZ };
@@ -119,10 +96,8 @@ export class ZoneDirector {
     const base = air ? air(definition.atmosphere) : definition.atmosphere;
     const target = mode === 'recessed' ? recessed(base) : base;
 
-    // Light and air ease across a crossing and are set otherwise. A crossing
-    // goes via the world it is leaving, at full strength, before it goes
-    // inside, and its change of light is confined to the stretch where the
-    // camera is between the two — see `AtmosphereDirector.crossTo`.
+    // A crossing blends from the old zone's atmosphere to the new one inside
+    // the `CROSSING_LIGHT` window. See `AtmosphereDirector.crossTo`.
     if (changed && crossing && animate && this.leaving) {
       this.atmosphere.crossTo(this.leaving.atmosphere, target, crossing.seconds, CROSSING_LIGHT);
       this.leaving = null;
@@ -141,18 +116,9 @@ export class ZoneDirector {
 
     departing.zone.instance?.update?.(dt);
 
-    // The plane is what normally fires. The move ending is insurance against a
-    // pose edited to stop short of it, because a zone left mounted forever is a
-    // whole outdoors being drawn behind a wall for the rest of the talk.
-    //
-    // **Insurance, and not a timer.** It was a countdown of `dt` against the
-    // crossing's declared length, which is wrong in a way that only shows up
-    // when the two clocks disagree: `dt` is wall-clock and the move runs on
-    // GSAP's, which is scaled — by the reduced-motion setting in production and
-    // by `__time` while this transition was being authored. Slowed to 0.06 the
-    // countdown expired 33 m short of the door and deleted the entire outdoors
-    // with the camera still standing on the avenue looking at it. Asking the
-    // camera whether it has stopped cannot drift from the camera.
+    // Release when the camera passes `releaseAtZ`, or when its move ends in
+    // case the pose stops short. Uses camera state because GSAP time is scaled
+    // and can drift from `dt`.
     if (this.camera.camera.position.z < departing.releaseAtZ || !this.camera.isMoving) {
       this.releaseDeparting();
     }
@@ -177,26 +143,9 @@ export class ZoneDirector {
   }
 
   /**
-   * Pay a zone's entire standing-up cost once, before the talk starts.
-   *
-   * `warm` was written to move this work off the beat that plays the
-   * contributions morph, and it moved it exactly one beat: onto the beat
-   * before, which is the last thing said before the deck walks through the
-   * door. Measured on the corridor, that beat cost 127 ms of blocked main
-   * thread and a **1.7 second** `compileAsync` — the GPU building 42 shader
-   * programs while it is also drawing, which is a stutter through the whole
-   * approach even though the main thread is mostly free.
-   *
-   * There is no beat of a defence where that is acceptable, because every beat
-   * has someone speaking over it. The only moment the deck may block is the one
-   * the audience is not watching: the load. So the work moves there in full,
-   * and `warm` goes back to being what its name says — putting an already
-   * finished world into the scene graph, which is a pointer assignment.
-   *
-   * The group has to be **visible** while this runs: `WebGLRenderer.compile`
-   * walks the scene with `traverseVisible`, so a hidden group compiles nothing
-   * and the whole cost simply arrives later. It is parked again immediately
-   * afterwards, and the loading screen is over the canvas throughout.
+   * Builds a zone, uploads its textures and buffers, and compiles its shaders
+   * during load. On the corridor this avoids a 1.7 s compile mid-talk.
+   * The group must be visible here because `compile` uses `traverseVisible`.
    */
   async prepare(definition: ZoneDefinition): Promise<void> {
     if (this.built.has(definition.id)) return;
@@ -208,7 +157,7 @@ export class ZoneDirector {
     await this.renderer
       .compileAsync(this.world.scene, this.camera.camera)
       .catch(() => {
-        // A failed precompile costs a hitch later, not a broken deck.
+        // A failed precompile only costs a hitch later.
       });
 
     this.paint(zone.group);
@@ -216,25 +165,9 @@ export class ZoneDirector {
   }
 
   /**
-   * Draw the zone once, into a single pixel, so its geometry reaches the GPU.
-   *
-   * `compileAsync` builds programs and `upload` pushes textures, and between
-   * them they still leave the largest buffers on the CPU: **vertex and index
-   * data uploads on the first draw call that uses it**, and nothing before that
-   * frame asks for it. So the corridor still arrived with tens of megabytes of
-   * `bufferData` on the beat it was warmed — small enough to stop reading as a
-   * freeze once the shaders had moved, and still a visible catch.
-   *
-   * Drawing it is the only thing that forces the upload, so it is drawn. Into a
-   * 1x1 target, with everything else in the scene hidden, so every draw call
-   * issues and every buffer is bound while almost no fragment is shaded. Frustum
-   * culling is switched off for the pass because the camera is standing in
-   * another zone entirely and would otherwise reject the very geometry this is
-   * here to upload.
-   *
-   * Shadows are left on: a foliage or lightmapped material's depth variant is a
-   * separate program with its own buffers, and skipping the shadow pass here
-   * would leave exactly half the work to arrive later.
+   * Renders only this zone into a 1x1 target so its vertex and index buffers
+   * upload now (they upload on first draw). Frustum culling is off because the
+   * camera is in another zone. Shadows stay on so depth programs compile too.
    */
   private paint(group: Group): void {
     const target = new WebGLRenderTarget(1, 1);
@@ -269,16 +202,8 @@ export class ZoneDirector {
   }
 
   /**
-   * Stand the next zone up a beat early.
-   *
-   * Cheap now: `prepare` has already built the instance, uploaded its textures
-   * and compiled its programs, so this is the scene-graph half of what this
-   * method used to do and nothing else.
-   *
-   * It still falls back to building on demand. `prepare` runs at load for every
-   * zone the deck names, so that path is only reached if one was added without
-   * being registered — in which case a stutter here is the right failure, and a
-   * far better one than a missing world.
+   * Adds the next zone to the scene graph a beat early. Cheap after `prepare`.
+   * Builds on demand if the zone was never prepared.
    */
   warm(definition: ZoneDefinition): void {
     if (this.active?.definition.id === definition.id) return;
@@ -293,13 +218,8 @@ export class ZoneDirector {
   }
 
   /**
-   * Push a zone's textures to the GPU before anything draws them.
-   *
-   * `compileAsync` builds shader *programs*; it does not upload textures, and
-   * a texture uploads on the first frame that samples it. For this zone that is
-   * a 4096 occlusion atlas plus its detail maps arriving in one frame, which is
-   * tens of megabytes of `texImage2D` on the main thread — the rest of the
-   * hitch after the recompile was moved off it.
+   * Uploads a zone's textures now. `compileAsync` skips textures, which would
+   * otherwise upload on the first frame that samples them.
    */
   private upload(group: Group): void {
     const seen = new Set<Texture>();
@@ -326,15 +246,8 @@ export class ZoneDirector {
   }
 
   /**
-   * Take a warmed zone back out of the graph.
-   *
-   * Warming is not a one-way door. A defence is not walked in a straight line:
-   * a question sends the presenter backwards, and a zone that was stood up for
-   * a crossing that then did not happen is a whole other world left standing
-   * behind the one on screen — the corridor visible through the entrance glass
-   * on every earlier Act I frame, with the recess plug still open for it.
-   * Whatever `warm` did, this undoes, including the state it asked the zone in
-   * front to hold.
+   * Removes a warmed zone and resets `setBeyond` on the current one. Used when
+   * the presenter navigates back before the crossing.
    */
   unwarm(): void {
     const warmed = this.warmed;
@@ -345,18 +258,12 @@ export class ZoneDirector {
   }
 
   private mount(definition: ZoneDefinition): ActiveZone {
-    // Being entered is not being unwarmed: the group stays in the graph, it
-    // just stops being something that can be taken back out.
+    // Entering a warmed zone keeps its group in the graph.
     if (this.warmed?.definition.id === definition.id) this.warmed = null;
 
     const zone = this.built.get(definition.id) ?? this.build(definition);
     this.world.zones.add(zone.group);
-    // The shadow rig belongs to whichever zone is being *looked at*, which
-    // during a crossing is still the one being left. Refitting it on mount
-    // dropped a 58 m frustum to a 6 m one at the moment the crossing began —
-    // so the sunlit building lost every shadow it had while the camera was
-    // still fifty metres away looking straight at it. It is handed over with
-    // the release instead.
+    // During a crossing the old zone keeps the shadow rig until release.
     if (!this.departing) this.aim(zone);
     return zone;
   }
@@ -381,10 +288,7 @@ export class ZoneDirector {
     return zone;
   }
 
-  /**
-   * Hands a zone everything that belongs to whichever one is being looked at:
-   * the key light's target, its shadow frustum, and the sky.
-   */
+  /** Points the key light, shadow frustum and sky at this zone. */
   private aim(zone: ActiveZone): void {
     const { definition } = zone;
     this.world.setLightTarget(definition.origin);
@@ -397,7 +301,7 @@ export class ZoneDirector {
     if (!departing) return;
     this.departing = null;
     this.park(departing.zone);
-    // Deferred to here rather than done at mount — see `mount`.
+    // Deferred from `mount` during a crossing.
     if (this.active) this.aim(this.active);
   }
 
@@ -408,20 +312,9 @@ export class ZoneDirector {
 }
 
 /**
- * The crossing's light, in fractions of the move.
- *
- * These are read against `animations/entry.ts`, which is what makes them
- * meaningful rather than arbitrary: that profile is front-loaded, so the camera
- * is at the doorway by `t = 0.34` having covered 70% of the distance, and is
- * through the vestibule and past the handover by about `t = 0.55`.
- *
- * `lift` ends at 0.22 — early, while the building still fills the frame and
- * before the doors part, because that is when the world wants to be at its best.
- *
- * `from`/`to` bracket the vestibule. Before 0.34 the camera is outside and the
- * light has to stay the forecourt's; after 0.55 the outdoors has stopped being
- * drawn and anything still owed shows up as fog rolling into a corridor that
- * ought to have been dim when it was revealed. The nine metres in between are
- * where a threshold's change of light belongs anyway.
+ * Crossing light timing, as fractions (0 to 1) of the move. Must match the
+ * profile in `animations/entry.ts`: the camera reaches the doorway at 0.34 and
+ * clears the vestibule by about 0.55. `lift` ends before the doors open;
+ * `from`/`to` confine the light change to the vestibule.
  */
 const CROSSING_LIGHT = { lift: 0.22, from: 0.34, to: 0.56 } as const;

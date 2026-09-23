@@ -16,16 +16,9 @@ import type { QualitySettings } from '@/config/quality';
 import type { AtmosphereState } from './AtmosphereDirector';
 
 /**
- * The single persistent scene graph.
- *
- * Two content roots, with different lifetimes. `zones` holds the built world —
- * a building, a corridor — which outlives any one scene and is never touched by
- * scene teardown. `stage` holds per-scene content, attached on enter and
- * detached on exit. Keeping them apart is what allows nine scenes to look at
- * one building without rebuilding it nine times.
- *
- * Lighting, fog and background are global and never rebuilt. They are *driven*,
- * by whatever atmosphere the current zone and render mode resolve to.
+ * The single persistent scene graph. `zones` holds built world content that
+ * outlives scenes. `stage` holds per-scene content. Lighting, fog and
+ * background are global and driven by the current atmosphere.
  */
 export class World {
   readonly scene = new Scene();
@@ -59,9 +52,8 @@ export class World {
   }
 
   /**
-   * Image-based lighting generated procedurally rather than loaded from an HDR
-   * file: it costs no payload, needs no network, and keeps the offline
-   * guarantee intact. Zones with their own sky override it.
+   * Procedural image-based lighting, so no HDR download is needed and the deck
+   * works offline. Zones with their own sky override it.
    */
   private buildDefaultEnvironment(renderer: WebGLRenderer): void {
     const pmrem = new PMREMGenerator(renderer);
@@ -73,13 +65,9 @@ export class World {
   }
 
   /**
-   * The tone curve's exposure, as the world is currently being graded.
-   *
-   * Held because surfaces that have to look the same whatever the light is
-   * doing cannot opt out of the curve — `RenderPipeline` ends in an
-   * `OutputPass`, so ACES runs over the whole framebuffer and `toneMapped` is
-   * inert (learnings §59). Their only route is to cancel the exposure in their
-   * own colour, which means reading it.
+   * Current tone-mapping exposure. `OutputPass` applies ACES to the whole
+   * frame and ignores `toneMapped` (learnings §59), so fixed-look surfaces read
+   * this to cancel exposure in their own colour.
    */
   exposure = 1;
 
@@ -91,8 +79,8 @@ export class World {
     this.fog.near = state.fogNear;
     this.fog.far = state.fogFar;
 
-    // A background that does not match the fog produces a visible seam where
-    // distant geometry stops. Zones that supply a sky take over the match.
+    // Match background to fog to avoid a seam at the horizon. Zones with a sky
+    // handle this themselves.
     if (!this.background) this.backgroundColor.copy(state.fogColor);
 
     this.ambient.color.copy(state.skyColor);
@@ -112,16 +100,15 @@ export class World {
   }
 
   /**
-   * Recentres the key light so its shadow frustum follows the active zone.
-   * A directional shadow camera is centred on the light's target, so a zone
-   * placed 200 units down the world would otherwise fall outside it entirely.
+   * Recentres the key light on the active zone. The directional shadow camera
+   * is centred on the light target.
    */
   setLightTarget(origin: Vec3): void {
     this.lightTarget.position.set(...origin);
     this.lightTarget.updateMatrixWorld();
   }
 
-  /** Sizes the shadow frustum to the zone that is being lit. */
+  /** Sizes the shadow frustum to the lit zone. */
   fitShadow(radius: number, far: number): void {
     const camera = this.keyLight.shadow.camera;
     camera.left = -radius;
@@ -133,13 +120,13 @@ export class World {
     camera.updateProjectionMatrix();
   }
 
-  /** A zone's sky. `null` restores the fog-matched flat background. */
+  /** Sets a zone's sky. `null` restores the fog-coloured background. */
   setBackground(texture: Texture | null): void {
     this.background = texture;
     this.scene.background = texture ?? this.backgroundColor;
   }
 
-  /** A zone's image-based lighting. `null` restores the default room. */
+  /** Sets a zone's image-based lighting. `null` restores the default room. */
   setEnvironment(texture: Texture | null): void {
     this.scene.environment = texture ?? this.defaultEnvironment;
   }

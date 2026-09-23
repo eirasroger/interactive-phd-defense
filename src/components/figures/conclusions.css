@@ -1,35 +1,12 @@
 /*
- * The conclusions: four findings, each with the evidence that makes it true
- * drawn beside it.
- *
- * **The pipeline is not on this slide.** It has been the subject of the whole
- * deck, walked in Act II, read from above at the top of Act III and argued twice
- * since. A sixth picture of it would be the talk repeating itself in its last
- * minute. What the audience has not been shown is the four findings side by
- * side, which is what a conclusion frame is for.
- *
- * **Nothing outside a panel moves.** Four panels in a fixed grid whose rows are
- * reserved at the open height from the first frame, so a panel opening on its
- * beat grows inside the room it already held and nothing below it is pushed
- * anywhere. A closing frame whose parts appear in one corner and vanish from
- * another is a frame nobody can read while it is being spoken over.
- *
- * Surfaces are the dark translation of C5's and the conditions slide's card: an
- * 18px radius, an inset accent hairline and a deep shadow that lifts the panel
- * off the sea. Each is driven by a single `--open` scalar, so the ground, the
- * hairline, the shadow and the texture cannot drift apart while it comes up.
+ * Conclusions: four findings, each with a small drawing of its evidence.
+ * Grid rows are reserved at the open height, so opening a panel never moves
+ * anything outside it. Each panel's look is driven by one `--open` scalar (0-1).
  */
 /*
- * The two heights the opening travels between, and why they are exact.
- *
- * A `max-height` reveal stops the moment it passes the content's own height, so
- * the panel would finish growing partway through the scalar and then coast,
- * which no ease can fix because the quantity is flat over the last of its
- * travel. A definite height is linear in the scalar by construction.
- *
- * The stage is a fixed 1920x1080 surface and does not reflow, so a height solved
- * once is solved. `--tall` is what the panel measures with its drawing in;
- * `--shut` is the number, the rule and the claim with the panel's own padding.
+ * Closed and open panel heights. A fixed height keeps the opening linear in
+ * `--open` (a `max-height` reveal would stall early). The 1920x1080 stage does
+ * not reflow, so these values stay valid. `--shut` fits index, rule and claim.
  */
 .cc {
   --accent: var(--c-ai);
@@ -77,7 +54,7 @@
       color-mix(in srgb, #000000 calc(46% * var(--open)), transparent);
 }
 
-/* The panel's own texture, so the ground reads as a surface rather than a fill. */
+/* Faint grid texture on the panel background. */
 .cc-panel::before {
   content: '';
   position: absolute;
@@ -131,12 +108,7 @@
   );
 }
 
-/*
- * The claim, at the size a conclusion is entitled to.
- *
- * Display weight. This is the sentence the committee writes down, and every
- * other sentence in the act has been set smaller than it on purpose.
- */
+/* The main claim, set in the display font. */
 .cc-lead {
   margin: 0;
   font-family: var(--font-display);
@@ -147,12 +119,7 @@
   color: var(--c-text);
 }
 
-/*
- * The sentence under the claim, lit with the drawing rather than with the panel.
- *
- * A shut panel carries its claim and nothing else, which is what makes the four
- * of them readable as an agenda before any of them is opened.
- */
+/* Supporting sentence. Fades in with the drawing, so a closed panel shows only its claim. */
 .cc-note {
   margin: var(--s-3) 0 0;
   font-size: 0.875rem;
@@ -164,13 +131,9 @@
 /* ---- The drawings --------------------------------------------------------------------- */
 
 /*
- * Colour on this frame is spent on data and nowhere else.
- *
- * The panel chrome is one accent for all four. Inside a drawing the colours are
- * the semantic scales the stations already declared: C3's pass and fail on the
- * screening figure, C4's violet for an inferred value, C5's two conditioning
- * inputs on the slope. Lifted for the dark ground, and every one of them is
- * paired with a position or a shape, so colour is never the only encoding.
+ * Data colours reuse the station scales (C3 pass/fail, C4 inferred violet, C5
+ * contexts), lightened for the dark background. Each is paired with a position
+ * or shape.
  */
 .cc-figure {
   --known: #5b9dff;
@@ -184,22 +147,12 @@
   position: relative;
   width: 420px;
   /*
-   * Lit later than the panel, and never by an intermediate custom property.
-   *
-   * `opacity` clamps its own input, so the ramp is written as a plain `calc`
-   * that starts at a third of the travel and is complete before the panel
-   * arrives: the contents come up inside a surface that already exists rather
-   * than expanding with it. Text growing with its own container is the specific
-   * thing that reads as a page loading.
-   *
-   * A `clamp()` behind a custom property was the first version of this and it
-   * resolved to an invalid opacity, which falls back to 1 silently: every shut
-   * panel rendered its note at full strength and clipped it against its own
-   * height. Nothing errors, and it looks like a layout bug.
+   * Fades in from about a third of `--open` and finishes before the panel does.
+   * Keep this a plain `calc`: `opacity` clamps it. A `clamp()` in a custom
+   * property resolves to an invalid value and silently falls back to 1.
    */
   opacity: calc((var(--open) - 0.34) * 2.6);
-  /* Arrives from slightly below, so the drawing rises into the room the panel
-     opened rather than fading onto it. */
+  /* Rises slightly as it fades in. */
   transform: translateY(calc(16px * (1 - var(--open))));
 }
 
@@ -218,20 +171,14 @@
 
 /* ---- 01 · The ordering holds where the values do not ---------------------------------- */
 
-/*
- * An interval, and the value inside it.
- *
- * The band is deliberately flat and unremarkable: it is what is not known, and a
- * band with a gradient or a cap would be making a distributional claim the work
- * does not support.
- */
+/* Uncertainty interval. Kept flat so it implies no distribution. */
 .cc-band {
   fill: color-mix(in srgb, var(--known) 15%, transparent);
   stroke: color-mix(in srgb, var(--known) 22%, transparent);
   stroke-width: 1;
 }
 
-/* The intervals keep moving, because they are the part that is not settled. */
+/* Intervals breathe slowly to show they are uncertain. */
 .cc-band {
   animation: cc-widen 9s ease-in-out infinite;
 }
@@ -260,13 +207,7 @@
   fill: var(--known);
 }
 
-/*
- * The order through the markers.
- *
- * Monotonic by construction, and the one line on the drawing that is solid and
- * at full strength. The whole finding is that this line is readable while the
- * bands under it are not.
- */
+/* Monotonic ranking line through the markers, the strongest stroke in the drawing. */
 .cc-order {
   fill: none;
   stroke: color-mix(in srgb, var(--known) 78%, transparent);
@@ -284,12 +225,7 @@
 
 /* ---- 02 · Admissible first, preferred second ------------------------------------------ */
 
-/*
- * The rule, and the only hard edge in the set of four.
- *
- * Compliance is a binary condition, so the line that carries it is drawn as one:
- * full strength, no softening, and nothing crosses it that has not passed.
- */
+/* Compliance gate. A solid line because compliance is binary. */
 .cc-gate {
   fill: none;
   stroke: color-mix(in srgb, var(--pass) 52%, transparent);
@@ -297,7 +233,7 @@
   stroke-dasharray: none;
 }
 
-/* Where a candidate stood before the screening ran. */
+/* A candidate's position before screening. */
 .cc-socket {
   fill: none;
   stroke: color-mix(in srgb, var(--absent) 30%, transparent);
@@ -309,13 +245,7 @@
   fill: color-mix(in srgb, var(--pass) 82%, transparent);
 }
 
-/*
- * A candidate that did not pass.
- *
- * Held, not deleted. A screened-out product still exists and is still a product;
- * what it is not is a member of the set preference is evaluated over, and a
- * hollow token in the fail tone says exactly that much.
- */
+/* A screened-out candidate: kept on screen as a hollow token in the fail tone. */
 .cc-token.is-out {
   fill: color-mix(in srgb, var(--fail) 18%, transparent);
   stroke: color-mix(in srgb, var(--fail) 62%, transparent);
@@ -332,10 +262,7 @@
   fill: color-mix(in srgb, var(--known) 42%, transparent);
 }
 
-/*
- * An absence, in the dash the candidate set and the declaration have used since
- * Act I. By the fourth appearance it needs no legend.
- */
+/* Missing value, in the same dash style used since Act I. */
 .cc-cell.is-absent {
   fill: none;
   stroke: color-mix(in srgb, var(--absent) 62%, transparent);
@@ -353,13 +280,7 @@
   }
 }
 
-/*
- * A value that was estimated rather than declared.
- *
- * Never the tone a reported value carries. A recovered attribute drawn the same
- * as a reported one is the pipeline claiming more than it has, and the whole
- * conclusion is that the difference stays visible downstream.
- */
+/* Inferred value. Uses its own violet tone so it stays distinct from reported values. */
 .cc-cell.is-inferred {
   fill: color-mix(in srgb, var(--infer) 40%, transparent);
   stroke: color-mix(in srgb, var(--infer) 78%, transparent);
@@ -368,13 +289,8 @@
 }
 
 /*
- * The breath is on the paint, never on `opacity`.
- *
- * `opacity` on these three cells belongs to the beat's timeline, which fades
- * them in last and pops them to full size. A CSS animation outranks an inline
- * style, so anything this keyframe writes to a property GSAP also writes wins
- * permanently. `fill-opacity` and `stroke-opacity` are the drawing's own and
- * nothing else touches them.
+ * Animates `fill-opacity` and `stroke-opacity` only. GSAP drives `opacity` on
+ * these cells, and a CSS animation would override its inline style.
  */
 @keyframes cc-pulse {
   0%,
@@ -395,13 +311,7 @@
 
 /* ---- 04 · The same set, ranked twice -------------------------------------------------- */
 
-/*
- * Five candidates, five colours, held across both columns.
- *
- * The colour is what makes a crossing readable: without a stable identity per
- * token the slope is a bundle of lines rather than an order changing. Every
- * token also holds its horizontal column, so colour is never the only encoding.
- */
+/* One stable colour per candidate across both columns, so rank crossings are easy to follow. */
 .cc-cand[data-candidate='0'],
 .cc-slope[data-candidate='0'] {
   --cand: #5b9dff;
@@ -436,8 +346,7 @@
   stroke-linecap: round;
 }
 
-/* Which context each column is ranked under. A swatch and nothing else: a legend
-   on a drawing this small is a paragraph explaining a picture meant to save one. */
+/* Swatch marking the context each column is ranked under. */
 .cc-ctx.is-a {
   fill: var(--ctx-a);
 }

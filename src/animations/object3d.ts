@@ -20,11 +20,8 @@ function materialsOf(root: Object3D): Material[] {
 }
 
 /**
- * Fades an object in by animating material opacity.
- *
- * Transparency is enabled for the duration and switched back off at the end:
- * leaving objects permanently transparent costs a depth-sorting pass and
- * causes ordering artefacts once scenes get dense.
+ * Fades an object in by animating material opacity. Transparency is turned off
+ * again at the end to avoid depth-sorting cost and ordering artefacts.
  */
 export function fadeIn(root: Object3D, options: FadeOptions = {}): gsap.core.Timeline {
   const materials = materialsOf(root);

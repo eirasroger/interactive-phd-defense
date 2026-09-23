@@ -1,10 +1,6 @@
 /*
- * Beat 6. The claim the contribution exists to make, and beside it the reason
- * it is not a claim about end-of-life circularity.
- *
- * The reach is drawn at full size on the right rather than listed with the
- * others, because it is the difference between a model for one attribute and a
- * method for any attribute the composition correlates with.
+ * Beat 6: the main claim on the left, and on the right the fan showing the
+ * method applies to any attribute that correlates with composition.
  */
 .rh {
   display: grid;
@@ -28,8 +24,7 @@
   font-family: var(--font-display);
   font-size: 2.25rem;
   font-weight: var(--fw-light);
-  /* Not `--lh-tight`: a light-weight display line needs more than its em box
-     and clips at that value, the same way `.c4-figure` does. */
+  /* Light-weight display text clips at `--lh-tight` (same as `.c4-figure`). */
   line-height: 1.16;
   letter-spacing: var(--ls-title);
   color: var(--ink);
@@ -98,9 +93,8 @@
   stroke: var(--c4-accent);
 }
 
-/* Wiped from the wide end, so the mark reads as three hundred coefficients
-   arriving and fifty leaving. The origin is in viewBox units, which is what an
-   SVG child's default `transform-box` resolves against. */
+/* Wipes in from the wide end (300 coefficients in, 50 out). Origin is in
+   viewBox units, the default `transform-box` for SVG children. */
 .rh-funnel-group {
   transform-origin: 9px 32px;
 }
@@ -166,8 +160,7 @@
   background-color: color-mix(in srgb, var(--c4-accent) 40%, transparent);
 }
 
-/* The spine and the branch stubs are what make three separate rows read as one
-   fan leaving a single point. */
+/* Spine and branch stubs join the rows into one fan from a single source. */
 .rh-branches {
   position: relative;
   display: grid;
@@ -210,8 +203,7 @@
   color: var(--ink);
 }
 
-/* The one this contribution measured carries the accent; the rest are the same
-   operation pointed somewhere else. */
+/* The attribute measured in this contribution gets the accent. */
 .rh-attribute[data-measured='true'] {
   background-color: color-mix(in srgb, var(--c4-accent) 14%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c4-accent) 44%, transparent);

@@ -10,8 +10,7 @@
 }
 
 /* ---- The chain ------------------------------------------------------- */
-/* Neutral on purpose. The linear flow is what already happens; the colour
-   belongs to the returns, which are the thing being argued for. */
+/* Neutral. Colour is reserved for the returns. */
 
 .loop-node rect {
   fill: color-mix(in srgb, var(--c-void) 55%, transparent);
@@ -39,17 +38,8 @@
 
 /* ---- The returns ----------------------------------------------------- */
 /*
- * **One hue, three steps, and every step is that hue against the ground.**
- *
- * The three returns used to be three different colours: the accent, then a
- * mix of the accent with grey text, then the dim accent token. The middle one
- * came out muddy and none of the three was on the same ramp as the others, so
- * a figure whose entire grammar is depth was carrying three unrelated greens.
- * Mixing toward `--c-void` instead keeps the hue exactly and only changes how
- * far away the return reads, which is the one thing the ramp is for.
- *
- * Weight travels with colour in the same declaration, so a return cannot end
- * up bright and thin, or dim and thick.
+ * One hue in three steps, mixed toward `--c-void` so the hue stays constant.
+ * Stroke weight is set with the colour so the two stay paired.
  */
 
 .loop-return {
@@ -78,7 +68,7 @@
   fill: var(--arc);
 }
 
-/* Set where the return arrives, reading into the stage it lands on. */
+/* Placed where the return arrives. */
 .loop-return-name {
   fill: var(--arc);
   font-family: var(--font-label);
@@ -89,8 +79,7 @@
 }
 
 /* ---- The marks ------------------------------------------------------- */
-/* Held back for the second beat, and amber throughout: these are the only
-   things on the figure that are a problem rather than a mechanism. */
+/* Hidden until the second beat. Amber marks the problem. */
 
 .loop-mark {
   opacity: 0;

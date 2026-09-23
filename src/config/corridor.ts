@@ -41,13 +41,13 @@ export const STATIONS: readonly Station[] = [
 
 const terminal = STATIONS[4] as Station;
 
-/** The back wall of the last room. There is nothing beyond it. */
+/** z of the back wall of the last room, where the corridor ends. */
 export const RUN = terminal.z + ROOM.length / 2;
 
-/** Half the widest moment: C3 and C4 face each other across the axis. */
+/** Half-width at the widest point, where C3 and C4 face each other. */
 export const CROSS = Math.abs(laneAt('low')) + ROOM.width / 2;
 
-/** Half the low spine the camera stands in between C3 and C4. */
+/** Half-width of the low spine between C3 and C4 where the camera stands. */
 export const SPINE = Math.abs(laneAt('low')) - ROOM.width / 2;
 
 export const SECTION = plan.section;
@@ -59,7 +59,7 @@ export const PLAN_ASPECT = RUN / (CROSS * 2);
 /** A point on the plan: x across the run, z along it, both in metres. */
 export type PlanPoint = readonly [number, number];
 
-/** Solid between two voids, and the thickness every wall band is drawn at. */
+/** Wall thickness in metres, also used for every drawn wall band. */
 export const WALL = 0.3;
 
 export interface CellWing {
@@ -79,24 +79,15 @@ export interface Cell {
   readonly half: number;
   readonly centre: number;
   readonly top: number;
-  /** Sides with no wall at all, because another member is on the far side. */
+  /** Sides with no wall, because another member adjoins there. */
   readonly opens: readonly number[];
   readonly wings: readonly CellWing[];
 }
 
 /**
- * The enfilade, as the building is carved from it.
- *
- * **This mirrors `enfilade()` in `tools/blender/corridor_shell.py`**, and the
- * mirror is deliberate: both sides derive the same members from
- * `corridorPlan.json`, because Python cannot import this and glTF carries
- * geometry rather than the plan that produced it. Change one and change the
- * other — the shape of a member is the one thing here that is stated twice.
- *
- * The runtime needs it because the plan the corridor is read as from above is
- * drawn from the plan, not traced off the mesh: an `EdgesGeometry` of the shell
- * returns every bevel, every oak board and both faces of every wall, which is a
- * wireframe of a building and not a drawing of one.
+ * The members the building is carved from. Must match `enfilade()` in
+ * `tools/blender/corridor_shell.py`: both derive from `corridorPlan.json`.
+ * The top-down plan drawing is built from these, since mesh edges include every bevel.
  */
 const enfilade = (): Cell[] => {
   const half = ROOM.length / 2;
@@ -161,9 +152,8 @@ export const CELLS: readonly Cell[] = enfilade();
 export interface FlowRoute {
   readonly key: string;
   /**
-   * How far downstream this route starts, in routes rather than metres. The
-   * network's arclength is accumulated from it, so one pulse released at the
-   * mouth reaches C5 through both branches at the same moment.
+   * How many routes downstream this one starts. Arclength accumulates from it,
+   * so a pulse from the mouth reaches C5 through both branches at once.
    */
   readonly stage: number;
   readonly points: readonly PlanPoint[];
@@ -174,23 +164,10 @@ const FAN = (ROOM.length / 2) * plan.flow.fan;
 const BRANCH = Math.abs(laneAt('low'));
 
 /**
- * The figure, as routes through the built volume.
- *
- * Every turn happens where the building is open. The fan is inside the cross
- * and not in the link before it, because a link is 3.2 m wide and a branch
- * turning there would leave through a wall. The axis carries nothing between
- * the fan and the merge: there is no C2 → C5 edge at inference time, so
- * everything detours through C3 and C4, and the audience standing on the axis
- * watches the flow divide around them and come back together.
- *
- * **A branch is a chevron, not an elbow.** Routed orthogonally — out to the
- * lane, along it, and back — the two branches close into a rounded rectangle
- * sitting in the middle of the cross, and a rectangle reads as a loop rather
- * than as a division: the cross-overs came to 13 m against a 6 m run through
- * the room, so the detour was longer than the thing it was detouring to. The
- * room is too short against the lane offset for an orthogonal route to read.
- * Two diagonals turning at the lane say *divide* and *rejoin* in one shape, and
- * they put the turn exactly where C3 and C4 are labelled.
+ * The pipeline figure as routes through the building. The fan sits inside the
+ * cross because a 3.2 m link is too narrow to turn in. The axis is empty between
+ * fan and merge: there is no C2 to C5 edge at inference, so flow goes via C3 and C4.
+ * Each branch is a chevron that turns at its lane, where C3 and C4 are labelled.
  */
 export const FLOW_ROUTES: readonly FlowRoute[] = [
   {
@@ -230,73 +207,37 @@ export const FLOW_ROUTES: readonly FlowRoute[] = [
 ];
 
 /**
- * The ceiling opens at the end of the corridor's run, and the deck is what
- * decides where that is — `scenes/act3/index.ts` asserts the two still agree.
- */
-/**
- * The corridor's scene run, and the two states the overlook is made of.
- *
- * Zone progress is derived from the deck's order, so the states the world can be
- * in are positions in this run rather than authored numbers. Act III's themes
- * stay inside the corridor zone even though there is no corridor left in them:
- * what they are argued inside is the sea, the sea belongs to this zone, and a
- * zone change would take it away and put a hard cut where the dive is.
- *
- * Adding a theme means raising `CORRIDOR_RUN` and nothing else. The thresholds
- * are indices into the run, so they move with it, and
- * `scenes/act3/index.ts` asserts the deck against them at load.
+ * Scene count of the corridor zone and the overlook thresholds within it.
+ * Act III stays in this zone because its sea belongs here. To add a theme,
+ * raise `CORRIDOR_RUN`; `scenes/act3/index.ts` checks the deck against it at load.
  */
 const ACT2_STATIONS = 5;
 const CORRIDOR_RUN = ACT2_STATIONS + 6;
 
 export const RISE = {
-  /** The ceiling comes off, the shell drains and the plan is read. */
+  /** Ceiling lifts, the shell fades and the plan shows. */
   opens: ACT2_STATIONS / (CORRIDOR_RUN - 1),
-  /** The plan clears, and the sea it clears into is what Act III stands in. */
+  /** Plan clears to the sea used by Act III. */
   disperses: (ACT2_STATIONS + 1) / (CORRIDOR_RUN - 1),
   lift: 24,
 } as const;
 
 /**
- * Where station `index` stands in the corridor's run.
- *
- * The projector and its screens light a station as the camera reaches it, and
- * what they are handed is zone progress, which is a fraction of a run whose
- * length they do not control. Reading it as `index / SCREENS.length` is only
- * correct while the run is exactly the five stations plus one, and it fails
- * silently the moment Act III gains a scene: every station's progress shifts
- * down, the threshold does not, and the camera stands at C5 in front of a wall
- * that was never lit. Nothing errors and nothing looks broken except the thing
- * the whole act is read off.
- *
- * So the position comes from the run, once, here.
+ * Zone progress (0-1) of station `index`. Use this for screen lighting
+ * thresholds so they stay correct when Act III gains scenes.
  */
 export const stationProgress = (index: number): number => index / (CORRIDOR_RUN - 1);
 
 /**
- * How the figure leaves, and why it leaves in a direction.
- *
- * A uniform fade to black is the one move a slide deck can already do, and it
- * says nothing. The figure clears the way the pipeline runs, from the mouth
- * through to C5, so the last thing to go is the station the camera climbed out
- * of and the direction reads as the argument finishing.
- *
- * `soft` is what makes it a dissolve rather than a wipe: the front is nineteen
- * metres deep on a run of seventy-five, so a quarter of the figure is
- * mid-departure at any moment and no edge is ever visible as a line. `grain`
- * bends that front by a low-frequency function of position, enough that rooms
- * do not empty in rank order.
- *
- * The drawing and the flow share it, because two layers of one figure leaving
- * on separately tuned curves is two things leaving.
+ * Clearing sweep from the mouth to C5, shared by the drawing and the flow.
+ * `soft` is the front depth in metres, so the edge dissolves. `grain` adds
+ * low-frequency noise to the front so rooms do not clear in strict order.
  */
 export const SWEEP = { soft: 19, grain: 0.42 } as const;
 
 /**
- * Where the clearing front stands at `level`.
- *
- * A full soft-edge behind the mouth at 0, so nothing has started; one past C5
- * at 1, so nothing is left.
+ * z of the clearing front at `level` (0 to 1). At 0 it sits fully behind the
+ * mouth, at 1 fully past C5.
  */
 export const sweepFront = (level: number): number =>
   -SWEEP.soft * 2 + level * (RUN + SWEEP.soft * 3);
@@ -332,7 +273,7 @@ export const SHOT_DISTANCE = SLIDE_WIDTH / (2 * SHOT.fill * HALF_FRAME);
 
 export const EYE = SECTION.floor + 1.58;
 
-/** Where the projected quad lands on screen, as fractions of the stage rather than pixels. */
+/** Where the projected quad lands on screen, as fractions of the stage. */
 export const SLIDE_RECT = (() => {
   const halfHeight = SLIDE.height / 2 / SHOT_DISTANCE / HALF_V;
   const centreY = (SLIDE.y - EYE) / SHOT_DISTANCE / HALF_V;
@@ -395,7 +336,7 @@ export const SCREENS: readonly Screen[] = [
   terminalScreen(),
 ];
 
-/** Square-on and level: aiming up at the slide would keystone the wall it is thrown on. */
+/** Square-on and level, so the slide is never keystoned. */
 export const shotAt = (
   index: number,
 ): { position: PlanPoint3; target: PlanPoint3; via: PlanPoint3 } => {

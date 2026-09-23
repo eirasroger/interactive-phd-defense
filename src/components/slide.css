@@ -1,4 +1,4 @@
-/* 5:7, not even: the claim needs a measure and stops, the evidence takes the rest. */
+/* 5:7 split: text column on the left, evidence on the right. */
 .slide {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
@@ -60,17 +60,14 @@
   gap: var(--s-6);
 }
 
-/* Empty until a beat fills it, and contributing no gap while it is. */
+/* Hidden while empty so it adds no gap. */
 .slide-statements:empty {
   display: none;
 }
 
 /*
- * Statements sharing one cell, for a slide whose beats replace the claim.
- *
- * The column is as tall as the longest of them and never reflows, which is the
- * same rule the evidence stack follows one column over: a swap must not move
- * anything the reader has already found.
+ * Swapped statements share one grid cell, so the column keeps the height of
+ * the tallest and never reflows.
  */
 .slide-statements[data-swap] > * {
   grid-area: 1 / 1;
@@ -121,7 +118,6 @@
 }
 
 /*
- * No responsive fallback. The stage is always 1920x1080 and letterboxes on
- * anything else, so a viewport media query here would fire on a small window
- * and restack a composition that has not actually changed size.
+ * No media queries: the stage is always 1920x1080 and letterboxes, so the
+ * layout never changes size.
  */

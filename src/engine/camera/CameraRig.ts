@@ -3,23 +3,12 @@ import { CAMERA_DEFAULTS, ORIGIN_POSE } from '@/config/presentation';
 import type { CameraPose, Vec3 } from './types';
 
 /**
- * Holds the live camera and its current pose as plain numbers.
+ * Holds the live camera and its pose as plain numbers so GSAP can tween them.
+ * `apply()` writes them to the camera once per frame.
  *
- * The pose is stored as scalars rather than Vector3s so it can be tweened
- * directly by GSAP, which interpolates numeric properties. `apply()` pushes
- * those scalars onto the actual camera once per frame.
- *
- * **Position is tweened; orientation is swept.** During a move the look target
- * is not interpolated — the *view direction* is, along the shortest arc between
- * the two headings, at a rate that is even for the whole move. Lerping the
- * target point instead makes the turn rate depend on how far away the target
- * happens to be, so a move that ends on something close whips through the last
- * third of its turn while the numbers say it is easing out. That is a camera
- * artefact with no cause in the scene, and it is what makes a smooth-on-paper
- * transition feel like a lurch.
- *
- * The declared target is therefore honoured exactly at both ends of a move and
- * treated as a heading in between, which is what a camera on a head does.
+ * During a move, position is tweened and the view direction is slerped at an
+ * even rate. Lerping the target point would make the turn rate depend on target
+ * distance. The declared target is exact at both ends of a move.
  */
 export class CameraRig {
   readonly camera: PerspectiveCamera;
@@ -72,11 +61,8 @@ export class CameraRig {
   }
 
   /**
-   * Captures the two headings a move sweeps between, and resets its progress.
-   *
-   * Read from the live state rather than from the previous scene's declared
-   * pose, so a move interrupted halfway sweeps on from where the camera
-   * actually is instead of from where it was last told to be.
+   * Captures the start and end headings of a move and resets progress. The
+   * start comes from the live state, so an interrupted move continues smoothly.
    */
   beginMove(pose: CameraPose, duration = 0): void {
     const s = this.state;
@@ -131,7 +117,7 @@ export class CameraRig {
     return new CatmullRomCurve3(points, false, 'catmullrom', 0.05);
   }
 
-  /** Lands on the declared target exactly, whatever the last frame rounded to. */
+  /** Snaps to the declared target exactly, removing per-frame rounding. */
   endMove(): void {
     const s = this.state;
     this.moving = false;
@@ -154,8 +140,7 @@ export class CameraRig {
       s.pz = this.waypoint.z;
     }
 
-    // A half-sine arc peaks mid-move and vanishes at both ends, so the lift
-    // never displaces the declared start or end pose.
+    // Half-sine lift: zero at both ends, so start and end poses are exact.
     const lift = s.arc === 0 ? 0 : Math.sin(s.phase * Math.PI) * s.arc;
     this.camera.position.set(s.px, s.py + lift, s.pz);
 
@@ -277,12 +262,8 @@ function reach(vector: Vector3): number {
 }
 
 /**
- * Constant-rate interpolation between two unit headings.
- *
- * Falls back to a normalised lerp when the two are nearly parallel, where the
- * arc is shorter than the precision of the angle it would be divided by, and
- * when they are nearly opposed, where the arc is not unique. Neither case has a
- * visible difference; both have a division by zero.
+ * Constant-rate interpolation between two unit headings. Nearly parallel or
+ * nearly opposed inputs take special paths to avoid dividing by zero.
  */
 const UP = new Vector3(0, 1, 0);
 const SIDE = new Vector3(1, 0, 0);

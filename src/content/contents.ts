@@ -1,17 +1,9 @@
 import { CONTRIBUTIONS } from '@/content/contributions';
 
 /**
- * Scene 2 — the contents.
- *
- * Six sections, numbered, in order. Nothing is explained here: a contents page
- * that annotates itself is being read out instead of referred to.
- *
- * The five stations are the contribution map's own, so the roles on this slide
- * and the roles on the corridor wall are one string.
- *
- * `from` is the scene each section opens on. `scenes/index.ts` asserts every one
- * of them exists and that they run in the deck's own order, so reordering the
- * talk fails the build rather than leaving the contents quietly wrong.
+ * Scene 2: the contents slide. Station roles come from the contribution map.
+ * `from` is the scene each section opens on. `scenes/index.ts` checks that each
+ * one exists and that they are in deck order, and fails the build otherwise.
  */
 
 export interface ContentsPart {

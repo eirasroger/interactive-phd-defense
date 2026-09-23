@@ -26,18 +26,9 @@ import { assetsByZone, zoneProgressByIndex } from '@/engine/world/zoneRuns';
 import { zoneFor } from '@/world/zones';
 
 /**
- * Seconds between arriving on the beat before a crossing and standing the next
- * zone up.
- *
- * Everything expensive about that zone is already paid for at load, so what is
- * left is small — but it is not nothing, and it used to land on the same tick as
- * the click that played the beat. A hitch *on* an input reads as the deck not
- * responding; the same hitch half a second later, under someone speaking, is
- * not perceived at all. The delay buys nothing technically and everything
- * perceptually, which is the whole of its justification.
- *
- * It is a deadline rather than a wait: any navigation before it expires runs the
- * warm immediately, so the corridor is never less ready than it was before.
+ * Seconds to wait after reaching the beat before a crossing before warming the
+ * next zone. Keeps the small warm hitch off the click itself. Any navigation
+ * before the deadline runs the warm immediately.
  */
 const WARM_DELAY_SECONDS = 0.5;
 
@@ -53,12 +44,9 @@ export interface EngineOptions {
 }
 
 /**
- * Top-level composition root.
- *
- * Everything the presentation needs is constructed and wired here; no other
- * module reaches across subsystem boundaries. The frame loop is the single
- * place where camera state, diagnostics and rendering are advanced, in that
- * order, so what is drawn always reflects the pose computed this frame.
+ * Composition root. Builds and wires every subsystem. The frame loop advances
+ * camera, diagnostics and rendering in that order, so each frame draws the pose
+ * computed in it.
  */
 export class Engine {
   private readonly clock = new Clock();
@@ -78,12 +66,12 @@ export class Engine {
   private readonly lifetime = new AbortController();
 
   private diagnosticsVisible = false;
-  /** Held true across the initial load and the zone preparation that follows it. */
+  /** True during the initial load and the zone preparation after it. */
   private preparing = true;
-  /** A zone due to be stood up, and the deadline it is waiting on. */
+  /** Zone waiting to be warmed when `warmTimer` fires. */
   private pendingWarm: ZoneDefinition | null = null;
   private warmTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Names what a long frame was doing. Dropped from production builds. */
+  /** Logs what a long frame was doing. Dev builds only. */
   private readonly frames: FrameLog | null;
   private contextLost = false;
 
@@ -91,8 +79,8 @@ export class Engine {
     this.renderer = new Renderer(options.container, quality, {
       onResize: (width, height) => {
         this.rig.setAspect(width / Math.max(height, 1));
-        // No size passed: the pipeline reads the drawing buffer, which is the
-        // only thing the composer and the canvas can both be sized from.
+        // The pipeline sizes itself from the drawing buffer, shared by the
+        // composer and the canvas.
         this.pipeline.setSize();
       },
       onContextLost: () => {
@@ -142,12 +130,11 @@ export class Engine {
       clock: this.clock,
       quality,
       onLoadingChange: (loading, value) => {
-        // The adaptive ladder must not read a load as a slow machine.
+        // Pause the quality ladder while loading so a load is never treated as
+        // a slow machine.
         this.performance.setActive(!loading && !this.preparing);
-        // The scene director finishing its own assets is not the end of loading
-        // while zones are still being stood up — see `prepareZones`. Suppressing
-        // its `false` keeps one continuous loading screen instead of a flash of
-        // title slide over a deck that is about to block for two seconds.
+        // Loading continues while `prepareZones` runs. Holding the loading
+        // screen avoids a brief flash of the title slide.
         if (!loading && this.preparing) return;
         options.onLoadingChange(loading, value);
       },
@@ -160,24 +147,15 @@ export class Engine {
   }
 
   /**
-   * The built world follows the deck.
-   *
-   * Zone, render mode and world state are all read off the scene definition and
-   * its position in its zone's run, so a scene never sets up the world it stands
-   * in — which is what keeps a jump backwards during questions from leaving the
-   * building half specified or the light belonging to somewhere else.
+   * Sets the world from the scene definition and its position in its zone's
+   * run. Scenes never set up the world themselves, so any jump lands in a
+   * fully specified state.
    */
   private enterZone(state: SceneState): void {
-    // Any deferred warm is due now. The deck is moving, and if this is the
-    // navigation that walks through the door then the world on the far side of
-    // it has to be standing before the crossing is set up rather than half a
-    // second after the camera has started travelling.
+    // Run any pending warm now so the next zone exists before a crossing starts.
     this.flushWarm();
 
-    // Forwards only. A crossing is a set piece — doors opening, two worlds
-    // briefly sharing a frame — and replaying it at a presenter who has jumped
-    // back through a door to answer a question is the wrong reading of what
-    // they asked for. Backwards is a cut, like every other jump.
+    // Crossings play only when moving forward. Going backward is a cut.
     const crossing = state.direction === 'forward' ? (state.definition.crossing ?? null) : null;
 
     this.zones.enter(
@@ -194,12 +172,8 @@ export class Engine {
   }
 
   /**
-   * Stand the next zone up on the last beat before a crossing — and take it
-   * back down the moment that stops being where the deck is pointed.
-   *
-   * Every early return here is a navigation that has moved away from the
-   * crossing, including backwards, so each of them has to undo the warm rather
-   * than simply decline to repeat it.
+   * Warms the next zone on the last beat before a crossing. Any other position
+   * cancels and undoes the warm.
    */
   private warmNextZone(state: SceneState): void {
     const next = this.options.scenes[state.index + 1];
@@ -214,7 +188,7 @@ export class Engine {
     this.scheduleWarm(zoneFor(next.zone));
   }
 
-  /** Stands a zone up after `WARM_DELAY_SECONDS`, or sooner if the deck moves. */
+  /** Warms a zone after `WARM_DELAY_SECONDS`, or sooner if the deck moves. */
   private scheduleWarm(definition: ZoneDefinition): void {
     if (this.zones.isWarmed(definition.id)) return;
     if (this.pendingWarm?.id === definition.id) return;
@@ -241,12 +215,11 @@ export class Engine {
   }
 
   start(): void {
-    // Before the renderer starts, so its first measurement is of a stage that
-    // is already at its final scale.
+    // Bound first so the renderer's first measurement sees the final stage scale.
     bindStageFit(() => this.renderer.refresh(), this.lifetime.signal);
 
-    // Started here, not in the constructor, so the first resize reaches a
-    // fully wired camera rig and render pipeline.
+    // Started after construction so the first resize reaches a wired rig and
+    // pipeline.
     this.renderer.start();
 
     this.clock.add(this.frame);
@@ -270,21 +243,9 @@ export class Engine {
   }
 
   /**
-   * Stand every zone in the deck up before the first click.
-   *
-   * A zone costs the same to build whenever it is built; the only question is
-   * who is watching. Deferred to the beat before its crossing, the corridor
-   * cost a 1.7 second shader compile over the approach to the entrance — the
-   * one move in Act I that has to be smooth, because it is the transition the
-   * whole act has been walking toward. Done here it costs a slightly longer
-   * loading screen, which is the one moment of the deck nobody is presenting
-   * over.
-   *
-   * Assets are loaded per zone rather than per scene, because a zone is what
-   * `create` reads and a scene's declaration is only ever the union of what its
-   * zone needs. Everything is already cached by the time the scenes that
-   * declare it are reached, so `ensureAssets` becomes a no-op for the rest of
-   * the deck and no later scene change touches the network either.
+   * Builds every zone during the loading screen, so shader compiles (1.7 s for
+   * the corridor) never land mid-presentation. Assets load per zone, so later
+   * `ensureAssets` calls are no-ops and scene changes never hit the network.
    */
   private async prepareZones(): Promise<void> {
     try {
@@ -294,10 +255,8 @@ export class Engine {
         await this.zones.prepare(zoneFor(zone));
       }
     } catch (error) {
-      // A zone that will not stand up early will be built on demand by `warm`,
-      // exactly as it was before. Reported rather than swallowed: a deck that
-      // silently lost its preparation is a deck that stutters in the hall for a
-      // reason nobody can see.
+      // Failed zones are built on demand by `warm`. Logged so the cause of any
+      // later stutter is visible.
       console.warn('[engine] zone preparation failed; falling back to on-demand.', error);
     } finally {
       this.preparing = false;
@@ -320,8 +279,7 @@ export class Engine {
   }
 
   private readonly frame = (dt: number): void => {
-    // A lost context cannot be drawn to; skipping keeps the tab responsive
-    // until the browser hands the context back.
+    // Skip frames until the browser restores the WebGL context.
     if (this.contextLost) return;
 
     this.rig.apply();
@@ -340,7 +298,7 @@ export class Engine {
   private bindInput(): void {
     const { signal } = this.lifetime;
 
-    // A click plays the next beat if there is one, and otherwise moves on.
+    // Play the next beat if there is one, otherwise go to the next scene.
     const next = (): void => {
       if (!this.scenes.advanceBeat()) this.navigate(this.scenes.currentIndex + 1);
     };
