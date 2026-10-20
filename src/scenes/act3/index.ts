@@ -165,7 +165,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
    */
   {
     id: 'ai',
-    title: 'AI as the methodological backbone',
+    title: 'Artificial intelligence across the pipeline',
     chapter: CHAPTER.crossCutting,
     zone: corridorZone.id,
     world: 'recessed',
@@ -181,7 +181,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
    */
   {
     id: 'conditions',
-    title: 'Missing data and context as structural conditions',
+    title: 'Missing data and context',
     chapter: CHAPTER.crossCutting,
     zone: corridorZone.id,
     world: 'recessed',

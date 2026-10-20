@@ -7,8 +7,7 @@ import type { CaptionContent } from '@/components/Caption';
 export const act3Captions = {
   whole: {
     eyebrow: 'Integrated pipeline',
-    heading:
-      'Extraction quality, compliance outcomes and inferred attributes propagate coherently to the recommendation.',
+    heading: 'The five contributions form one integrated pipeline.',
   },
 } satisfies Record<string, CaptionContent>;
 
@@ -42,33 +41,33 @@ export const BACKBONE_NODES: readonly BackboneNode[] = [
     key: 'extract',
     verb: 'Extract',
     family: 'Large language model',
-    need: 'Unstructured sources, into records',
+    need: 'Documents into records',
   },
   {
     key: 'screen',
     verb: 'Screen',
     family: 'LLM agent, human in the loop',
-    need: 'An outcome that carries consequence',
+    need: 'Decisions with consequences',
   },
   {
     key: 'estimate',
     verb: 'Estimate',
     family: 'Deep learning',
-    need: 'Evidence that is missing',
+    need: 'Missing evidence',
   },
   {
     key: 'recommend',
     verb: 'Recommend',
     family: 'Deep learning, labels from an LLM',
-    need: 'Preference with no ground truth',
+    need: 'No ground truth for preference',
   },
 ];
 
 /** Cross-cutting theme 1. One beat of about 30 seconds. */
 export const BACKBONE = {
   eyebrow: 'Cross-cutting themes',
-  heading: 'Artificial intelligence as the methodological backbone',
-  line: 'A different method at each stage, decided by what the stage needs.',
+  heading: 'Artificial intelligence across the pipeline',
+  line: 'A different method at each stage.',
 } as const;
 
 /* ---- Cross-cutting theme 2: conditions the architecture is designed around ---- */
@@ -79,8 +78,8 @@ export const BACKBONE = {
  */
 export const CONDITIONS = {
   eyebrow: 'Cross-cutting themes',
-  heading: 'Missing data and context as structural conditions',
-  line: 'Both run the length of the pipeline, and both are answered at every stage.',
+  heading: 'Missing data and context',
+  line: 'Both are handled at every stage.',
 } as const;
 
 /**
@@ -89,21 +88,21 @@ export const CONDITIONS = {
  */
 export const CARDS = {
   evidence: {
-    heading: 'The missing-data thread',
-    lead: 'The pipeline is built to run on incomplete information.',
+    heading: 'Missing data',
+    lead: 'The pipeline works with incomplete information.',
     steps: [
-      'It targets early design and early construction, where product decisions carry the most influence and the evidence is thinnest.',
-      'Inference recovers part of what a product has not declared.',
-      'The recommender accepts missing values as valid input and returns a recommendation anyway.',
+      'Early design is when decisions matter most and data is thinnest.',
+      'Inference recovers part of the missing data.',
+      'The recommender accepts missing values.',
     ],
   },
   context: {
-    heading: 'Context sensitivity',
-    lead: 'Context decides which indicators matter, and how much.',
+    heading: 'Context',
+    lead: 'Context sets which indicators matter, and how much.',
     steps: [
-      'Admissibility and feasibility settle which products can be considered at all.',
-      'Application and stakeholder priority set the weight each indicator carries.',
-      'The recommendation is therefore made for the needs of the project at hand.',
+      'Screening sets which products are admissible.',
+      'Application and priorities set the indicator weights.',
+      'The recommendation fits the project at hand.',
     ],
   },
 } as const;
@@ -154,18 +153,18 @@ export const STANDING_BANDS: readonly StandingBand[] = [
     label: 'Theoretical contributions',
     rows: [
       {
-        lead: 'Relative comparison as the evaluation logic for early design',
-        note: 'Comparison across candidates is established as a valid mode of evaluation where absolute accounting cannot be supported, its validity resting on evidence assembled consistently for each.',
+        lead: 'Relative comparison for early design',
+        note: 'Comparing candidates is valid before absolute values are available.',
         icon: 'comparison',
       },
       {
-        lead: 'Context integrated into the recommendation itself',
-        note: 'The recommendation is conditioned on the application and on the priorities of the project, so the ranking is produced for the case at hand.',
+        lead: 'Context inside the recommendation',
+        note: 'The ranking depends on application and priorities.',
         icon: 'context',
       },
       {
-        lead: 'Evaluation under incomplete evidence',
-        note: 'Uncertainty and partial information are treated as working conditions of early design, so products are ranked without requiring complete declarations.',
+        lead: 'Evaluation with incomplete evidence',
+        note: 'Products are ranked without complete declarations.',
         icon: 'partial',
       },
     ],
@@ -176,22 +175,22 @@ export const STANDING_BANDS: readonly StandingBand[] = [
     rows: [
       {
         lead: 'Design and procurement',
-        note: 'An operational instrument for sustainable and circular selection at the stage the decision is taken, which was not previously available.',
+        note: 'A tool for sustainable and circular selection when the decision is made.',
         icon: 'earlier',
       },
       {
         lead: 'Manufacturers',
-        note: 'The analysis shows where documentation is reported inconsistently, and what must be stated more precisely for products to be compared on equal terms.',
+        note: 'Shows where declarations are inconsistent or incomplete.',
         icon: 'declaration',
       },
       {
         lead: 'Programme operators',
-        note: 'Coverage and categorisation consistency across the corpus are quantified, showing where reporting requirements would benefit from harmonisation.',
+        note: 'Quantifies where reporting should be harmonised.',
         icon: 'coverage',
       },
       {
         lead: 'Regulators',
-        note: 'Verification at the product specification level can be automated, and its reliability is set by the scope of mandatory disclosure.',
+        note: 'Product-level compliance checks can be automated.',
         icon: 'threshold',
       },
     ],
@@ -209,20 +208,18 @@ export const STANDING_LIMITS = {
   items: [
     {
       lead: 'EPDs as the evidence base',
-      limit:
-        'For some construction products an EPD does not carry the whole picture, and the rest of the evidence sits in separate documents.',
-      next: 'Associating the documents that describe one product, and adapting the pipeline once the digital product passport carries them together.',
+      limit: 'Some product evidence sits outside the EPD.',
+      next: 'Link the documents of each product, and adopt the digital product passport.',
     },
     {
       lead: 'Concrete as the case study',
-      limit:
-        'The pipeline was exercised on concrete, chosen for the relevance of the product and for the maturity of its declarations.',
-      next: 'Extension to other construction products, where performance indicators differ, to establish whether transfer learning is sufficient or deeper adaptation is warranted.',
+      limit: 'The pipeline was tested on concrete.',
+      next: 'Extend to other products and test transfer learning.',
     },
     {
       lead: 'Attributes covered by inference',
-      limit: 'Inference was demonstrated for end-of-life attributes and for global warming potential.',
-      next: 'Extension to technical performance and cost, which vary with application context and with market conditions.',
+      limit: 'Inference covered end of life and global warming potential.',
+      next: 'Extend to technical performance and cost.',
     },
   ],
 } as const;
@@ -238,7 +235,7 @@ export const STANDING_LIMITS = {
 export const CONCLUSIONS = {
   eyebrow: 'Conclusions',
   heading: 'Conclusions',
-  line: 'The five contributions function as one traceable architecture.',
+  line: 'The five contributions work as one traceable pipeline.',
 } as const;
 
 export interface ConclusionPanel {
@@ -254,25 +251,25 @@ export const CONCLUSION_PANELS: readonly ConclusionPanel[] = [
   {
     key: 'comparison',
     index: '01',
-    lead: 'Relative comparison is the evaluation logic early design can sustain.',
-    note: 'Absolute quantification needs complete product data that arrives only once design is settled. The ordering across alternatives holds where the values cannot.',
+    lead: 'Early design calls for relative comparison.',
+    note: 'Absolute values arrive too late. The ranking between alternatives is available earlier.',
   },
   {
     key: 'sequence',
     index: '02',
-    lead: 'Feasibility and preference are distinct operations, resolved in sequence.',
-    note: 'Screening establishes which products are admissible under the governing constraints. Preference is evaluated only over what passes.',
+    lead: 'Screening comes before preference.',
+    note: 'Only admissible products are ranked.',
   },
   {
     key: 'evidence',
     index: '03',
-    lead: 'Incomplete evidence is characterised, and then carried forward.',
-    note: 'The extent and distribution of unreported information were measured across the corpus. Inference recovers part of it, and what stays uncertain remains visible.',
+    lead: 'Missing evidence is measured and carried forward.',
+    note: 'Inference recovers part of it. What stays uncertain remains visible.',
   },
   {
     key: 'context',
     index: '04',
-    lead: 'Preference is relational, and conditioned on the context of the decision.',
-    note: 'The same candidate set ranks differently under different applications and priorities, and the model adapts without anyone quantifying weights in advance.',
+    lead: 'Preference depends on context.',
+    note: 'The same candidates rank differently by application and priority, with no fixed weights.',
   },
 ];
