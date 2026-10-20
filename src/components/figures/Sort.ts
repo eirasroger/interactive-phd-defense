@@ -246,6 +246,29 @@ export function createSort(): Sort {
 
   let shown = -1;
 
+  /** A card's visible verdict: its status, reason and per-reading states. */
+  interface Look {
+    readonly status: string;
+    readonly reason: string;
+    readonly readings: Readonly<Record<string, string>>;
+  }
+
+  const look = (card: (typeof cards)[number]): Look => ({
+    status: card.node.dataset['status'] ?? 'pass',
+    reason: card.reason.textContent ?? '',
+    readings: Object.fromEntries(
+      Object.entries(card.readings).map(([key, node]) => [key, node.dataset['state'] ?? 'pass']),
+    ),
+  });
+
+  const show = (card: (typeof cards)[number], state: Look): void => {
+    card.node.dataset['status'] = state.status;
+    card.reason.textContent = state.reason;
+    for (const [key, node] of Object.entries(card.readings)) {
+      node.dataset['state'] = state.readings[key] ?? 'pass';
+    }
+  };
+
   const present = (condition: Condition, source: Source): boolean =>
     condition.sources[source] !== undefined;
 
@@ -317,6 +340,10 @@ export function createSort(): Sort {
       cards.map((card) => card.node),
       { opacity: 1, x: 0, y: 0 },
     );
+    gsap.set(
+      cards.map((card) => card.reason),
+      { opacity: 1 },
+    );
   };
 
   return {
@@ -337,6 +364,7 @@ export function createSort(): Sort {
       gsap.set(element, { opacity: 1 });
 
       const first = cards.map((card) => card.node.offsetLeft);
+      const before = cards.map(look);
       const verdicts = apply(condition);
       const last = cards.map((card) => card.node.offsetLeft);
 
@@ -445,8 +473,9 @@ export function createSort(): Sort {
         if (changed) rolled += 1;
       }
 
-      // Only cards whose verdict changed move. A moving card scales up slightly
-      // and back down.
+      // Only cards whose verdict changed move. Each keeps its old verdict until
+      // its own move starts, then shifts colour while it travels, and its reason
+      // fades in as it lands. A moving card scales up slightly and back down.
       const cardsAt = seconds(DURATION.slow * 0.95);
       const cardTravel = seconds(DURATION.cinematic * 0.62);
       let moved = 0;
@@ -455,8 +484,19 @@ export function createSort(): Sort {
         if (delta === 0) continue;
 
         const at = cardsAt + seconds(STAGGER * 3) * moved;
+        const after = look(card);
+        const previous = before[row];
+        if (previous) show(card, previous);
 
         line
+          .call(() => show(card, { ...after, reason: '' }), [], at)
+          .call(() => (card.reason.textContent = after.reason), [], at + cardTravel * 0.55)
+          .fromTo(
+            card.reason,
+            { opacity: 0 },
+            { opacity: 1, duration: seconds(DURATION.slow), ease: EASE.standard, immediateRender: false },
+            at + cardTravel * 0.55,
+          )
           .call(() => (card.node.dataset['moving'] = 'true'), [], at)
           .fromTo(card.node, { x: delta }, { x: 0, duration: cardTravel, ease: 'power3.inOut' }, at)
           .to(
