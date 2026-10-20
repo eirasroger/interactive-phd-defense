@@ -23,7 +23,7 @@
 
 .mg-group-label {
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -84,7 +84,7 @@
   gap: 0.04em;
 
   font-family: var(--font-figure);
-  font-size: var(--t-figure);
+  font-size: var(--t-display);
   font-weight: var(--fw-light);
   line-height: var(--lh-tight);
   letter-spacing: var(--ls-display);
@@ -128,7 +128,7 @@
 .mg-label {
   margin: 0;
   max-width: 34ch;
-  font-size: 1rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--c-text-muted);
 }

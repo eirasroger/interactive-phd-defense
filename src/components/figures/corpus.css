@@ -25,7 +25,7 @@
 
 .cp-index {
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -36,7 +36,7 @@
 
 .cp-method {
   display: grid;
-  grid-template-columns: 21rem 11rem minmax(0, 1fr);
+  grid-template-columns: 21rem 14rem minmax(0, 1fr);
   gap: var(--s-6);
   align-items: center;
 }
@@ -111,7 +111,7 @@
   transform: translateY(-50%);
 
   font-family: var(--font-label);
-  font-size: 0.4375rem;
+  font-size: var(--t-label);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--group) 82%, var(--c-base));
@@ -138,7 +138,7 @@
 .cp-exemplar {
   padding-left: var(--s-3);
   border-left: 2px solid color-mix(in srgb, var(--group-circularity) 50%, transparent);
-  font-size: 0.75rem;
+  font-size: var(--t-subtext);
   font-style: italic;
   line-height: var(--lh-snug);
   color: var(--ink-muted);
@@ -180,15 +180,17 @@
 }
 
 .cp-model {
+  white-space: nowrap;
   font-family: var(--font-figure);
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   color: var(--accent);
 }
 
 .cp-step {
+  white-space: nowrap;
   font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-size: var(--t-label);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -196,12 +198,12 @@
 
 .cp-guardrail {
   position: relative;
-  max-width: 11rem;
+  max-width: 13rem;
   padding: var(--s-2);
   border-radius: 6px;
   /* Opaque ground hides the rail line behind the note. */
   background-color: color-mix(in srgb, #ffffff 82%, transparent);
-  font-size: 0.6875rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   text-align: center;
   color: var(--ink-muted);
@@ -245,7 +247,7 @@
 
 .cp-group-label {
   font-family: var(--font-display);
-  font-size: 1.0625rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-light);
   letter-spacing: var(--ls-title);
   color: var(--group);
@@ -263,16 +265,16 @@
   background-color: color-mix(in srgb, #ffffff 62%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--group) 28%, transparent);
 
-  font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   letter-spacing: 0.03em;
   color: var(--ink-muted);
   white-space: nowrap;
 }
 
 .cp-modules {
-  font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   letter-spacing: 0.04em;
   color: var(--ink-faint);
 }
@@ -300,7 +302,7 @@
 
 .cp-figure {
   font-family: var(--font-figure);
-  font-size: 3rem;
+  font-size: var(--t-title);
   font-weight: var(--fw-light);
   line-height: var(--lh-tight);
   letter-spacing: var(--ls-display);
@@ -323,7 +325,7 @@
 
 .cp-readout-label {
   max-width: 17rem;
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }
@@ -331,8 +333,8 @@
 .cp-source {
   padding-top: var(--s-3);
   border-top: 1px solid var(--rule);
-  font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   letter-spacing: 0.04em;
   color: var(--ink-faint);
 }
@@ -371,7 +373,7 @@
   grid-template-columns: var(--s-3) minmax(0, 1fr) 3rem 2.75rem;
   gap: var(--s-3);
   align-items: center;
-  font-size: 0.75rem;
+  font-size: var(--t-subtext);
   color: var(--ink-muted);
 }
 

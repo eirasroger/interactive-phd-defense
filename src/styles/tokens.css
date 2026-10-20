@@ -34,14 +34,14 @@
 
   /* Fixed sizes for the fixed 1920x1080 stage. `vw`/`vh` would resolve against
      the window and cause reflow. */
-  --t-display: 6.5rem;
-  --t-title: 4rem;
-  --t-heading: 2.25rem;
-  /* Standalone numbers: larger than the adjacent heading. */
-  --t-figure: 4.75rem;
-  --t-body: 1.375rem;
-  --t-caption: 1rem;
-  --t-micro: 0.8125rem;
+  /* The whole deck uses these seven sizes and no others. */
+  --t-display: 4rem; /* title card, standalone numbers */
+  --t-title: 3rem; /* slide headings */
+  --t-subtitle: 2.25rem; /* section titles, secondary numbers */
+  --t-lead: 1.75rem; /* card and item titles */
+  --t-text: 1.375rem; /* sentences */
+  --t-subtext: 1.125rem; /* notes, chips, data labels */
+  --t-label: 0.9375rem; /* uppercase labels */
 
   --lh-tight: 1.05;
   --lh-snug: 1.25;

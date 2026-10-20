@@ -38,14 +38,14 @@
 }
 
 .rc-row-label {
-  font-size: 1.25rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   line-height: var(--lh-snug);
 }
 
 .rc-row-kind {
   font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -82,7 +82,7 @@
   top: 50%;
   transform: translateY(-50%);
   font-family: var(--font-label);
-  font-size: 0.5625rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -109,8 +109,8 @@
 .rc-tick {
   position: absolute;
   bottom: 0.25rem;
-  font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   letter-spacing: 0.03em;
   color: var(--ink-ghost);
 }
@@ -167,7 +167,7 @@
 .rc-mark-value {
   bottom: calc(100% + 5px);
   font-family: var(--font-figure);
-  font-size: 1.25rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
@@ -176,7 +176,7 @@
 .rc-mark-source {
   bottom: calc(100% + 2.15rem);
   font-family: var(--font-label);
-  font-size: 0.5625rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -213,7 +213,7 @@
 
 .rc-governing-value {
   font-family: var(--font-figure);
-  font-size: 2rem;
+  font-size: var(--t-subtitle);
   font-weight: var(--fw-light);
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -223,7 +223,7 @@
 
 .rc-governing-source {
   font-family: var(--font-label);
-  font-size: 0.5625rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;

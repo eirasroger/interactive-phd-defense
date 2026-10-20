@@ -23,7 +23,7 @@ html {
 
 body {
   font-family: var(--font-sans);
-  font-size: var(--t-body);
+  font-size: var(--t-text);
   font-weight: var(--fw-regular);
   line-height: var(--lh-normal);
   letter-spacing: var(--ls-body);

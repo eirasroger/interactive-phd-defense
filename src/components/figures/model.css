@@ -63,7 +63,7 @@
 
 .md-declared-name {
   font-family: var(--font-display);
-  font-size: 1.0625rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   letter-spacing: var(--ls-title);
   color: var(--ink);
@@ -72,7 +72,7 @@
 .md-declared-weight {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   color: var(--c4-accent-soft);
 }
 
@@ -92,8 +92,8 @@
 }
 
 .md-term-name {
-  font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   letter-spacing: 0.04em;
   color: var(--ink-muted);
 }
@@ -101,7 +101,7 @@
 .md-material-label,
 .md-product-label {
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -226,7 +226,7 @@
 .md-product-detail {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 0.75rem;
+  font-size: var(--t-subtext);
   color: var(--ink-muted);
 }
 
@@ -289,7 +289,12 @@
   fill: none;
   stroke: color-mix(in srgb, #c9b5ff 62%, transparent);
   stroke-width: 1.5;
-  stroke-dasharray: 260;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+}
+
+.md-join {
+  fill: #c9b5ff;
 }
 
 /* Centred with a negative margin so `transform` stays free for the reveal. */
@@ -306,36 +311,31 @@
 .md-caption-units {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   line-height: 1;
   color: var(--c4-accent-soft);
 }
 
 .md-caption[data-key='latent'] .md-caption-units {
-  font-size: 1.125rem;
+  font-size: var(--t-subtext);
   color: #ffffff;
 }
 
 .md-caption-label {
-  font-size: 0.75rem;
+  font-size: var(--t-subtext);
   line-height: 1.2;
   color: var(--ink);
 }
 
-.md-caption-detail {
-  font-size: 0.625rem;
-  line-height: 1.25;
-  color: var(--ink-faint);
-}
 
 /* Objective tag at the end of its branch. */
 .md-objective {
   position: absolute;
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0 var(--s-2);
-  width: 13%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 var(--s-3);
   transform: translateY(-50%);
   pointer-events: none;
 }
@@ -343,7 +343,7 @@
 .md-objective-label {
   align-self: center;
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -352,9 +352,8 @@
 
 .md-objective-weight {
   white-space: nowrap;
-  grid-row: 1 / 3;
   align-self: center;
-  font-size: 1.75rem;
+  font-size: var(--t-lead);
   color: var(--c4-accent-soft);
 }
 
@@ -362,30 +361,17 @@
   color: #ffffff;
 }
 
-.md-objective-body {
-  font-size: 0.625rem;
-  line-height: 1.3;
-  color: var(--ink-faint);
-}
 
 /* Label where the two objectives meet. */
 .md-total-label {
   display: block;
   font-family: var(--font-display);
-  font-size: 1.0625rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   letter-spacing: var(--ls-title);
   color: var(--ink);
 }
 
-.md-total-body {
-  display: block;
-  max-width: 11rem;
-  margin-top: 3px;
-  font-size: 0.75rem;
-  line-height: var(--lh-snug);
-  color: var(--ink-muted);
-}
 
 .md-total {
   position: absolute;
@@ -393,7 +379,7 @@
   transform: translateY(-50%);
 
   font-family: var(--font-display);
-  font-size: 0.9375rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-title);
@@ -410,18 +396,13 @@
 
 .md-target {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--t-text);
   font-weight: var(--fw-light);
   line-height: 1.18;
   letter-spacing: var(--ls-title);
   color: var(--c4-accent);
 }
 
-.md-target-form {
-  font-size: 0.875rem;
-  line-height: var(--lh-snug);
-  color: var(--ink-muted);
-}
 
 /* ---- Footer below the field ---------------------------------------------- */
 
@@ -454,22 +435,22 @@
 }
 
 .md-step-index {
-  font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   color: var(--ink-ghost);
 }
 
 .md-step-label {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   line-height: var(--lh-snug);
   color: var(--ink);
 }
 
 .md-step-body {
-  font-size: 0.75rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }
@@ -492,7 +473,7 @@
 
 .md-fact-label {
   font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -500,7 +481,7 @@
 }
 
 .md-fact-value {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink);
 }

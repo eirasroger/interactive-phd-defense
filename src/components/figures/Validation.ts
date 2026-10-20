@@ -4,15 +4,9 @@ import {
   AGREEMENT,
   APPLICATIONS,
   BEHAVIOUR_STUDIES,
-  BEHAVIOUR_TAKEAWAY,
-  INDICATORS,
   MODEL_UNCERTAINTY,
   PANEL,
   PRODUCTS,
-  SALIENCE,
-  SALIENCE_MAX,
-  SALIENCE_REMAINING,
-  SALIENCE_WEIGHTS,
   STAKEHOLDER_SCENARIOS,
   VALIDATION_BLOCKS,
   type ProductId,
@@ -264,63 +258,16 @@ const applicationGrid = (): { readonly element: HTMLElement; readonly cells: HTM
   return { cells, element: el('div', { className: 'vl-grid', children: [...header, ...rows] }) };
 };
 
-/* ---- Block three: Fig. 10 --------------------------------------------------------- */
-
-/**
- * Three of Fig. 10's four panels on a shared scale, so their spread is
- * comparable. The grey bar sums the seven indicators outside the top ten.
- */
-const salienceColumn = (context: (typeof SALIENCE)[number]): {
-  readonly element: HTMLElement;
-  readonly bars: HTMLElement[];
-} => {
-  const bars: HTMLElement[] = [];
-  const weights = (SALIENCE_WEIGHTS[context.key] ?? []).slice(0, 5);
-  const remaining = SALIENCE_REMAINING[context.key] ?? 0;
-
-  const row = (label: string, weight: number, kind: string): HTMLElement => {
-    const fill = el('span', {
-      className: 'vl-shap-fill',
-      attrs: { 'data-kind': kind, style: `--extent: ${((weight / SALIENCE_MAX) * 100).toFixed(2)}%` },
-    });
-    bars.push(fill);
-    return el('div', {
-      className: 'vl-shap-row',
-      attrs: { 'data-kind': kind },
-      children: [
-        el('span', { className: 'vl-shap-name', text: label }),
-        el('span', { className: 'vl-shap-track', children: [fill] }),
-      ],
-    });
-  };
-
-  return {
-    bars,
-    element: el('div', {
-      className: 'vl-shap',
-      children: [
-        el('p', { className: 'vl-shap-head', text: context.label }),
-        ...weights.map((entry, index) =>
-          row(INDICATORS[entry.key], entry.weight, index === 0 ? 'lead' : 'normal'),
-        ),
-        row('Remaining seven', remaining, 'remaining'),
-        el('p', { className: 'vl-shap-note', text: context.concentration }),
-      ],
-    }),
-  };
-};
-
 /* ---- The panel --------------------------------------------------------------------- */
 
 /**
- * Beat 4: validation. Three numbered blocks: agreement with the expert panel,
- * behaviour across contexts, and feature importance.
+ * Beat 4: validation. Two numbered blocks: agreement with the expert panel,
+ * and behaviour across contexts.
  */
 export function createValidation(): Validation {
   const panel = panelBoard();
   const who = whoBoard();
   const application = applicationGrid();
-  const salience = SALIENCE.map(salienceColumn);
 
   const figures = AGREEMENT.figures.map((entry) =>
     el('div', {
@@ -401,23 +348,9 @@ export function createValidation(): Validation {
     }),
   );
 
-  const three = block(
-    3,
-    VALIDATION_BLOCKS.importance,
-    '',
-    el('div', {
-      className: 'vl-block-body',
-      attrs: { 'data-split': 'importance' },
-      children: salience.map((column) => column.element),
-    }),
-  );
+  const element = el('div', { className: 'c5 vl', children: [one, two] });
 
-  const takeaway = el('p', { className: 'vl-takeaway', text: BEHAVIOUR_TAKEAWAY });
-
-  const element = el('div', { className: 'c5 vl', children: [one, two, three, takeaway] });
-
-  const blocks = [one, two, three, takeaway];
-  const shapBars = salience.flatMap((column) => column.bars);
+  const blocks = [one, two];
 
   const settleTo = (): void => {
     gsap.set(element, { opacity: 1 });
@@ -425,7 +358,6 @@ export function createValidation(): Validation {
     gsap.set(panel.bands, { opacity: 1, scaleX: 1 });
     gsap.set(who.bars, { opacity: 1, scaleY: 1 });
     gsap.set(application.cells, { opacity: 1, scale: 1 });
-    gsap.set(shapBars, { opacity: 1, scaleX: 1 });
   };
 
   return {
@@ -499,17 +431,6 @@ export function createValidation(): Validation {
             stagger: { each: seconds(STAGGER * 0.2), from: 'start' },
           },
           seconds(DURATION.cinematic),
-        )
-        .fromTo(
-          shapBars,
-          { scaleX: 0 },
-          {
-            scaleX: 1,
-            duration: seconds(DURATION.normal),
-            ease: EASE.enter,
-            stagger: { each: seconds(STAGGER * 0.2), from: 'start' },
-          },
-          seconds(DURATION.cinematic * 1.35),
         );
     },
   };

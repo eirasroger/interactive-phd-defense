@@ -2,7 +2,6 @@ import gsap from 'gsap';
 import { DURATION, EASE, STAGGER, seconds } from '@/animations/timing';
 import {
   CORPUS_CLAIM,
-  GENERATION,
   INFLUENCE,
   INFLUENCE_BANDS,
   SOURCES,
@@ -22,277 +21,6 @@ export interface Supervision {
 const count = (value: number): string => value.toLocaleString('en-GB');
 
 const percent = (value: number, places = 0): string => `${(value * 100).toFixed(places)}%`;
-
-/* ---- Deterministic scatter --------------------------------------------------- */
-
-/**
- * Deterministic pseudo-random value in 0-1 from a seed. Used for illustrative
- * scatter only, so the drawing is identical on every reload.
- */
-const jitter = (seed: number): number => {
-  const mixed = Math.imul(seed + 1, 2654435761) >>> 8;
-  return (mixed % 1000) / 1000;
-};
-
-/* ---- How a control case is designed ------------------------------------------- */
-
-const CONTROL_BOARD = { width: 380, height: 100 } as const;
-
-/**
- * Short forms of the published indicator names. The swept indicator varies
- * across the 24,000 cases.
- */
-const CONTROL_ROWS = [
-  'Global warming potential',
-  'Life cycle cost',
-  'Density',
-  'Recycling',
-] as const;
-const CONTROL_VARIED = 0;
-
-/**
- * A control case: three alternatives that differ on one indicator only, so the
- * preferred one follows from that row. Marks on the swept row are lettered to
- * show they are the same three products throughout.
- */
-const controlDiagram = (): SVGSVGElement => {
-  const board = svg('svg', {
-    class: 'sv-diagram',
-    viewBox: `0 0 ${CONTROL_BOARD.width} ${CONTROL_BOARD.height}`,
-  });
-
-  const nameRight = 118;
-  const trackLeft = 126;
-  const trackRight = 372;
-  const rowTop = 22;
-  const rowStep = 22;
-  const mark = 9;
-
-  const mark_ = (x: number, y: number, accent: boolean): SVGRectElement =>
-    svg('rect', {
-      class: 'sv-alt',
-      'data-varied': String(accent),
-      x: (x - mark / 2).toFixed(1),
-      y: (y - mark / 2).toFixed(1),
-      width: String(mark),
-      height: String(mark),
-      rx: '2.5',
-    });
-
-  for (const [row, indicator] of CONTROL_ROWS.entries()) {
-    const y = rowTop + row * rowStep;
-
-    const name = svg('text', { class: 'sv-row-name', x: String(nameRight), y: (y + 3.2).toFixed(1) });
-    name.textContent = indicator;
-    board.appendChild(name);
-
-    board.appendChild(
-      svg('line', {
-        class: 'sv-track',
-        'vector-effect': 'non-scaling-stroke',
-        x1: String(trackLeft),
-        y1: y.toFixed(1),
-        x2: String(trackRight),
-        y2: y.toFixed(1),
-      }),
-    );
-
-    if (row === CONTROL_VARIED) {
-      const spread = [trackLeft + 28, (trackLeft + trackRight) / 2, trackRight - 26];
-      for (const [index, x] of spread.entries()) {
-        board.appendChild(mark_(x, y, true));
-        const letter = svg('text', {
-          class: 'sv-alt-letter',
-          x: x.toFixed(1),
-          y: (y - mark / 2 - 3).toFixed(1),
-        });
-        letter.textContent = String.fromCharCode(65 + index);
-        board.appendChild(letter);
-      }
-      continue;
-    }
-
-    // Other indicators sit in a narrow randomised window, offset per row.
-    const centre = (trackLeft + trackRight) / 2 + (jitter(row) - 0.5) * 26;
-    for (const offset of [-7, 0, 7]) board.appendChild(mark_(centre + offset, y, false));
-  }
-
-  return board;
-};
-
-/* ---- How a generated case is labelled ------------------------------------------ */
-
-const GENERATED_BOARD = { width: 564, height: 100 } as const;
-
-/** What the system prompt fixes (§3.2.2). */
-const PROMPT_FACETS = [
-  'Assessment role',
-  'Indicator set',
-  'How each is read',
-  'Stakeholder archetypes',
-  'Applications',
-  'Output format',
-] as const;
-
-/**
- * The labelling pipeline: prompt constraints, model, returned fields, and
- * whether a label is kept or discarded. Fields show no values.
- */
-const generatedDiagram = (): SVGSVGElement => {
-  const board = svg('svg', {
-    class: 'sv-diagram',
-    viewBox: `0 0 ${GENERATED_BOARD.width} ${GENERATED_BOARD.height}`,
-  });
-
-  const title = (text: string, x: number): SVGTextElement => {
-    const node = svg('text', { class: 'sv-diagram-label', 'data-kind': 'faint', x: String(x), y: '9' });
-    node.textContent = text;
-    return node;
-  };
-
-  /* Input. */
-  board.appendChild(title('The prompt fixes', 0));
-  board.appendChild(
-    svg('rect', { class: 'sv-panel', x: '0', y: '16', width: '150', height: '80', rx: '5' }),
-  );
-  for (const [index, facet] of PROMPT_FACETS.entries()) {
-    const y = 30 + index * 12;
-    board.appendChild(
-      svg('rect', { class: 'sv-bullet', x: '10', y: String(y - 3.5), width: '3.5', height: '3.5' }),
-    );
-    const node = svg('text', { class: 'sv-field', x: '19', y: String(y) });
-    node.textContent = facet;
-    board.appendChild(node);
-  }
-
-  const feed = (from: number, to: number, y: number, kind = ''): SVGPathElement =>
-    svg('path', {
-      class: `sv-feed ${kind}`.trim(),
-      'vector-effect': 'non-scaling-stroke',
-      d: `M ${from} ${y} L ${to} ${y}`,
-    });
-
-  board.appendChild(feed(154, 182, 56));
-
-  board.appendChild(
-    svg('rect', { class: 'sv-node', x: '186', y: '44', width: '66', height: '24', rx: '5' }),
-  );
-  const model = svg('text', { class: 'sv-node-label', x: '219', y: '59.5' });
-  model.textContent = GENERATION.model;
-  board.appendChild(model);
-
-  board.appendChild(feed(256, 282, 56));
-
-  /* Output. */
-  board.appendChild(title('Every label returns', 286));
-  board.appendChild(
-    svg('rect', { class: 'sv-panel', x: '286', y: '16', width: '124', height: '80', rx: '5' }),
-  );
-  for (const [index, field] of ['Preference score', 'Self-reported confidence'].entries()) {
-    const node = svg('text', { class: 'sv-field', x: '296', y: String(42 + index * 24) });
-    node.textContent = field;
-    board.appendChild(node);
-    board.appendChild(
-      svg('rect', {
-        class: 'sv-field-mark',
-        'data-kind': index === 0 ? 'score' : 'confidence',
-        x: '296',
-        y: String(48 + index * 24),
-        width: '84',
-        height: '5',
-        rx: '2.5',
-      }),
-    );
-  }
-
-  /* Outcome: confident labels are kept and weighted, unresolved ones are
-     discarded. */
-  board.appendChild(
-    svg('path', {
-      class: 'sv-feed sv-feed-kept',
-      'vector-effect': 'non-scaling-stroke',
-      d: 'M 414 56 C 428 56, 430 34, 444 34',
-    }),
-  );
-  board.appendChild(
-    svg('path', {
-      class: 'sv-feed sv-feed-dropped',
-      'vector-effect': 'non-scaling-stroke',
-      d: 'M 414 56 C 428 56, 430 80, 444 80',
-    }),
-  );
-
-  const outcome = (text: string, y: number, kind: string): SVGTextElement => {
-    const node = svg('text', { class: 'sv-outcome', 'data-kind': kind, x: '450', y: String(y) });
-    node.textContent = text;
-    return node;
-  };
-  board.appendChild(outcome('Kept, weighted by', 32, 'kept'));
-  board.appendChild(outcome('its own confidence', 43, 'kept'));
-  board.appendChild(outcome('No clear ordering:', 78, 'dropped'));
-  board.appendChild(outcome('discarded', 89, 'dropped'));
-
-  return board;
-};
-
-/* ---- How the expert batches are laid out ---------------------------------------- */
-
-const EXPERT_BOARD = { width: 380, height: 100 } as const;
-const EXPERTS = 6;
-const CASES_DRAWN = 4;
-
-/**
- * Six expert batches with no shared scenario. One cell per column marks the
- * expert's preferred alternative. Its row is illustrative, since cases are not
- * published per batch.
- */
-const expertDiagram = (): SVGSVGElement => {
-  const board = svg('svg', {
-    class: 'sv-diagram',
-    viewBox: `0 0 ${EXPERT_BOARD.width} ${EXPERT_BOARD.height}`,
-  });
-
-  const cellWidth = 46;
-  const cellHeight = 10;
-  const columnStep = 60;
-  const rowStep = 14;
-  const left = 4;
-  const top = 18;
-  for (let expert = 0; expert < EXPERTS; expert += 1) {
-    const x = left + expert * columnStep;
-    const chosen = Math.floor(jitter(expert * 3) * CASES_DRAWN);
-
-    const head = svg('text', {
-      class: 'sv-column-name',
-      x: (x + cellWidth / 2).toFixed(1),
-      y: '11',
-    });
-    head.textContent = `E${expert + 1}`;
-    board.appendChild(head);
-
-    for (let index = 0; index < CASES_DRAWN; index += 1) {
-      board.appendChild(
-        svg('rect', {
-          class: 'sv-case',
-          'data-marked': String(index === chosen),
-          x: x.toFixed(1),
-          y: (top + index * rowStep).toFixed(1),
-          width: String(cellWidth),
-          height: String(cellHeight),
-          rx: '2',
-        }),
-      );
-    }
-  }
-
-  return board;
-};
-
-const DIAGRAMS: Readonly<Record<string, () => SVGSVGElement>> = {
-  control: controlDiagram,
-  generated: generatedDiagram,
-  expert: expertDiagram,
-};
 
 /* ---- The corpus, and what it is worth -------------------------------------------- */
 
@@ -336,8 +64,6 @@ const ribbonBetween = (from: Span, to: Span): string => {
 /* ---- The three sources ------------------------------------------------------------- */
 
 const sourceCard = (source: LabelSource): HTMLElement => {
-  const diagram = DIAGRAMS[source.key];
-
   return el('div', {
     className: 'sv-source',
     attrs: { 'data-key': source.key },
@@ -350,7 +76,6 @@ const sourceCard = (source: LabelSource): HTMLElement => {
         ],
       }),
       el('p', { className: 'sv-source-produced', text: source.produced }),
-      el('div', { className: 'sv-source-figure', children: diagram ? [diagram()] : [] }),
       ...(source.fact ? [el('p', { className: 'sv-detail', text: source.fact })] : []),
       el('p', { className: 'sv-source-gives', text: source.contributes }),
     ],
@@ -358,8 +83,7 @@ const sourceCard = (source: LabelSource): HTMLElement => {
 };
 
 /**
- * Beat 2: the three label sources and their weight. Each card draws its
- * method. The ribbon maps each source's share of the corpus (top band) to its
+ * Beat 2: the three label sources and their weight. The ribbon maps each source's share of the corpus (top band) to its
  * share of the training objective (bottom band).
  */
 export function createSupervision(): Supervision {

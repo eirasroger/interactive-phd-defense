@@ -41,7 +41,6 @@ export type Provenance = 'declared' | 'inferred' | 'absent';
 /** The predicted attribute and its output form. */
 export const TARGET = {
   label: 'End-of-life circularity pathway',
-  form: 'A probability distribution across eight pathways',
 } as const;
 
 /** The eight outputs, in softmax order. */
@@ -142,7 +141,6 @@ export interface Objective {
   readonly key: 'prediction' | 'reconstruction';
   readonly label: string;
   readonly weight: number;
-  readonly body: string;
 }
 
 /**
@@ -154,20 +152,17 @@ export const OBJECTIVES: readonly Objective[] = [
     key: 'prediction',
     label: 'Prediction loss',
     weight: 1.0,
-    body: 'Against the declared pathway',
   },
   {
     key: 'reconstruction',
     label: 'Reconstruction loss',
     weight: 0.1,
-    body: 'Against the input embedding',
   },
 ] as const;
 
 /** Sum of the two weighted losses. */
 export const TOTAL = {
   label: 'Total loss',
-  body: 'Both networks are trained by minimising it together',
 } as const;
 
 export const TRAINING = {
@@ -262,12 +257,6 @@ export const METRICS: readonly Metric[] = [
   },
 ] as const;
 
-/** Ten stratified splits: mean and standard deviation. */
-export const CROSS_VALIDATION = [
-  { key: 'prediction', label: 'Test prediction loss', mean: 0.0032, deviation: 0.0002 },
-  { key: 'reconstruction', label: 'Test reconstruction loss', mean: 0.0021, deviation: 0.0001 },
-] as const;
-
 export interface Recall {
   readonly key: string;
   readonly label: string;
@@ -298,7 +287,6 @@ export const FLOOR = {
   label: 'Four pathways are reported inconsistently',
   share: 0.625,
   measure: 'Reuse read as recycling',
-  body: 'They are best read together with recycling.',
 } as const;
 
 /* ---- What the embedding generalises over ---------------------------------- */

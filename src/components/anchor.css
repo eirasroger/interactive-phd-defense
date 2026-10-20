@@ -22,7 +22,7 @@
 
 .anchor-label {
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;

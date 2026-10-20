@@ -68,7 +68,7 @@
 /* Uppercase index label at the top of each C3 panel. */
 .c3-index {
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -78,7 +78,7 @@
 /* The operator's scenario text, quoted. */
 .c3-quote {
   max-width: 46rem;
-  font-size: 0.9375rem;
+  font-size: var(--t-subtext);
   font-style: italic;
   line-height: var(--lh-snug);
   color: var(--ink-muted);

@@ -100,7 +100,6 @@ interface Node {
   readonly y: number;
   readonly units: number;
   readonly label: string;
-  readonly detail: string;
   /** Where the caption sits relative to the column. */
   readonly caption: 'above' | 'below';
 }
@@ -126,7 +125,6 @@ const NODES: readonly Node[] = [
     y: SPINE,
     units: stageNamed(ENCODER, 'input').units,
     label: 'Product embedding',
-    detail: 'Weighted material vector',
     caption: 'below',
   },
   {
@@ -135,7 +133,6 @@ const NODES: readonly Node[] = [
     y: SPINE,
     units: stageNamed(ENCODER, 'hidden').units,
     label: 'Encoder',
-    detail: 'LeakyReLU, dropout',
     caption: 'below',
   },
   {
@@ -144,7 +141,6 @@ const NODES: readonly Node[] = [
     y: SPINE,
     units: stageNamed(ENCODER, 'latent').units,
     label: 'Latent space',
-    detail: 'Shared by both objectives',
     caption: 'below',
   },
   {
@@ -153,7 +149,6 @@ const NODES: readonly Node[] = [
     y: 300,
     units: SCALARS.length,
     label: 'Design attributes',
-    detail: 'Two scalars',
     caption: 'below',
   },
   {
@@ -162,7 +157,6 @@ const NODES: readonly Node[] = [
     y: UPPER,
     units: stageNamed(DECODER, 'hidden').units,
     label: 'Decoder',
-    detail: 'Mirror of the encoder',
     caption: 'below',
   },
   {
@@ -171,7 +165,6 @@ const NODES: readonly Node[] = [
     y: UPPER,
     units: stageNamed(DECODER, 'output').units,
     label: 'Reconstruction',
-    detail: 'Compared against the input',
     caption: 'below',
   },
   {
@@ -180,7 +173,6 @@ const NODES: readonly Node[] = [
     y: LOWER,
     units: stageNamed(PREDICTOR, 'input').units,
     label: 'Concatenation',
-    detail: 'Latent space and scalars',
     caption: 'above',
   },
   {
@@ -189,7 +181,6 @@ const NODES: readonly Node[] = [
     y: LOWER,
     units: stageNamed(PREDICTOR, 'hidden').units,
     label: 'Predictor',
-    detail: 'Norm, LeakyReLU, dropout',
     caption: 'below',
   },
   {
@@ -198,7 +189,6 @@ const NODES: readonly Node[] = [
     y: LOWER,
     units: stageNamed(PREDICTOR, 'output').units,
     label: 'Pathway distribution',
-    detail: 'Softmax',
     caption: 'below',
   },
 ] as const;
@@ -215,6 +205,23 @@ const EDGES: readonly (readonly [string, string])[] = [
 ] as const;
 
 const HALF_WIDTH = 11;
+
+/**
+ * Loss column, in board units. Both tags share a left edge and a width, so their
+ * weights line up. Each branch starts a gap after its tag and the two meet at
+ * `join`, where the total loss is labelled.
+ */
+const LOSS = { tagLeft: 945, tagWidth: 217, gap: 18, join: 1262, labelGap: 16 } as const;
+const BRANCH_START = LOSS.tagLeft + LOSS.tagWidth + LOSS.gap;
+
+/** Horizontal tangents at both ends, so each branch leaves its tag level. */
+const branchPath = (y: number): string => {
+  const pull = (LOSS.join - BRANCH_START) * 0.55;
+  return (
+    `M ${BRANCH_START} ${y} ` +
+    `C ${BRANCH_START + pull} ${y}, ${LOSS.join - pull} ${SPINE}, ${LOSS.join} ${SPINE}`
+  );
+};
 
 const nodeNamed = (key: string): Node => {
   const found = NODES.find((node) => node.key === key);
@@ -364,17 +371,20 @@ export function createModel(): Model {
 
   const captions = NODES.map((node) => {
     const height = heightOf(node.units);
-    const offset = node.caption === 'above' ? node.y - height / 2 - 38 : node.y + height / 2 + 10;
+    const above = node.caption === 'above';
+    const offset = above ? node.y - height / 2 - 10 : node.y + height / 2 + 10;
 
-    return el('div', {
+    const caption = el('div', {
       className: 'md-caption',
       attrs: { 'data-key': node.key, style: atBoard(node.x, offset) },
       children: [
         el('span', { className: 'md-caption-units', text: String(node.units) }),
         el('span', { className: 'md-caption-label', text: node.label }),
-        el('span', { className: 'md-caption-detail', text: node.detail }),
       ],
     });
+    // A caption above its column hangs from its bottom edge.
+    if (above) gsap.set(caption, { yPercent: -100 });
+    return caption;
   });
 
   const objectives = OBJECTIVES.map((objective) => {
@@ -384,7 +394,9 @@ export function createModel(): Model {
       className: 'md-objective',
       attrs: {
         'data-key': objective.key,
-        style: atBoard(reconstruction ? 830 : 980, reconstruction ? UPPER : LOWER),
+        style:
+          `${atBoard(LOSS.tagLeft, reconstruction ? UPPER : LOWER)}; ` +
+          `width: ${((LOSS.tagWidth / BOARD.width) * 100).toFixed(3)}%`,
       },
       children: [
         el('span', { className: 'md-objective-label', text: objective.label }),
@@ -392,25 +404,23 @@ export function createModel(): Model {
           className: 'md-objective-weight c4-figure',
           text: `× ${objective.weight.toFixed(1)}`,
         }),
-        el('span', { className: 'md-objective-body', text: objective.body }),
       ],
     });
   });
 
   // Both loss branches join at one point: the total loss.
-  const converge = svg('path', {
-    class: 'md-converge',
-    d: `M 1032 ${UPPER} C 1130 ${UPPER}, 1140 ${SPINE}, 1214 ${SPINE} ` +
-      `M 1182 ${LOWER} C 1206 ${LOWER}, 1200 ${SPINE}, 1214 ${SPINE}`,
-  });
-  board.appendChild(converge);
+  const converge = [UPPER, LOWER].map((y) =>
+    svg('path', { class: 'md-converge', d: branchPath(y), pathLength: '1' }),
+  );
+  const join = svg('circle', { class: 'md-join', cx: String(LOSS.join), cy: String(SPINE), r: '4.5' });
+  for (const branch of converge) board.appendChild(branch);
+  board.appendChild(join);
 
   const total = el('div', {
     className: 'md-total',
-    attrs: { style: atBoard(1228, SPINE) },
+    attrs: { style: atBoard(LOSS.join + LOSS.labelGap, SPINE) },
     children: [
       el('span', { className: 'md-total-label', text: TOTAL.label }),
-      el('span', { className: 'md-total-body', text: TOTAL.body }),
     ],
   });
 
@@ -478,7 +488,6 @@ export function createModel(): Model {
     className: 'md-head-block',
     children: [
       el('p', { className: 'md-target', text: TARGET.label }),
-      el('p', { className: 'md-target-form', text: TARGET.form }),
     ],
   });
 
@@ -529,6 +538,7 @@ export function createModel(): Model {
       y: 0,
     });
     gsap.set(converge, { opacity: 1, strokeDashoffset: 0 });
+    gsap.set(join, { opacity: 1, scale: 1 });
   };
 
   const playEmbed = (): gsap.core.Timeline => {
@@ -691,9 +701,15 @@ export function createModel(): Model {
       )
       .fromTo(
         converge,
-        { strokeDashoffset: 260 },
+        { strokeDashoffset: 1 },
         { strokeDashoffset: 0, duration: seconds(DURATION.slow), ease: EASE.standard },
         seconds(DURATION.cinematic * 0.95),
+      )
+      .fromTo(
+        join,
+        { opacity: 0, scale: 0, transformOrigin: 'center center' },
+        { opacity: 1, scale: 1, duration: seconds(DURATION.normal), ease: 'back.out(2)' },
+        seconds(DURATION.cinematic * 0.95 + DURATION.slow * 0.85),
       )
       .from(
         total,

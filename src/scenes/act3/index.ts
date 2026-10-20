@@ -11,14 +11,13 @@ import { ExteriorScene } from '@/scenes/act1/ExteriorScene';
 import { CORRIDOR_ASSETS, corridorZone, opened } from '@/world/corridor/CorridorZone';
 import { BackboneScene } from './BackboneScene';
 import { ConclusionsScene } from './ConclusionsScene';
-import { ConditionsScene } from './ConditionsScene';
 import { DiscussionScene } from './DiscussionScene';
 import { RiseScene } from './RiseScene';
 
 /** Thesis section names shown in the progress bar. */
 const CHAPTER = {
   pipeline: 'Integrated pipeline',
-  crossCutting: 'Cross-cutting themes',
+  crossCutting: 'Cross-cutting theme',
   discussion: 'Discussion',
   conclusions: 'Conclusions',
 } as const;
@@ -87,27 +86,17 @@ const overlook = (pull = 1, arc: number = OVERLOOK.arc): CameraPose => {
 const DRIFT = { pull: 1.06, seconds: 1.9 } as const;
 
 /**
- * Descent from the overlook into the sea, levelling off to look along the
- * volume so it has a horizon.
+ * Descent from the overlook into the sea, levelling off inside the volume to
+ * look along it, so the frame has a horizon.
  */
 const DIVE = {
-  seconds: 3.4,
-  /** Inside the volume, near the mouth end, on the axis. */
-  eye: 26,
-  /** Slightly above the eye, so the level-off has a horizon. */
-  aim: 30,
-  from: 46,
-  to: -74,
-  fov: 46,
-} as const;
-
-/** Continues along the volume from the dive and settles slightly lower. */
-const GLIDE = {
-  seconds: 3,
+  seconds: 3.6,
   eye: 21,
+  /** Slightly above the eye, so the level-off has a horizon. */
   aim: 24,
   from: -36,
   to: -158,
+  fov: 46,
 } as const;
 
 /**
@@ -132,7 +121,7 @@ const ASCENT = {
  */
 const CLOSE = {
   seconds: 5,
-  /** Back inside the volume, at the dive's level-off height. */
+  /** Back inside the volume, above the dive's level-off height. */
   eye: 34,
   /** Level with the eye, so the field shows a horizon. */
   aim: 31,
@@ -159,7 +148,7 @@ export const act3Scenes: readonly SceneDefinition[] = [
     create: () => new RiseScene(),
   },
   /**
-   * First cross-cutting theme and the last scene with the corridor mounted.
+   * The cross-cutting theme, and the last scene with the corridor mounted.
    * Uses `opened` air so the dimming derives from the plan view's air.
    * The dissolve lives in the zone, so a jump here finds the same world state.
    */
@@ -176,13 +165,13 @@ export const act3Scenes: readonly SceneDefinition[] = [
     create: () => new BackboneScene(),
   },
   /**
-   * Second theme, reached by the dive. Stays in the corridor zone because the
-   * sea volume belongs to it; leaving the zone would cut the move.
+   * Discussion, reached by the dive. Stays in the corridor zone because the sea
+   * volume belongs to it; leaving the zone would cut the move.
    */
   {
-    id: 'conditions',
-    title: 'Missing data and context',
-    chapter: CHAPTER.crossCutting,
+    id: 'discussion',
+    title: 'Implications, limitations, and future work',
+    chapter: CHAPTER.discussion,
     zone: corridorZone.id,
     world: 'recessed',
     pose: {
@@ -192,23 +181,6 @@ export const act3Scenes: readonly SceneDefinition[] = [
     },
     air: opened,
     travel: { seconds: DIVE.seconds, ease: EASE.camera },
-    assets: [...CORRIDOR_ASSETS],
-    create: () => new ConditionsScene(),
-  },
-  /** Discussion, reached by the glide along the volume. */
-  {
-    id: 'discussion',
-    title: 'Implications, limitations, and future work',
-    chapter: CHAPTER.discussion,
-    zone: corridorZone.id,
-    world: 'recessed',
-    pose: {
-      position: at([0, SECTION.floor + GLIDE.eye, GLIDE.from]),
-      target: at([0, SECTION.floor + GLIDE.aim, GLIDE.to]),
-      fov: DIVE.fov,
-    },
-    air: opened,
-    travel: { seconds: GLIDE.seconds, ease: EASE.camera },
     assets: [...CORRIDOR_ASSETS],
     create: () => new DiscussionScene(),
   },

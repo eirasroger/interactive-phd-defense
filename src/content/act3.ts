@@ -20,7 +20,7 @@ export const STATION_ROLES: Record<string, string> = {
 };
 
 
-/* ---- Cross-cutting theme 1: artificial intelligence -------------------------- */
+/* ---- Cross-cutting theme: artificial intelligence ---------------------------- */
 
 /**
  * One pipeline stage on the backbone: the task, the model family that does it,
@@ -63,48 +63,11 @@ export const BACKBONE_NODES: readonly BackboneNode[] = [
   },
 ];
 
-/** Cross-cutting theme 1. One beat of about 30 seconds. */
+/** Cross-cutting theme. One beat of about 30 seconds. */
 export const BACKBONE = {
-  eyebrow: 'Cross-cutting themes',
+  eyebrow: 'Cross-cutting theme',
   heading: 'Artificial intelligence across the pipeline',
   line: 'A different method at each stage.',
-} as const;
-
-/* ---- Cross-cutting theme 2: conditions the architecture is designed around ---- */
-
-/**
- * Cross-cutting theme 2. Missing evidence and context sensitivity share one
- * slide because both are properties of the problem that span every stage.
- */
-export const CONDITIONS = {
-  eyebrow: 'Cross-cutting themes',
-  heading: 'Missing data and context',
-  line: 'Both are handled at every stage.',
-} as const;
-
-/**
- * The two cards: a claim, then three supporting steps each. Plain sentences
- * with no numbers, method names or per-contribution detail.
- */
-export const CARDS = {
-  evidence: {
-    heading: 'Missing data',
-    lead: 'The pipeline works with incomplete information.',
-    steps: [
-      'Early design is when decisions matter most and data is thinnest.',
-      'Inference recovers part of the missing data.',
-      'The recommender accepts missing values.',
-    ],
-  },
-  context: {
-    heading: 'Context',
-    lead: 'Context sets which indicators matter, and how much.',
-    steps: [
-      'Screening sets which products are admissible.',
-      'Application and priorities set the indicator weights.',
-      'The recommendation fits the project at hand.',
-    ],
-  },
 } as const;
 
 /* ---- The closing frame ------------------------------------------------------------- */

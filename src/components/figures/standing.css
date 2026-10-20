@@ -93,7 +93,7 @@
 .std-label {
   position: relative;
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -301,7 +301,7 @@
 /* Row names in the gutter. Smaller and muted so the column heads stay dominant. */
 .std-side {
   font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -348,7 +348,7 @@
 /* Short lead name for each entry, in the band accent. The sentence below stays muted. */
 .std-lead {
   margin: 0 0 var(--s-2);
-  font-size: 0.9375rem;
+  font-size: var(--t-text);
   line-height: var(--lh-snug);
   color: color-mix(in srgb, var(--band-lift) 92%, transparent);
 }
@@ -356,7 +356,7 @@
 .std-note,
 .std-cell {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: 1.6;
   color: color-mix(in srgb, var(--c-text-muted) 94%, transparent);
 }

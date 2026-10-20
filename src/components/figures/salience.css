@@ -1,0 +1,151 @@
+/*
+ * Feature importance by application. Legend on top, three white columns on one
+ * shared scale. Bars take their indicator family colour.
+ */
+.wt {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--s-6);
+  align-content: center;
+}
+
+.wt-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-8);
+}
+
+.wt-legend {
+  display: flex;
+  gap: var(--s-6);
+}
+
+.wt-key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-subtext);
+  color: var(--ink-muted);
+}
+
+.wt-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background-color: var(--family);
+}
+
+/* ---- Columns --------------------------------------------------------------------- */
+
+.wt-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-6);
+  min-height: 0;
+}
+
+.wt-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--s-4);
+  padding: var(--s-6) var(--s-6) var(--s-4);
+  border-radius: 20px;
+  background-color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c5-accent) 14%, transparent),
+    0 22px 54px color-mix(in srgb, var(--c5-accent) 10%, transparent);
+}
+
+.wt-context {
+  font-family: var(--font-display);
+  font-size: var(--t-lead);
+  font-weight: var(--display-weight);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--display-tracking);
+  color: var(--ink);
+}
+
+.wt-rows {
+  display: grid;
+  gap: var(--s-3);
+  align-content: start;
+}
+
+.wt-row {
+  display: grid;
+  gap: 6px;
+}
+
+.wt-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  white-space: nowrap;
+}
+
+.wt-rank {
+  min-width: 1.5rem;
+  font-family: var(--font-label);
+  font-size: var(--t-label);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+
+.wt-label {
+  font-size: var(--t-subtext);
+  color: var(--ink-muted);
+}
+
+.wt-row[data-lead='true'] .wt-label {
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+}
+
+.wt-row[data-lead='true'] .wt-rank {
+  color: var(--family);
+}
+
+.wt-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--c-base) 6%, transparent);
+  overflow: hidden;
+}
+
+.wt-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: var(--extent);
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--family) 72%, #ffffff),
+    var(--family)
+  );
+  transform-origin: left center;
+}
+
+.wt-row[data-kind='remaining'] {
+  --family: color-mix(in srgb, var(--c-base) 26%, #ffffff);
+  margin-top: var(--s-2);
+}
+
+.wt-row[data-kind='remaining'] .wt-label {
+  color: var(--ink-faint);
+}
+
+.wt-row[data-kind='remaining'] .wt-rank {
+  display: none;
+}
+
+.wt-note {
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+  font-size: var(--t-text);
+  line-height: var(--lh-snug);
+  color: var(--c5-accent);
+}
+

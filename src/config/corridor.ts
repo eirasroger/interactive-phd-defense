@@ -209,10 +209,10 @@ export const FLOW_ROUTES: readonly FlowRoute[] = [
 /**
  * Scene count of the corridor zone and the overlook thresholds within it.
  * Act III stays in this zone because its sea belongs here. To add a theme,
- * raise `CORRIDOR_RUN`; `scenes/act3/index.ts` checks the deck against it at load.
+ * change `CORRIDOR_RUN`; `scenes/act3/index.ts` checks the deck against it at load.
  */
 const ACT2_STATIONS = 5;
-const CORRIDOR_RUN = ACT2_STATIONS + 6;
+const CORRIDOR_RUN = ACT2_STATIONS + 5;
 
 export const RISE = {
   /** Ceiling lifts, the shell fades and the plan shows. */

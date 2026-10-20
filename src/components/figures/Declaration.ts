@@ -67,7 +67,7 @@ const GATE_GAP = 40;
 
 /** Two text columns: code over verdict, name over basis. */
 const CODE_X = 18;
-const NAME_X = 128;
+const NAME_X = 150;
 const LINE_ONE_DY = 23;
 const LINE_TWO_DY = 46;
 

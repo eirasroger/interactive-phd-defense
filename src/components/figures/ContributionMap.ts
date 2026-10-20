@@ -65,6 +65,8 @@ const ROW = { width: 310, height: 382, pitch: 338, sheet: 133 } as const;
 /** Plan geometry lives in `config/corridorPlan.json` (see `config/corridor.ts`). */
 const PLAN_BOX = { ...plan.box, sheet: 46 } as const;
 const COLUMN_X = plan.columnX;
+/** The last card is wider so its role fits on one line. Nothing leaves it. */
+const LAST_WIDTH = 370;
 /** The axis lane sits between the branch lanes, so C2 to C5 is a straight line. */
 const LANE_Y: Record<Lane, number> = plan.laneY;
 
@@ -124,9 +126,10 @@ interface Slot {
 
 const slotOf = (item: Contribution): Slot => {
   const left = COLUMN_X[item.plan.column] ?? 0;
+  const last = item.plan.column === COLUMN_X.length - 1;
   return {
     left,
-    right: left + PLAN_BOX.width,
+    right: left + (last ? LAST_WIDTH : PLAN_BOX.width),
     centreY: LANE_Y[item.plan.lane],
   };
 };
@@ -234,7 +237,14 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
     const sheet = el('div', { className: 'paper-sheet', children: [image] });
 
     const key = el('span', { className: 'paper-key', text: item.key });
-    const role = el('p', { className: 'paper-role', text: item.role });
+    // One span per word, so each word can glide to its place when the role
+    // rewraps between layouts.
+    const words = item.role.split(' ').map((word) => el('span', { className: 'paper-word', text: word }));
+    const role = el('p', { className: 'paper-role', attrs: { 'data-layout': 'row' } });
+    words.forEach((word, index) => {
+      if (index > 0) role.append(' ');
+      role.append(word);
+    });
     const head = el('div', { className: 'paper-head', children: [key, role] });
 
     const journal = el('p', { className: 'paper-journal', text: item.journal });
@@ -248,7 +258,7 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
     const body = el('div', { className: 'paper-body', children: [head, record] });
     const element = el('article', { className: 'paper-card', children: [sheet, body] });
 
-    return { element, sheet, record, slot: slotOf(item) };
+    return { element, sheet, record, role, words, slot: slotOf(item) };
   });
 
   const field = el('div', { className: 'contribution-field' });
@@ -264,7 +274,7 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
       ? {
           x: card.slot.left,
           y: card.slot.centreY - PLAN_BOX.height / 2,
-          width: PLAN_BOX.width,
+          width: card.slot.right - card.slot.left,
           height: PLAN_BOX.height,
         }
       : {
@@ -346,6 +356,34 @@ export function createContributionMap(spec: ContributionMapSpec): ContributionMa
       const previous = current;
       current = state;
       const timeline = gsap.timeline();
+      const layout = state === PLAN ? 'plan' : 'row';
+
+      cards.forEach((card, index) => {
+        // FLIP: switch the role to its final layout at once, then move each word
+        // from where it was to where it now sits, in step with the card.
+        const before = card.words.map((word) => [word.offsetLeft, word.offsetTop] as const);
+        card.role.dataset['layout'] = layout;
+        if (settle || previous === state) return;
+
+        card.words.forEach((word, order) => {
+          const [left, top] = before[order] ?? [0, 0];
+          const dx = left - word.offsetLeft;
+          const dy = top - word.offsetTop;
+          if (dx === 0 && dy === 0) return;
+          timeline.fromTo(
+            word,
+            { x: dx, y: dy },
+            {
+              x: 0,
+              y: 0,
+              duration: seconds(SPAN.travel),
+              ease: MOVE.travel,
+              overwrite: 'auto',
+            },
+            CUE.travel + index * CARD_STEP,
+          );
+        });
+      });
 
       for (const step of plan(state, settle ? state : previous)) {
         if (settle) {

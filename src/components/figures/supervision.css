@@ -12,7 +12,7 @@
 
 .sv-claim {
   font-family: var(--font-display);
-  font-size: 1.375rem;
+  font-size: var(--t-text);
   font-weight: var(--fw-light);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-title);
@@ -45,7 +45,7 @@
 /* The generated source gets the widest column because it needs the most explanation. */
 .sv-sources {
   display: grid;
-  grid-template-columns: 27fr 40fr 27fr;
+  grid-template-columns: minmax(0, 27fr) minmax(0, 40fr) minmax(0, 27fr);
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 0 var(--s-12);
 }
@@ -68,14 +68,14 @@
 
 .sv-source-label {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: var(--t-text);
   font-weight: var(--fw-light);
   letter-spacing: var(--ls-title);
   color: var(--ink);
 }
 
 .sv-source-count {
-  font-size: 1.75rem;
+  font-size: var(--t-lead);
   color: var(--ink);
 }
 
@@ -85,160 +85,17 @@
 
 .sv-source-produced {
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
-/* ---- The three method diagrams -------------------------------------------------- */
-
-/* A diagram of each source's labelling method, large enough to read. */
-.sv-source-figure {
-  align-self: center;
-}
-
-.sv-diagram {
-  display: block;
-  width: 100%;
-  height: 6.25rem;
-  overflow: visible;
-}
-
-.sv-diagram-label {
-  font-family: var(--font-label);
-  font-size: 9px;
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  fill: var(--ink-faint);
-}
-
-.sv-diagram-label[data-kind='accent'] {
-  fill: var(--c5-accent);
-}
-
-/* Indicator name at the start of each track. */
-.sv-row-name {
-  font-size: 9.5px;
-  text-anchor: end;
-  fill: var(--ink-muted);
-}
-
-.sv-column-name {
-  font-family: var(--font-label);
-  font-size: 9px;
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.04em;
-  text-anchor: middle;
-  fill: var(--ink-faint);
-}
-
-/* Control: the same three alternatives on every row. */
-.sv-track {
-  stroke: var(--rule-strong);
-  stroke-width: 1;
-}
-
-.sv-alt {
-  fill: color-mix(in srgb, var(--c5-accent) 30%, transparent);
-}
-
-.sv-alt[data-varied='true'] {
-  fill: var(--c5-accent);
-}
-
-.sv-alt-letter {
-  font-family: var(--font-label);
-  font-size: 8.5px;
-  font-weight: var(--fw-semibold);
-  text-anchor: middle;
-  fill: var(--c5-accent);
-}
-
-/* Generated: what the prompt constrains, what comes back, what becomes of it. */
-.sv-panel {
-  fill: color-mix(in srgb, var(--c5-accent) 5%, transparent);
-  stroke: color-mix(in srgb, var(--c5-accent) 24%, transparent);
-  stroke-width: 1;
-}
-
-.sv-field {
-  font-size: 9.5px;
-  fill: var(--ink-muted);
-}
-
-.sv-bullet {
-  fill: var(--c5-accent);
-}
-
-.sv-field-mark {
-  fill: color-mix(in srgb, var(--c5-accent) 32%, transparent);
-}
-
-.sv-field-mark[data-kind='confidence'] {
-  fill: var(--c5-accent);
-}
-
-.sv-feed {
-  fill: none;
-  stroke: color-mix(in srgb, var(--c5-accent) 40%, transparent);
-  stroke-width: 1;
-}
-
-.sv-feed-kept {
-  stroke: var(--c5-accent);
-  stroke-width: 1.5;
-}
-
-.sv-feed-dropped {
-  stroke: var(--rule-strong);
-  stroke-width: 1;
-  stroke-dasharray: 2.5 3;
-}
-
-.sv-node {
-  fill: color-mix(in srgb, var(--c5-accent) 10%, transparent);
-  stroke: color-mix(in srgb, var(--c5-accent) 40%, transparent);
-  stroke-width: 1;
-}
-
-.sv-node-label {
-  font-family: var(--font-label);
-  font-size: 9.5px;
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.04em;
-  text-anchor: middle;
-  fill: var(--c5-accent);
-}
-
-.sv-outcome {
-  font-size: 9.5px;
-  fill: var(--ink-muted);
-}
-
-.sv-outcome[data-kind='kept'] {
-  fill: var(--c5-accent);
-}
-
-.sv-outcome[data-kind='dropped'] {
-  fill: var(--ink-faint);
-}
-
-/* Expert: six labelled batches, each with the alternative that expert preferred. */
-.sv-case {
-  fill: color-mix(in srgb, var(--c5-accent) 16%, transparent);
-}
-
-.sv-case[data-marked='true'] {
-  fill: var(--c5-accent);
-}
-
 /* ---- What each source says, and what it is worth ---------------------------------- */
 
 .sv-detail {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }
@@ -249,7 +106,7 @@
   padding-top: var(--s-2);
   border-top: 1px solid var(--rule);
 
-  font-size: 0.875rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink);
 }
@@ -279,7 +136,7 @@
   inset-inline: 0;
   transform: translateY(-50%);
 
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   text-align: right;
   color: var(--ink-muted);
@@ -350,7 +207,7 @@
 
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 0.6875rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   line-height: var(--band);
   white-space: nowrap;
@@ -382,12 +239,12 @@
 }
 
 .sv-amplified-figure {
-  font-size: 1.625rem;
+  font-size: var(--t-lead);
   color: var(--c5-accent);
 }
 
 .sv-amplified-note {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   color: var(--ink-faint);
 }
 
@@ -404,7 +261,7 @@
 
 .sv-split-figure {
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   letter-spacing: var(--ls-title);
   white-space: nowrap;
@@ -412,7 +269,7 @@
 }
 
 .sv-split-note {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }

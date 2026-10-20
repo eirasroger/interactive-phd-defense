@@ -12,9 +12,10 @@
   align-items: center;
   gap: var(--s-4);
 
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--ls-micro);
+  font-family: var(--font-label);
   text-transform: uppercase;
   color: var(--c-text);
 

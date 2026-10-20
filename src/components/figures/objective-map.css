@@ -16,7 +16,7 @@
   gap: var(--s-3);
 
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -72,7 +72,7 @@
 
 .gap-chip-key {
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -80,7 +80,7 @@
 }
 
 .gap-chip-label {
-  font-size: 1rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--c-text-faint);
   text-wrap: pretty;
@@ -137,7 +137,7 @@
 .objective-key {
   position: relative;
   font-family: var(--font-figure);
-  font-size: 1.75rem;
+  font-size: var(--t-lead);
   font-weight: var(--fw-medium);
   letter-spacing: 0.02em;
   color: var(--c-text-faint);
@@ -150,7 +150,7 @@
   position: relative;
   align-self: start;
 
-  font-size: 1.125rem;
+  font-size: var(--t-text);
   font-weight: var(--fw-medium);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-body);

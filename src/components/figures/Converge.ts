@@ -335,7 +335,6 @@ export function createConverge(): Converge {
             el('p', { className: 'cv-source-label', text: entry.label }),
           ],
         }),
-        el('p', { className: 'cv-source-note', text: entry.note }),
       ],
     }),
   );
@@ -351,14 +350,12 @@ export function createConverge(): Converge {
   /* -- Model card -- */
 
   const stageName = el('p', { className: 'cv-stage-name', text: STAGE.name });
-  const stageLine = el('p', { className: 'cv-stage-line', text: STAGE.line });
   const card = el('div', {
     className: 'c5-field cv-card',
     attrs: { style: boxBoard(CARD_LEFT, CARD_TOP, CARD_RIGHT - CARD_LEFT, CARD_HEIGHT) },
     children: [
       el('p', { className: 'cv-stage-index', text: STAGE.index }),
       stageName,
-      stageLine,
     ],
   });
 
@@ -373,7 +370,6 @@ export function createConverge(): Converge {
       },
       children: [
         el('p', { className: 'cv-context-label', text: entry.label }),
-        el('p', { className: 'cv-context-note', text: entry.note }),
       ],
     }),
   );
@@ -440,17 +436,9 @@ export function createConverge(): Converge {
     },
   });
 
-  const outNote = el('p', {
-    className: 'cv-out-note',
-    text: OUTPUT.note,
-    attrs: {
-      style: `${atBoard(READOUT_LEFT, READOUT_TOP + READOUT_HEIGHT + 16)}; ${spanBoard(BOARD.width - READOUT_LEFT)}`,
-    },
-  });
-
   const frame = el('div', {
     className: 'cv-frame',
-    children: [board, ledger, card, ...contexts, readout, upstreamIndex, outIndex, contextIndex, outNote],
+    children: [board, ledger, card, ...contexts, readout, upstreamIndex, outIndex, contextIndex],
   });
 
   /* -- Claim and next steps -- */
@@ -482,12 +470,12 @@ export function createConverge(): Converge {
 
   const settleTo = (): void => {
     gsap.set(element, { opacity: 1 });
-    gsap.set([...locators, ...sources, ...contexts, ...rows, outNote, claim, ...moves], {
+    gsap.set([...locators, ...sources, ...contexts, ...rows, claim, ...moves], {
       opacity: 1,
       x: 0,
       y: 0,
     });
-    gsap.set([card, stageName, stageLine], { opacity: 1, y: 0, scale: 1 });
+    gsap.set([card, stageName], { opacity: 1, y: 0, scale: 1 });
     gsap.set(flowWipe.rect, shown(flowWipe));
     gsap.set(outWipe.rect, shown(outWipe));
     gsap.set(ports, { opacity: 1 });
@@ -558,13 +546,12 @@ export function createConverge(): Converge {
           )
           // Stage name appears as the card settles.
           .from(
-            [stageName, stageLine],
+            stageName,
             {
               opacity: 0,
               y: 12,
               duration: seconds(DURATION.slow),
               ease: EASE.enter,
-              stagger: seconds(STAGGER * 2.2),
             },
             seconds(DURATION.cinematic * 0.9),
           )
@@ -670,11 +657,6 @@ export function createConverge(): Converge {
               stagger: seconds(STAGGER * 1.4),
             },
             seconds(DURATION.cinematic * 1.58),
-          )
-          .from(
-            outNote,
-            { opacity: 0, y: 8, duration: seconds(DURATION.slow), ease: EASE.enter },
-            seconds(DURATION.cinematic * 1.9),
           )
           .from(
             claim,

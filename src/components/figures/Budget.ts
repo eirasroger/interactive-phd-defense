@@ -1,15 +1,13 @@
 import gsap from 'gsap';
 import { DURATION, EASE, STAGGER, seconds } from '@/animations/timing';
 import {
-  CROSS_VALIDATION,
   FLOOR,
   METRICS,
   RECALL,
   REDUCTIONS,
   REDUCTION_CLAIM,
-  SPLIT,
 } from '@/content/c4';
-import { countUp, formatCount } from '@/utilities/count';
+import { countUp } from '@/utilities/count';
 import { el } from '@/utilities/dom';
 import './c4-palette.css';
 import './budget.css';
@@ -45,63 +43,8 @@ export function createBudget(): Budget {
           className: 'bd-tile-value',
           children: [figure, el('span', { className: 'bd-tile-unit', text: metric.unit })],
         }),
-        el('p', {
-          className: 'bd-tile-splits',
-          text:
-            `${metric.train.toFixed(metric.decimals)} training · ` +
-            `${metric.test.toFixed(metric.decimals)} testing`,
-        }),
       ],
     });
-  });
-
-  // Dataset size plus a bar split by the train and test counts.
-  const splitSegments = (['train', 'test'] as const).map((part) =>
-    el('span', { className: 'bd-split-segment', attrs: { 'data-part': part } }),
-  );
-
-  const splitKey = (count: number, label: string): HTMLElement =>
-    el('span', {
-      className: 'bd-split-key',
-      children: [
-        el('span', { className: 'bd-split-count', text: formatCount(count, { grouped: true }) }),
-        el('span', { className: 'bd-split-label', text: label }),
-      ],
-    });
-
-  const splitNote = el('div', {
-    className: 'bd-split',
-    attrs: { style: `--train: ${SPLIT.train}fr; --test: ${SPLIT.test}fr` },
-    children: [
-      el('div', {
-        className: 'bd-split-total',
-        children: [
-          el('span', { className: 'bd-split-figure c4-figure', text: formatCount(SPLIT.total, { grouped: true }) }),
-          el('span', { className: 'bd-split-unit', text: 'products' }),
-        ],
-      }),
-      el('div', { className: 'bd-split-bar', children: splitSegments }),
-      el('div', {
-        className: 'bd-split-keys',
-        children: [splitKey(SPLIT.train, 'training'), splitKey(SPLIT.test, 'testing')],
-      }),
-    ],
-  });
-
-  const converged = el('div', {
-    className: 'bd-converged',
-    children: CROSS_VALIDATION.map((entry) =>
-      el('span', {
-        className: 'bd-converged-item',
-        children: [
-          el('span', { className: 'bd-converged-label', text: entry.label }),
-          el('span', {
-            className: 'bd-converged-value',
-            text: `${entry.mean.toFixed(4)} ± ${entry.deviation.toFixed(4)}`,
-          }),
-        ],
-      }),
-    ),
   });
 
   /* -- Reductions -- */
@@ -198,7 +141,6 @@ export function createBudget(): Budget {
         className: 'bd-floor-text',
         children: [
           el('p', { className: 'bd-floor-label', text: FLOOR.label }),
-          el('p', { className: 'bd-floor-body', text: FLOOR.body }),
         ],
       }),
     ],
@@ -229,8 +171,6 @@ export function createBudget(): Budget {
         children: [
           index,
           el('div', { className: 'bd-tiles', children: tiles }),
-          splitNote,
-          converged,
         ],
       }),
       el('div', { className: 'bd-body', children: [reductions, recall] }),
@@ -251,8 +191,6 @@ export function createBudget(): Budget {
     gsap.set(
       [
         index,
-        splitNote,
-        converged,
         floor,
         ...tiles,
         ...panelLabels,
@@ -262,7 +200,7 @@ export function createBudget(): Budget {
       ],
       { opacity: 1, x: 0, y: 0 },
     );
-    gsap.set([...reductionBars, ...recallBars, ...splitSegments], { opacity: 1, scaleX: 1 });
+    gsap.set([...reductionBars, ...recallBars], { opacity: 1, scaleX: 1 });
     write();
   };
 
@@ -291,29 +229,6 @@ export function createBudget(): Budget {
             stagger: seconds(STAGGER * 1.3),
           },
           seconds(DURATION.quick * 0.5),
-        )
-        .from(
-          [splitNote, converged],
-          {
-            opacity: 0,
-            y: 6,
-            duration: seconds(DURATION.normal),
-            ease: EASE.enter,
-            stagger: seconds(STAGGER * 1.2),
-          },
-          seconds(DURATION.slow * 0.8),
-        )
-        .fromTo(
-          splitSegments,
-          { scaleX: 0 },
-          {
-            scaleX: 1,
-            duration: seconds(DURATION.slow),
-            ease: EASE.enter,
-            transformOrigin: 'left center',
-            stagger: seconds(STAGGER),
-          },
-          seconds(DURATION.slow * 0.9),
         )
         .from(
           panelLabels,

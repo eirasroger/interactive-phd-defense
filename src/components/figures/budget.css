@@ -30,7 +30,7 @@
 
 .bd-tile-label {
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -44,122 +44,22 @@
 }
 
 .bd-tile-figure {
-  font-size: 2.25rem;
+  font-size: var(--t-subtitle);
   color: var(--c4-accent);
 }
 
 .bd-tile-unit {
   font-family: var(--font-figure);
-  font-size: 1.25rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-light);
   color: color-mix(in srgb, var(--c4-accent) 58%, transparent);
-}
-
-.bd-tile-splits {
-  font-family: var(--font-figure);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.75rem;
-  color: var(--ink-faint);
-}
-
-/* Train/test split bar. Track widths come from the counts (--train, --test). */
-.bd-split {
-  display: grid;
-  gap: 5px;
-  /* The test track is a fifth of the bar and must still fit its count and label. */
-  max-width: 29rem;
-}
-
-.bd-split-total {
-  display: flex;
-  gap: var(--s-2);
-  align-items: baseline;
-}
-
-.bd-split-figure {
-  font-size: 1.375rem;
-  color: var(--ink);
-}
-
-.bd-split-unit {
-  font-family: var(--font-label);
-  font-size: 0.6875rem;
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.bd-split-bar,
-.bd-split-keys {
-  display: grid;
-  grid-template-columns: var(--train) var(--test);
-  gap: 3px;
-}
-
-.bd-split-segment {
-  height: 7px;
-  border-radius: 2px;
-  transform-origin: left center;
-}
-
-.bd-split-segment[data-part='train'] {
-  background-color: color-mix(in srgb, var(--c4-accent) 62%, transparent);
-}
-
-.bd-split-segment[data-part='test'] {
-  background-color: color-mix(in srgb, var(--c4-accent) 26%, transparent);
-}
-
-.bd-split-key {
-  display: flex;
-  gap: 5px;
-  align-items: baseline;
-  min-width: 0;
-  white-space: nowrap;
-}
-
-.bd-split-count {
-  font-family: var(--font-figure);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.8125rem;
-  color: var(--ink);
-}
-
-.bd-split-label {
-  font-size: 0.75rem;
-  color: var(--ink-faint);
-}
-
-/* Converged losses, shown with the error budget. */
-.bd-converged {
-  display: flex;
-  gap: var(--s-8);
-}
-
-.bd-converged-item {
-  display: flex;
-  gap: var(--s-2);
-  align-items: baseline;
-}
-
-.bd-converged-label {
-  font-size: 0.8125rem;
-  color: var(--ink-muted);
-}
-
-.bd-converged-value {
-  font-family: var(--font-figure);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.8125rem;
-  color: var(--ink);
 }
 
 /* ---- Panels ---------------------------------------------------------------- */
 
 .bd-body {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: var(--s-16);
   min-height: 0;
 }
@@ -177,7 +77,7 @@
 
 .bd-panel-label {
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -199,7 +99,7 @@
 }
 
 .bd-loss-label {
-  font-size: 0.9375rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   line-height: var(--lh-snug);
 }
@@ -211,7 +111,7 @@
 .bd-loss-value {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
+  font-size: var(--t-subtext);
   color: var(--ink-muted);
 }
 
@@ -250,14 +150,14 @@
 }
 
 .bd-ledger-label {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   color: var(--ink-muted);
 }
 
 .bd-ledger-value {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   color: var(--ink);
 }
 
@@ -277,13 +177,13 @@
 
 .bd-recall {
   display: grid;
-  grid-template-columns: 9rem 1fr 5rem;
+  grid-template-columns: 9rem minmax(0, 1fr) 9rem;
   gap: var(--s-2);
   align-items: center;
 }
 
 .bd-recall-label {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
 }
 
@@ -314,14 +214,14 @@
 .bd-recall-value {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   text-align: right;
   color: var(--ink);
 }
 
 .bd-recall[data-resolved='false'] .bd-recall-value {
-  font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   letter-spacing: 0.03em;
   color: var(--ink-faint);
 }
@@ -352,14 +252,14 @@
 }
 
 .bd-floor-figure {
-  font-size: 1.75rem;
+  font-size: var(--t-lead);
   color: var(--c4-accent);
 }
 
 .bd-floor-measure {
   margin-left: var(--s-2);
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -368,28 +268,21 @@
 
 .bd-floor-unit {
   font-family: var(--font-figure);
-  font-size: 1rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-light);
   color: color-mix(in srgb, var(--c4-accent) 58%, transparent);
 }
 
 .bd-floor-label {
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   line-height: var(--lh-tight);
   letter-spacing: var(--ls-title);
 }
 
-.bd-floor-body {
-  margin-top: var(--s-1);
-  font-size: 0.75rem;
-  line-height: var(--lh-snug);
-  color: var(--ink-muted);
-}
-
 .bd-floor-remedy {
-  font-size: 0.75rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: color-mix(in srgb, var(--c4-accent) 76%, var(--c-base));
 }

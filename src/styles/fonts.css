@@ -1,20 +1,18 @@
 /* Fonts are bundled so the deck works offline. */
 
 @import '@fontsource-variable/instrument-sans';
+@import '@fontsource-variable/geist-mono';
 
 :root {
   --font-sans: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'Cascadia Code', monospace;
 
-  /* Roles share one family and differ by weight and tracking. */
   --font-display: var(--font-sans);
-  --font-label: var(--font-sans);
+  --font-label: var(--font-mono);
   --font-figure: var(--font-sans);
 
-  /* Diagnostics overlay only, so it is left unbundled. */
-  --font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', monospace;
-
-  --display-weight: 300;
-  --display-tracking: -0.028em;
-  --display-line: 1.18;
-  --label-tracking: 0.09em;
+  --display-weight: 500;
+  --display-tracking: -0.035em;
+  --display-line: 1.08;
+  --label-tracking: 0.06em;
 }

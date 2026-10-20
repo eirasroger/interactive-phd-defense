@@ -22,8 +22,9 @@
 }
 
 .loading-label {
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   letter-spacing: var(--ls-micro);
+  font-family: var(--font-label);
   text-transform: uppercase;
   color: var(--c-text-faint);
 }
@@ -56,7 +57,7 @@
   background-color: color-mix(in srgb, var(--c-surface) 80%, transparent);
 
   font-family: var(--font-mono);
-  font-size: var(--t-micro);
+  font-size: var(--t-subtext);
   font-variant-numeric: tabular-nums;
   color: var(--c-text-muted);
   pointer-events: none;
@@ -73,7 +74,7 @@
   z-index: var(--z-presenter);
 
   text-align: center;
-  font-size: var(--t-caption);
+  font-size: var(--t-subtext);
   color: var(--c-text-muted);
   pointer-events: none;
 }

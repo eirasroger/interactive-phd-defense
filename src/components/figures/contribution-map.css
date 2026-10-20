@@ -16,7 +16,7 @@
   gap: var(--s-3);
 
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -136,7 +136,7 @@
 
 .paper-key {
   font-family: var(--font-figure);
-  font-size: 1.5rem;
+  font-size: var(--t-text);
   font-weight: var(--fw-medium);
   line-height: 1.1;
   letter-spacing: 0.02em;
@@ -145,12 +145,28 @@
 
 /* Station name. Stays visible in the plan and reappears in the Act II corridor. */
 .paper-role {
-  font-size: 1.0625rem;
+  margin: 0;
+  font-size: var(--t-text);
   font-weight: var(--fw-medium);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-body);
   color: var(--c-text);
   text-wrap: pretty;
+}
+
+/* Fixed to a row card's inner width (`ROW.width` less border and padding), so
+   the role never rewraps while the card resizes. */
+.paper-role[data-layout='row'] {
+  width: calc(310px - 2px - 2 * var(--s-4));
+}
+
+.paper-role[data-layout='plan'] {
+  white-space: nowrap;
+}
+
+.paper-word {
+  display: inline-block;
+  will-change: transform;
 }
 
 /* Pinned to the card's foot so all five align across the row. */
@@ -164,7 +180,7 @@
 
 .paper-journal {
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -175,7 +191,7 @@
 /* Volume, year and article number, in tabular figures. */
 .paper-locator {
   font-family: var(--font-figure);
-  font-size: var(--t-micro);
+  font-size: var(--t-subtext);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: var(--c-text-faint);
@@ -185,7 +201,7 @@
 .paper-answers {
   margin-block-start: var(--s-2);
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;

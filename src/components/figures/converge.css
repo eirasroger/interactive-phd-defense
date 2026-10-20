@@ -34,8 +34,7 @@
 .cv-frame > .cv-card,
 .cv-frame > .cv-context,
 .cv-frame > .cv-readout,
-.cv-frame > .cv-locator,
-.cv-frame > .cv-out-note {
+.cv-frame > .cv-locator {
   position: absolute;
   z-index: 1;
   pointer-events: none;
@@ -75,8 +74,8 @@
 }
 
 .cv-source-code {
-  font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   color: var(--c5-accent);
@@ -84,18 +83,13 @@
 
 .cv-source-label {
   font-family: var(--font-display);
-  font-size: 1.0625rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-light);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-title);
   color: var(--ink);
 }
 
-.cv-source-note {
-  font-size: 0.75rem;
-  line-height: var(--lh-snug);
-  color: var(--ink-faint);
-}
 
 /* ---- Evidence flow ------------------------------------------------------------- */
 
@@ -200,7 +194,7 @@
 }
 
 .cv-rank {
-  font-size: 0.75rem;
+  font-size: var(--t-subtext);
   color: var(--ink-ghost);
 }
 
@@ -233,12 +227,6 @@
   background-color: var(--c5-lead);
 }
 
-.cv-out-note {
-  font-size: 0.8125rem;
-  line-height: var(--lh-snug);
-  text-align: right;
-  color: var(--c5-accent);
-}
 
 /* ---- Model ----------------------------------------------------------------------- */
 
@@ -254,7 +242,7 @@
 
 .cv-stage-index {
   font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -263,7 +251,7 @@
 
 .cv-stage-name {
   font-family: var(--font-display);
-  font-size: 2.25rem;
+  font-size: var(--t-subtitle);
   font-weight: var(--fw-light);
   /* `--lh-tight` clips light display type. */
   line-height: 1.12;
@@ -271,13 +259,6 @@
   color: var(--ink);
 }
 
-.cv-stage-line {
-  max-width: 16rem;
-  font-size: 0.8125rem;
-  text-wrap: balance;
-  line-height: var(--lh-snug);
-  color: var(--ink-muted);
-}
 
 /* ---- Context input ----------------------------------------------------------------- */
 
@@ -289,18 +270,12 @@
 
 .cv-context-label {
   font-family: var(--font-display);
-  font-size: 0.9375rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   letter-spacing: var(--ls-title);
   color: var(--input);
 }
 
-.cv-context-note {
-  font-size: 0.75rem;
-  line-height: var(--lh-snug);
-  text-wrap: balance;
-  color: var(--ink-muted);
-}
 
 /* ---- Forward index ----------------------------------------------------------------- */
 
@@ -316,7 +291,7 @@
 
 .cv-claim {
   font-family: var(--font-display);
-  font-size: 1.1875rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-light);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-title);
@@ -337,12 +312,12 @@
 }
 
 .cv-move-index {
-  font-size: 0.6875rem;
+  font-size: var(--t-subtext);
   color: var(--c5-accent);
 }
 
 .cv-move-label {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }

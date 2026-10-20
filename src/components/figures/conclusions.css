@@ -90,7 +90,7 @@
 .cc-index {
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: 0.08em;
   color: color-mix(in srgb, var(--accent) 82%, transparent);
@@ -112,7 +112,7 @@
 .cc-lead {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--t-lead);
   font-weight: var(--fw-light);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-title);
@@ -122,7 +122,7 @@
 /* Supporting sentence. Fades in with the drawing, so a closed panel shows only its claim. */
 .cc-note {
   margin: var(--s-3) 0 0;
-  font-size: 0.875rem;
+  font-size: var(--t-text);
   line-height: 1.65;
   opacity: calc((var(--open) - 0.34) * 2.6);
   color: color-mix(in srgb, var(--c-text-muted) 94%, transparent);
@@ -220,7 +220,7 @@
   fill: color-mix(in srgb, var(--c-text-muted) 78%, transparent);
   font-family: var(--font-figure);
   font-variant-numeric: tabular-nums;
-  font-size: 15px;
+  font-size: var(--t-subtext);
 }
 
 /* ---- 02 · Admissible first, preferred second ------------------------------------------ */

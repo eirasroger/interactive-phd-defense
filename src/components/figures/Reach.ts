@@ -104,7 +104,7 @@ export function createReach(): Reach {
       el('span', { className: 'rh-attribute-label', text: attribute.label }),
     ];
     if (attribute.measured) {
-      const tag = el('span', { className: 'rh-attribute-tag', text: 'Measured here' });
+      const tag = el('span', { className: 'rh-attribute-tag', text: 'Measured' });
       tags.push(tag);
       children.push(tag);
     }

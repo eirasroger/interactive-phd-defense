@@ -17,7 +17,7 @@
   gap: var(--s-3);
 
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -97,7 +97,7 @@
 .gap-card-key {
   position: relative;
   font-family: var(--font-figure);
-  font-size: 1.75rem;
+  font-size: var(--t-lead);
   font-weight: var(--fw-medium);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
@@ -110,7 +110,7 @@
   position: relative;
 
   font-family: var(--font-display);
-  font-size: 1.6rem;
+  font-size: var(--t-lead);
   font-weight: var(--fw-semibold);
   line-height: var(--lh-snug);
   letter-spacing: var(--ls-title);
@@ -121,7 +121,7 @@
 
 .gap-card-body {
   position: relative;
-  font-size: 1.0625rem;
+  font-size: var(--t-text);
   line-height: var(--lh-normal);
   color: var(--c-text-muted);
 }

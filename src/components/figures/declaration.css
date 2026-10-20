@@ -14,7 +14,7 @@
 .declaration-product,
 .declaration-unit {
   font-family: var(--font-label);
-  font-size: 13px;
+  font-size: var(--t-label);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
@@ -49,7 +49,7 @@
 .declaration-module-code {
   fill: var(--c-text);
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: var(--t-text);
   font-weight: var(--fw-semibold);
   letter-spacing: -0.01em;
 }
@@ -57,7 +57,7 @@
 .declaration-module-name {
   fill: var(--c-text-muted);
   font-family: var(--font-label);
-  font-size: 13.5px;
+  font-size: var(--t-label);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
@@ -66,7 +66,7 @@
 .declaration-module-verdict {
   fill: var(--c-circular);
   font-family: var(--font-label);
-  font-size: 12px;
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -79,8 +79,8 @@
 /* Muted so the basis stays readable when a module turns out to be a scenario. */
 .declaration-module-basis {
   fill: var(--c-text-muted);
-  font-family: var(--font-label);
-  font-size: 15px;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
 }
 
 /* ---- The gate ----------------------------------------------------------- */
@@ -92,7 +92,7 @@
 .declaration-gate-label {
   fill: var(--c-emphasis);
   font-family: var(--font-label);
-  font-size: 11px;
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -106,7 +106,7 @@
 .declaration-indicator {
   fill: var(--c-text-muted);
   font-family: var(--font-label);
-  font-size: 12px;
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -134,7 +134,7 @@
 .declaration-amount {
   fill: var(--c-text);
   font-family: var(--font-display);
-  font-size: 44px;
+  font-size: var(--t-title);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--ls-title);
 }
@@ -142,7 +142,7 @@
 .declaration-amount-unit {
   fill: var(--c-text-faint);
   font-family: var(--font-label);
-  font-size: 12px;
+  font-size: var(--t-label);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }

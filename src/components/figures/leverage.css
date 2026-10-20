@@ -6,8 +6,8 @@
 
 /* Source attribution, styled like the ledger's. */
 .leverage-source {
-  font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   color: var(--c-text-faint);
 }
 
@@ -35,7 +35,7 @@
 .leverage-phase {
   fill: var(--c-text-faint);
   font-family: var(--font-label);
-  font-size: 11px;
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -64,8 +64,8 @@
 }
 
 .leverage-name {
-  font-family: var(--font-label);
-  font-size: 13px;
+  font-family: var(--font-sans);
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   letter-spacing: 0.03em;
 }
@@ -97,7 +97,7 @@
 .leverage-window-label {
   fill: var(--c-emphasis);
   font-family: var(--font-label);
-  font-size: 12px;
+  font-size: var(--t-label);
   font-weight: var(--fw-medium);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;

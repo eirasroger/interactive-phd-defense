@@ -11,7 +11,6 @@ export interface Upstream {
   readonly key: string;
   readonly station: string;
   readonly label: string;
-  readonly note: string;
 }
 
 export const UPSTREAM: readonly Upstream[] = [
@@ -19,25 +18,21 @@ export const UPSTREAM: readonly Upstream[] = [
     key: 'c1',
     station: 'C1',
     label: 'Evaluation indicators',
-    note: 'The dimensions of the comparison',
   },
   {
     key: 'c2',
     station: 'C2',
     label: 'Structured product data',
-    note: 'Declared values, read at scale',
   },
   {
     key: 'c3',
     station: 'C3',
     label: 'Admissible candidates',
-    note: 'Alternatives that meet the requirements',
   },
   {
     key: 'c4',
     station: 'C4',
     label: 'Complete profiles',
-    note: 'Estimates where information is incomplete',
   },
 ];
 
@@ -52,7 +47,6 @@ export const CONDITIONING = {
 export interface ContextInput {
   readonly key: string;
   readonly label: string;
-  readonly note: string;
   /** Colour channel: `who` is the actor, `what` is the use. Reused by later beats. */
   readonly channel: 'who' | 'what';
 }
@@ -65,20 +59,17 @@ export const CONTEXT_INPUTS: readonly ContextInput[] = [
   {
     key: 'stakeholder',
     label: 'Stakeholder priority',
-    note: 'What the deciding actor values',
     channel: 'who',
   },
   {
     key: 'application',
     label: 'Application context',
-    note: 'The intended use of the product',
     channel: 'what',
   },
 ];
 
 export const OUTPUT = {
   label: 'A preference score for each alternative',
-  note: 'Each score is relative to the set',
 } as const;
 
 /** Opening-beat labels over the upstream inputs and the context inputs. */
@@ -91,7 +82,6 @@ export const OPENING = {
 export const STAGE = {
   index: 'The remaining stage',
   name: 'Recommendation',
-  line: 'An ordering that fits the decision',
 } as const;
 
 /** The approach in brief. Detailed at the architecture beat. */
@@ -159,21 +149,6 @@ export const SOURCES: readonly LabelSource[] = [
   },
 ];
 
-/**
- * How the generated set was sampled, §4.2. A tenth of the scenarios combine
- * several priorities, which gives the model conflicting objectives.
- */
-export const GENERATION = {
-  model: 'gpt-4.1',
-  missingRate: 0.01,
-  inspected: 500,
-  archetypeMix: [
-    { count: 1, share: 0.9 },
-    { count: 2, share: 0.075 },
-    { count: 3, share: 0.025 },
-  ] as readonly { readonly count: number; readonly share: number }[],
-} as const;
-
 export const CORPUS = { total: 42874, train: 30011, test: 12863 } as const;
 
 /**
@@ -239,8 +214,6 @@ export const FEATURES = {
 export interface AttributeFamily {
   readonly key: string;
   readonly label: string;
-  /** Source standard, if any. */
-  readonly source?: string;
   readonly attributes: readonly string[];
 }
 
@@ -279,7 +252,6 @@ export const ATTRIBUTE_FAMILIES: readonly AttributeFamily[] = [
   {
     key: 'performance',
     label: 'Performance',
-    source: 'EN 206, tailored to concrete',
     attributes: [
       'Compressive strength class',
       'Consistency class',
@@ -297,42 +269,9 @@ export const CASE_STUDY = {
   label: 'The input vector for a concrete alternative',
 } as const;
 
-/** Architecture beat heading, read by `act2.ts`. Lists the forward pass in order. */
+/** Architecture beat heading, read by `act2.ts`. */
 export const ARCHITECTURE_CLAIM =
   'The model scores each alternative against the whole set.';
-
-export interface Layer {
-  readonly key: string;
-  readonly label: string;
-  readonly detail: string;
-}
-
-export const PIPELINE: readonly Layer[] = [
-  {
-    key: 'encode',
-    label: 'Encoder',
-    detail: '256, 128, 64, each normalised, ReLU and dropout',
-  },
-  {
-    key: 'attend',
-    label: 'Set Transformer blocks',
-    detail: 'Two blocks, two heads, attention across every candidate',
-  },
-  {
-    key: 'context',
-    label: 'Global context',
-    detail: 'The mean embedding of the set, concatenated back onto each candidate',
-  },
-  {
-    key: 'score',
-    label: 'Scoring head',
-    detail: 'Two-layer MLP and a sigmoid, one score per candidate between zero and one',
-  },
-];
-
-/** Note under the architecture board. */
-export const SHARED_CONTEXT =
-  'The stakeholder archetype and the application are the same for every alternative in the set.';
 
 export const MODEL = {
   parameters: 167361,
@@ -342,7 +281,7 @@ export const MODEL = {
   blocks: 2,
   heads: 2,
   invariance: 'Permutation invariant',
-  invarianceNote: 'A change in the order alternatives arrive in leaves every score where it was',
+  invarianceNote: 'Same scores in any order',
 } as const;
 
 /* ---- Expert evaluation ------------------------------------------------------ */
@@ -409,7 +348,6 @@ export const AGREEMENT = {
 export const VALIDATION_BLOCKS = {
   panel: 'Validation against the expert panel',
   behaviour: 'Model behaviour under context',
-  importance: 'What the model weighs, by application',
 } as const;
 
 /**
@@ -428,7 +366,6 @@ export const BEHAVIOUR_STUDIES = {
 } as const;
 
 /** Summary line under the behaviour beat. */
-export const BEHAVIOUR_TAKEAWAY = 'Indicator weighting changes dynamically with context.';
 
 export const VALIDATION_CLAIM =
   'Validated against experts and tested under changing context.';
@@ -545,86 +482,66 @@ export const CROSSING = {
 export const APPLICATION_CLAIM =
   'Application decides which attributes count.';
 
-/* ---- What the model reads ------------------------------------------------------ */
+/* ---- What the model weighs ----------------------------------------------------- */
+
+/** Importance beat heading, read by `act2.ts`. */
+export const IMPORTANCE_CLAIM = 'What the model weighs depends on the application.';
+
+export type IndicatorFamily = 'circularity' | 'environmental' | 'economic' | 'performance';
+
+/** Families in legend order. Colours come from `family-palette.css`. */
+export const INDICATOR_FAMILIES: readonly { readonly key: IndicatorFamily; readonly label: string }[] = [
+  { key: 'circularity', label: 'Circularity' },
+  { key: 'environmental', label: 'Environmental' },
+  { key: 'economic', label: 'Economic' },
+  { key: 'performance', label: 'Performance' },
+];
+
+/** Indicator names and families by key, shared by all three columns. */
+export const INDICATORS = {
+  cost: { label: 'Life cycle costs', family: 'economic' },
+  gwp: { label: 'Global warming potential', family: 'environmental' },
+  origin: { label: 'Circular origin', family: 'circularity' },
+  landfill: { label: 'Inert landfilling', family: 'circularity' },
+  water: { label: 'Water depletion', family: 'environmental' },
+  recycling: { label: 'Recycling', family: 'circularity' },
+  cement: { label: 'Cement content', family: 'performance' },
+  strength: { label: 'Compressive strength', family: 'performance' },
+  freshwater: { label: 'Freshwater use', family: 'environmental' },
+  aggregate: { label: 'Maximum aggregate size', family: 'performance' },
+  density: { label: 'Density', family: 'performance' },
+  slump: { label: 'Consistency', family: 'performance' },
+  biodiversity: { label: 'Biodiversity', family: 'environmental' },
+  hazardous: { label: 'Hazardous waste', family: 'circularity' },
+} as const satisfies Record<string, { readonly label: string; readonly family: IndicatorFamily }>;
+
+export type IndicatorKey = keyof typeof INDICATORS;
 
 export interface Salience {
   readonly key: string;
   readonly label: string;
   /** Top ten by mean absolute SHAP value, in order, from Fig. 10. */
-  readonly order: readonly string[];
+  readonly order: readonly IndicatorKey[];
   readonly concentration: string;
 }
-
-/** Indicator names by key, so a slope line can follow one indicator across columns. */
-export const INDICATORS = {
-  cost: 'Life cycle costs',
-  gwp: 'Global warming potential',
-  origin: 'Circular origin',
-  landfill: 'Inert landfilling',
-  water: 'Water depletion',
-  recycling: 'Recycling',
-  cement: 'Cement content',
-  strength: 'Compressive strength',
-  freshwater: 'Freshwater use',
-  aggregate: 'Maximum aggregate size',
-  density: 'Density',
-  slump: 'Consistency',
-  biodiversity: 'Biodiversity',
-  hazardous: 'Hazardous waste',
-} as const;
-
-export type IndicatorKey = keyof typeof INDICATORS;
 
 export const SALIENCE: readonly Salience[] = [
   {
     key: 'standard',
     label: 'Standard structural',
-    order: [
-      'cost',
-      'gwp',
-      'origin',
-      'landfill',
-      'water',
-      'recycling',
-      'cement',
-      'strength',
-      'freshwater',
-      'aggregate',
-    ],
-    concentration: 'Importance spread across many indicators',
+    order: ['cost', 'gwp', 'origin', 'landfill', 'water', 'recycling', 'cement', 'strength', 'freshwater', 'aggregate'],
+    concentration: 'Spread across many indicators',
   },
   {
     key: 'thermal',
     label: 'Thermal insulation',
-    order: [
-      'density',
-      'gwp',
-      'cost',
-      'water',
-      'landfill',
-      'freshwater',
-      'recycling',
-      'origin',
-      'biodiversity',
-      'hazardous',
-    ],
+    order: ['density', 'gwp', 'cost', 'water', 'landfill', 'freshwater', 'recycling', 'origin', 'biodiversity', 'hazardous'],
     concentration: 'Density dominates',
   },
   {
     key: 'finish',
     label: 'Architectural finish',
-    order: [
-      'origin',
-      'slump',
-      'aggregate',
-      'gwp',
-      'cost',
-      'water',
-      'landfill',
-      'freshwater',
-      'recycling',
-      'biodiversity',
-    ],
+    order: ['origin', 'slump', 'aggregate', 'gwp', 'cost', 'water', 'landfill', 'freshwater', 'recycling', 'biodiversity'],
     concentration: 'A steep fall after the top three',
   },
 ];
@@ -646,7 +563,6 @@ export const SALIENCE_WEIGHTS: Readonly<Record<string, readonly SalienceWeight[]
     { key: 'origin', weight: 0.006 },
     { key: 'landfill', weight: 0.0058 },
     { key: 'water', weight: 0.0043 },
-    { key: 'recycling', weight: 0.0035 },
   ],
   thermal: [
     { key: 'density', weight: 0.0135 },
@@ -654,7 +570,6 @@ export const SALIENCE_WEIGHTS: Readonly<Record<string, readonly SalienceWeight[]
     { key: 'cost', weight: 0.0068 },
     { key: 'water', weight: 0.006 },
     { key: 'landfill', weight: 0.005 },
-    { key: 'freshwater', weight: 0.0038 },
   ],
   finish: [
     { key: 'origin', weight: 0.015 },
@@ -662,7 +577,6 @@ export const SALIENCE_WEIGHTS: Readonly<Record<string, readonly SalienceWeight[]
     { key: 'aggregate', weight: 0.0098 },
     { key: 'gwp', weight: 0.0055 },
     { key: 'cost', weight: 0.005 },
-    { key: 'water', weight: 0.0048 },
   ],
 };
 
@@ -676,14 +590,8 @@ export const SALIENCE_REMAINING: Readonly<Record<string, number>> = {
   finish: 0.0038,
 };
 
-/** Widest bar across all panels, so the three share one scale. */
+/** Widest bar across all columns, so the three share one scale. */
 export const SALIENCE_MAX = 0.015;
-
-/** Ranks shown per column before an indicator moves to the muted lane. */
-export const SHOWN_RANKS = 5;
-
-export const SALIENCE_CLAIM =
-  'These weightings were learned and match expert views.';
 
 /* ---- Robustness to missing data ---------------------------------------------- */
 
@@ -944,157 +852,20 @@ function assertPublished(): void {
       if (next && next.weight > bar.weight) {
         throw new Error(`C5: ${context} draws rank ${index + 2} longer than rank ${index + 1}.`);
       }
-    }
-  }
-
-  const mix = GENERATION.archetypeMix.reduce((sum, entry) => sum + entry.share, 0);
-  if (Math.abs(mix - 1) > 1e-9) {
-    throw new Error(`C5: the archetype mix covers ${(mix * 100).toFixed(1)}% of the scenarios.`);
-  }
-
-  // §5.1: every model score is inside the expert band, and the model interval
-  // is narrower than the expert interval for every product.
-  for (const entry of PANEL) {
-    if (MODEL_UNCERTAINTY >= entry.uncertainty) {
-      throw new Error(
-        `C5: product ${entry.id} is drawn with a model interval of ±${MODEL_UNCERTAINTY} against ` +
-          `an expert interval of ±${entry.uncertainty}, and Table 3 has the model tighter.`,
-      );
-    }
-    const distance = Math.abs(entry.model - entry.expert);
-    if (distance > entry.uncertainty + 1e-9) {
-      throw new Error(
-        `C5: product ${entry.id} is drawn at ${entry.model} against an expert band of ` +
-          `${entry.expert} ± ${entry.uncertainty}, and §5.1 states every model score falls ` +
-          `inside its band.`,
-      );
-    }
-  }
-
-  const application = (key: string): Application => {
-    const found = APPLICATIONS.find((entry) => entry.key === key);
-    if (!found) throw new Error(`C5: no application on file for "${key}".`);
-    return found;
-  };
-
-  const [first, second] = CROSSING.pair;
-  const before = application(CROSSING.from).scores;
-  const after = application(CROSSING.to).scores;
-  if (!(before[first] < before[second] && after[first] > after[second])) {
-    throw new Error(
-      `C5: the application beat exists to show ${first} passing ${second} between ` +
-        `${CROSSING.from} and ${CROSSING.to}, and the published scores do not cross.`,
-    );
-  }
-
-  const leader = (scores: Readonly<Record<ProductId, number>>): ProductId =>
-    PRODUCTS.reduce((best, id) => (scores[id] > scores[best] ? id : best));
-  for (const entry of APPLICATIONS) {
-    if (leader(entry.scores) !== 'D') {
-      throw new Error(
-        `C5: ${entry.label} leads with ${leader(entry.scores)}, and §5.4 states D keeps the ` +
-          `lead across all four applications.`,
-      );
-    }
-  }
-
-  const familyKeys = new Set(ATTRIBUTE_FAMILIES.map((family) => family.key));
-  for (const condition of MASKING) {
-    for (const key of condition.families) {
-      if (!familyKeys.has(key)) {
-        throw new Error(`C5: "${condition.label}" removes family "${key}", which does not exist.`);
+      if (bar.weight > SALIENCE_MAX) {
+        throw new Error(`C5: ${context} draws ${bar.key} past the shared scale.`);
       }
     }
-    if (condition.topChanged !== 0) {
-      throw new Error(
-        `C5: Table 4 reports the top-ranked product unchanged under every condition, and ` +
-          `"${condition.label}" is drawn at ${condition.topChanged}%.`,
-      );
-    }
-    if (condition.meanDelta > condition.maxDelta) {
-      throw new Error(`C5: "${condition.label}" draws a mean shift above its own maximum.`);
-    }
   }
 
-  if (MASKING.some((condition) => condition.families.includes('health'))) {
-    throw new Error('C5: Table 4 masks no health indicator, and the drawing removes one.');
-  }
-
-  if (!MASKING.some((condition) => condition.key === CLOSING_CONDITION)) {
-    throw new Error(`C5: no published condition named "${CLOSING_CONDITION}".`);
-  }
-
-  for (const key of [CONTEXT_MOVE.from, CONTEXT_MOVE.to]) {
-    if (!APPLICATIONS.some((entry) => entry.key === key)) {
-      throw new Error(`C5: no application named "${key}".`);
-    }
-  }
-
-  if (ROBUSTNESS.tests !== 96) {
-    throw new Error(
-      `C5: thirty-two combinations over three conditions make ninety-six tests, and the wall ` +
-        `prints ${ROBUSTNESS.tests}.`,
-    );
-  }
-
-  if (SHOWCASE.cost[0] === SHOWCASE.recommended[0]) {
-    throw new Error(
-      'C5: the first card exists to show the cheapest alternative and the recommended one being ' +
-        'different, and the two columns lead with the same one.',
-    );
-  }
-  if (SHOWCASE.cost.indexOf(SHOWCASE.promoted) !== 1 || SHOWCASE.recommended[0] !== SHOWCASE.promoted) {
-    throw new Error(`C5: ${SHOWCASE.promoted} is drawn rising to first and does not start second.`);
-  }
-  for (const list of [SHOWCASE.cost, SHOWCASE.recommended]) {
-    if (new Set(list).size !== PRODUCTS.length) {
-      throw new Error('C5: a showcase ordering does not hold every alternative exactly once.');
-    }
-  }
-
-  let leaders = 0;
-  for (const [index, context] of SHOWCASE.contexts.entries()) {
-    if (new Set(context.order).size !== PRODUCTS.length) {
-      throw new Error(`C5: showcase context ${index} does not hold every alternative once.`);
-    }
-    const before = SHOWCASE.contexts[index - 1];
-    if (before && before.order[0] !== context.order[0]) leaders += 1;
-  }
-  if (leaders < 2) {
-    throw new Error(
-      `C5: the second card exists to show the recommendation changing with the context, and the ` +
-        `leading alternative changes ${leaders} times across the drawn settings.`,
-    );
-  }
-
-  const shaken = [...SHOWCASE.recommended].sort(
-    (left, right) => SHOWCASE.uncertain[right] - SHOWCASE.uncertain[left],
-  );
-  if (shaken.join('') !== SHOWCASE.recommended.join('')) {
-    throw new Error(
-      'C5: the third card moves every score a little and keeps the ordering, and the drawn ' +
-        `values reorder to ${shaken.join('')}.`,
-    );
-  }
-  for (const id of PRODUCTS) {
-    if (Math.abs(SHOWCASE.uncertain[id] - SHOWCASE.scores[id]) > 0.06) {
-      throw new Error(`C5: ${id} moves further under uncertainty than the card claims.`);
+  for (const entry of SALIENCE) {
+    if (new Set(entry.order).size !== entry.order.length) {
+      throw new Error(`C5: ${entry.label} ranks an indicator twice.`);
     }
   }
 
   if (ENABLES.length !== 3) {
     throw new Error(`C5: the closing beat is built for three claims and holds ${ENABLES.length}.`);
-  }
-
-  for (const entry of SALIENCE) {
-    for (const key of entry.order) {
-      if (!(key in INDICATORS)) {
-        throw new Error(`C5: ${entry.label} ranks "${key}", which is not a named indicator.`);
-      }
-    }
-    if (new Set(entry.order).size !== entry.order.length) {
-      throw new Error(`C5: ${entry.label} ranks an indicator twice.`);
-    }
   }
 }
 

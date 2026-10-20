@@ -80,7 +80,7 @@ export function createClaims(lines: readonly string[], spec: ClaimsSpec = {}): C
 
   /*
    * All claims stay visible; only their state changes. Opacity is handled in
-   * CSS via `data-state` (see `conditions.css`).
+   * CSS via `data-state`.
    */
   return {
     element,

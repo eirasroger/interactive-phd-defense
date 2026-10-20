@@ -12,6 +12,7 @@ import { createParadox } from '@/components/figures/Paradox';
 import { createContext } from '@/components/figures/Context';
 import { createHandover } from '@/components/figures/Handover';
 import { createReach } from '@/components/figures/Reach';
+import { createSalience } from '@/components/figures/Salience';
 import { createSemantic } from '@/components/figures/Semantic';
 import { createSupervision } from '@/components/figures/Supervision';
 import { createValidation } from '@/components/figures/Validation';
@@ -105,7 +106,7 @@ const c2Takeaway: readonly TakeawayCard[] = [
     tint: WORTH.loss,
     name: 'Origin and recovery are separate targets',
     body: 'They vary independently, so both must be predicted.',
-    figure: [fork('Product record', ['Circular origin', 'End-of-life recovery'])],
+    figure: [fork('Product', ['Origin', 'Recovery'])],
   },
   {
     tint: WORTH.inference,
@@ -146,6 +147,7 @@ const PANELS: Readonly<Record<string, () => readonly SlidePanel[]>> = {
     createSupervision(),
     createAttention(),
     createValidation(),
+    createSalience(),
     createEnables(),
   ],
 };

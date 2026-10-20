@@ -1,7 +1,7 @@
 import type { CaptionContent } from '@/components/Caption';
 import type { FigureContent } from '@/components/SlideFigure';
 import fig4Url from '@/assets/figures/fig4.png?url';
-import { ARCHITECTURE_CLAIM, LEARNED_CLAIM, VALIDATION_CLAIM } from '@/content/c5';
+import { ARCHITECTURE_CLAIM, IMPORTANCE_CLAIM, LEARNED_CLAIM, VALIDATION_CLAIM } from '@/content/c5';
 
 /**
  * Act II copy: one slide per contribution, with one caption per beat. Each
@@ -69,6 +69,7 @@ export const c5Captions: readonly CaptionContent[] = [
   c5(LEARNED_CLAIM),
   c5(ARCHITECTURE_CLAIM),
   c5(VALIDATION_CLAIM),
+  c5(IMPORTANCE_CLAIM),
   c5('Key findings'),
 ];
 

@@ -140,7 +140,7 @@
 
 /* Act I style: one large display line over a ruled eyebrow. */
 .scene-layer[data-align='slide'] .slide-frame[data-figures] .caption-heading {
-  font-size: 3rem;
+  font-size: var(--t-title);
 }
 
 .scene-layer[data-align='slide'] .caption {
@@ -198,7 +198,7 @@
 
 /* Title size, kept to two lines so the cards below keep their space. */
 .scene-layer[data-align='theme'] .caption-heading {
-  font-size: 3rem;
+  font-size: var(--t-title);
 }
 
 /*

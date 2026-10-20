@@ -18,7 +18,7 @@
 
 .pd-index {
   font-family: var(--font-label);
-  font-size: 0.6875rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -27,11 +27,13 @@
 
 /* ---- The slope ---------------------------------------------------------- */
 
+/* Left padding holds the category names that sit outside the left axis. */
 .pd-chart {
   display: grid;
   gap: var(--s-3);
   align-content: center;
   min-width: 0;
+  padding-left: 16rem;
 }
 
 /* Heads are centred over the axes, at x = 30/420 and 356/420. */
@@ -45,7 +47,7 @@
   transform: translateX(-50%);
   white-space: nowrap;
   font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-size: var(--t-label);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -122,7 +124,7 @@
 
 .pd-label-value {
   font-family: var(--font-figure);
-  font-size: 1.0625rem;
+  font-size: var(--t-subtext);
   font-weight: var(--fw-medium);
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -130,7 +132,7 @@
 }
 
 .pd-label-name {
-  font-size: 0.6875rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }
@@ -146,7 +148,7 @@
 .pd-reading {
   padding-top: var(--s-3);
   border-top: 1px solid var(--rule);
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }
@@ -172,7 +174,7 @@
 
 .pd-blocker-label {
   font-family: var(--font-label);
-  font-size: 0.625rem;
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -180,7 +182,7 @@
 }
 
 .pd-blocker-body {
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }

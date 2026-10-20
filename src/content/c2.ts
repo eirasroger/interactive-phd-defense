@@ -335,7 +335,7 @@ export const HIGHLIGHTS: readonly Highlight[] = [
   { x: 0.1, y: 0.11, w: 0.44, group: 'identity', locus: 'Cover page' },
   { x: 0.1, y: 0.3, w: 0.62, group: 'composition', locus: 'Table' },
   { x: 0.52, y: 0.46, w: 0.38, group: 'environmental', locus: 'Table' },
-  { x: 0.1, y: 0.62, w: 0.55, group: 'performance', locus: 'Declaration of Performance' },
+  { x: 0.1, y: 0.62, w: 0.55, group: 'performance', locus: 'DoP' },
   { x: 0.1, y: 0.82, w: 0.7, group: 'circularity', locus: 'Narrative section' },
 ];
 

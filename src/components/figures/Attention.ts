@@ -6,9 +6,7 @@ import {
   CASE_STUDY,
   FEATURES,
   MODEL,
-  PIPELINE,
   PRODUCTS,
-  SHARED_CONTEXT,
   type ProductId,
 } from '@/content/c5';
 import { el, svg } from '@/utilities/dom';
@@ -49,8 +47,7 @@ const MEAN_X = (CONTEXT.start + CONTEXT.end) / 2;
 const CELL_HEIGHT = 26;
 const CELL_GAP = 9;
 
-const HEADER_Y = 18;
-const DETAIL_Y = 32;
+const HEADER_Y = 30;
 
 /** The three bands of the input vector, sized by feature count. */
 const INPUT_BANDS = [
@@ -58,12 +55,6 @@ const INPUT_BANDS = [
   { key: 'stakeholder', units: FEATURES.stakeholder },
   { key: 'application', units: FEATURES.application },
 ] as const;
-
-const stageNamed = (key: string): (typeof PIPELINE)[number] => {
-  const found = PIPELINE.find((layer) => layer.key === key);
-  if (!found) throw new Error(`C5: the architecture declares no stage "${key}".`);
-  return found;
-};
 
 /**
  * Standard structural scores in arrival order (rails A to E). Kept unsorted
@@ -107,10 +98,6 @@ export function createAttention(): Attention {
           className: 'at-family-head',
           children: [
             el('p', { className: 'at-family-label', text: family.label }),
-            el('span', {
-              className: 'at-family-source',
-              text: family.source ?? '',
-            }),
             el('span', {
               className: 'c5-figure at-family-count',
               text: String(family.attributes.length),
@@ -213,22 +200,20 @@ export function createAttention(): Attention {
   });
 
   const stageMarks: SVGElement[] = [];
-  const stageHead = (label: string, detail: string, centre: number): void => {
+  const stageHead = (label: string, centre: number): void => {
     const head = text(label, 'at-stage', { x: String(centre), y: String(HEADER_Y) });
-    const note = text(detail, 'at-stage-detail', { x: String(centre), y: String(DETAIL_Y) });
-    stageMarks.push(head, note);
+    stageMarks.push(head);
     board.appendChild(head);
-    board.appendChild(note);
   };
 
   const midOf = (span: { start: number; end: number }): number => (span.start + span.end) / 2;
 
-  stageHead('Input vector', `${FEATURES.total} features`, (TOKEN_X + INPUT.end) / 2);
-  stageHead(stageNamed('encode').label, '256 · 128 · 64', midOf(ENCODER));
-  stageHead('Set Transformer', `${MODEL.blocks} blocks · ${MODEL.heads} heads`, midOf(ATTEND));
-  stageHead(stageNamed('context').label, 'Mean pool', midOf(CONTEXT));
-  stageHead(stageNamed('score').label, 'Sigmoid', midOf(HEAD));
-  stageHead('Preference score', 'Zero to one', midOf(SCORE));
+  stageHead('Input', (TOKEN_X + INPUT.end) / 2);
+  stageHead('Encoder', midOf(ENCODER));
+  stageHead('Set Transformer', midOf(ATTEND));
+  stageHead('Context', midOf(CONTEXT));
+  stageHead('Head', midOf(HEAD));
+  stageHead('Score', midOf(SCORE));
 
   /* Set-level stages are boxes enclosing all rails, as in Fig. 2. */
   const attendBox = svg('rect', {
@@ -429,18 +414,16 @@ export function createAttention(): Attention {
     board.appendChild(bar);
   }
 
-  const shared = el('p', { className: 'at-shared', text: SHARED_CONTEXT });
-
   const field = el('div', {
     className: 'c5-field at-field',
-    children: [el('div', { className: 'at-board-frame', children: [board] }), shared],
+    children: [el('div', { className: 'at-board-frame', children: [board] })],
   });
 
   const properties = [
     { figure: MODEL.invariance, label: MODEL.invarianceNote },
     {
       figure: `${MODEL.minAlternatives} to ${MODEL.maxAlternatives}`,
-      label: 'Alternatives per scenario, handled by masking',
+      label: 'Alternatives per set',
     },
     { figure: MODEL.parameters.toLocaleString('en-GB'), label: 'Trainable parameters' },
   ].map((property) =>
@@ -473,7 +456,7 @@ export function createAttention(): Attention {
 
   const settleTo = (): void => {
     gsap.set(element, { opacity: 1 });
-    gsap.set([...parts, ...attributeRows, ...properties, shared], { opacity: 1, x: 0, y: 0 });
+    gsap.set([...parts, ...attributeRows, ...properties], { opacity: 1, x: 0, y: 0 });
     gsap.set([...railLines, ...inputStrips, ...encoders, ...heads, ...tokens], { opacity: 1 });
     gsap.set([attendBox, contextBox, ...stageMarks], { opacity: 1, y: 0 });
     gsap.set(matrixCells, { opacity: 1, scale: 1, transformOrigin: 'center center' });
@@ -647,7 +630,7 @@ export function createAttention(): Attention {
             seconds(DURATION.cinematic * 2.4),
           )
           .from(
-            [shared, ...properties],
+            properties,
             {
               opacity: 0,
               y: 10,

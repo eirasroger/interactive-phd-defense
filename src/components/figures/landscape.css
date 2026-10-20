@@ -38,7 +38,7 @@
 
 .ls-head-label {
   font-family: var(--font-label);
-  font-size: var(--t-micro);
+  font-size: var(--t-label);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -46,7 +46,7 @@
 }
 
 .ls-head-note {
-  font-size: 0.75rem;
+  font-size: var(--t-subtext);
   color: var(--ink-faint);
 }
 
@@ -58,7 +58,7 @@
 }
 
 .ls-label {
-  font-size: 1rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }
@@ -120,7 +120,7 @@
 .ls-figure {
   justify-self: end;
   font-family: var(--font-figure);
-  font-size: 1rem;
+  font-size: var(--t-subtext);
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
@@ -128,7 +128,7 @@
 .ls-count {
   justify-self: end;
   font-family: var(--font-figure);
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   font-variant-numeric: tabular-nums;
   color: var(--ink-faint);
 }
@@ -162,7 +162,7 @@
   border-top: 1px solid var(--rule);
 
   font-family: var(--font-figure);
-  font-size: 0.625rem;
+  font-size: var(--t-subtext);
   font-variant-numeric: tabular-nums;
   color: var(--ink-faint);
 }
@@ -194,7 +194,7 @@
 
 .ls-reading-value {
   font-family: var(--font-figure);
-  font-size: 2.25rem;
+  font-size: var(--t-subtitle);
   font-weight: var(--fw-light);
   line-height: 1;
   letter-spacing: var(--ls-title);
@@ -212,7 +212,7 @@
 
 .ls-reading-label {
   max-width: 34rem;
-  font-size: 0.8125rem;
+  font-size: var(--t-subtext);
   line-height: var(--lh-snug);
   color: var(--ink-muted);
 }
