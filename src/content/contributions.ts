@@ -18,9 +18,9 @@ import type { ContributionMapSpec } from '@/components/figures/ContributionMap';
 
 export const CONTRIBUTIONS = {
   eyebrow: 'Contributions',
-  heading: 'How the objectives are answered.',
+  heading: 'Five papers answer the four objectives.',
   /** Appended to the heading when the plan forms. */
-  coda: 'And how they connect.',
+  coda: 'Together they form one pipeline.',
 
   map: {
     items: [

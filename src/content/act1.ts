@@ -40,10 +40,7 @@ export const act1Captions = {
    */
   decision: {
     eyebrow: 'State of the art · 04',
-    heading: 'On what basis is a construction product selected?',
-    body: [
-      'A building is the accumulation of that decision, taken for every element and repeated throughout the project.',
-    ],
+    heading: 'How is a construction product selected?',
     accent: 'emphasis',
   },
 

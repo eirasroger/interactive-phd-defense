@@ -7,12 +7,12 @@ import type { LeverageSpec } from '@/components/figures/Leverage';
  */
 export const LEVERAGE = {
   eyebrow: 'Motivation · Research context',
-  heading: 'The cost of changing a decision rises the later it is addressed.',
+  heading: 'Decisions are cheapest to change early in design.',
 
   claims: [
-    'The ability to shape a project is highest while the project is least defined, so the largest reductions in cost and in environmental impact are available at the front of the programme.',
-    'That ability declines as the design is fixed, and the cost of revising a decision rises against it: a substitution made on a drawing becomes rework once detailed, and demolition and replacement once built.',
-    'Construction products are specified inside the first window, while the decisions around them are still fluid.',
+    'Early design has the most influence on cost and impact.',
+    'Later, a change becomes rework, then demolition.',
+    'Construction products are specified in this early window.',
   ],
 
   band: {

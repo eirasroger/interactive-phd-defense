@@ -10,7 +10,7 @@ export const MOTIVATION = {
   eyebrow: 'Motivation · Research context',
 
   /** Two fragments that state the contradiction. */
-  heading: 'One of Europe’s largest industries. One of its most destructive.',
+  heading: 'Construction is a large industry with a large environmental impact.',
 
   source: 'European Commission, 2026 · Circular Economy Action Plan, 2020 · IEEP, 2025',
 
@@ -24,14 +24,14 @@ export const MOTIVATION = {
       {
         label: 'Economic weight',
         fields: [
-          { label: 'of European Union gross domestic product', value: 9, accent: 'ai' },
+          { label: 'of EU GDP', value: 9, accent: 'ai' },
         ],
       },
       {
         label: 'Environmental impact',
         fields: [
-          { label: 'of all materials extracted globally', value: 50, accent: 'emphasis' },
-          { label: 'of total greenhouse gas emissions', value: 35, accent: 'emphasis' },
+          { label: 'of global material extraction', value: 50, accent: 'emphasis' },
+          { label: 'of greenhouse gas emissions', value: 35, accent: 'emphasis' },
         ],
       },
     ],

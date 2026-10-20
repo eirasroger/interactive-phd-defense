@@ -4,47 +4,46 @@ import type { GapCardsSpec } from '@/components/figures/GapCards';
  * Scene 9: the six research gaps. All six numbered cards show from the start
  * and fill one at a time.
  *
- * Titles and descriptions are verbatim from the thesis, except gap 01's body,
- * which names the dimensions so it does not overlap gaps 03 and 05.
+ * Titles and descriptions are shortened from the thesis.
  *
  * Cards have no fixed accent colour. The accent follows the gap being discussed.
  */
 
 export const GAPS = {
   eyebrow: 'Research gaps',
-  heading: 'Six research gaps.',
+  heading: 'Six research gaps',
 
   cards: {
     items: [
       {
         key: '01',
-        title: 'Product-level multi-criteria prioritisation',
-        body: 'Cost, environmental impact, circularity, performance and fit to context are not weighed together.',
+        title: 'Multi-criteria prioritisation',
+        body: 'Cost, impact, circularity and performance are assessed separately.',
       },
       {
         key: '02',
-        title: 'Systematic integration of circularity',
-        body: 'Circular origin, disassembly, recovery, and end-of-life are not embedded in product selection.',
+        title: 'Circularity integration',
+        body: 'Circularity is left out of product selection.',
       },
       {
         key: '03',
-        title: 'Heterogeneous and missing product data',
-        body: 'Product information is fragmented, inconsistent, unstructured, and incomplete.',
+        title: 'Heterogeneous and missing data',
+        body: 'Product data is fragmented and incomplete.',
       },
       {
         key: '04',
-        title: 'Compliance-first automated prefiltering',
-        body: 'Product compliance is checked too late and is rarely automated at product level.',
+        title: 'Automated compliance prefiltering',
+        body: 'Compliance is checked late and by hand.',
       },
       {
         key: '05',
-        title: 'Context-aware ML recommendation',
-        body: 'Existing models do not adequately handle context, candidate-set relationships, preferences, or missing evidence.',
+        title: 'Context-aware recommendation',
+        body: 'Current models overlook context and missing data.',
       },
       {
         key: '06',
-        title: 'Integrated end-to-end workflow',
-        body: 'Data extraction, compliance, circularity, uncertainty, and product ranking remain disconnected.',
+        title: 'End-to-end workflow',
+        body: 'The steps from data to ranking are disconnected.',
       },
     ],
   } satisfies GapCardsSpec,

@@ -9,19 +9,19 @@ import type { DeclarationSpec } from '@/components/figures/Declaration';
  */
 export const EPD = {
   eyebrow: 'State of the art · 03',
-  heading: 'EPDs as a source of product-level environmental data',
+  heading: 'Environmental Product Declarations (EPDs)',
 
   /**
    * Definition of an EPD as a reporting format. Declared unit, verification
    * body and programme are spoken.
    */
   carrier:
-    'A verified report of one product’s environmental performance, calculated by LCA under common category rules.',
+    'A verified LCA report for one product.',
 
   /** Claim, then consequence. */
   basis: [
-    'Only the product stage rests on primary data.',
-    'Transport, service life and end of life are assumed for a generic case. Verification confirms compliance with the rules, not that the scenarios fit the project.',
+    'Only the product stage uses primary data.',
+    'Later stages rely on generic assumptions.',
   ],
 
   /** The precast concrete panel from the Act I specification slot. */

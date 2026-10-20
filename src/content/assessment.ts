@@ -6,13 +6,13 @@ import type { ImpactMethodSpec } from '@/components/figures/ImpactMethod';
  */
 export const ASSESSMENT = {
   eyebrow: 'State of the art · 02',
-  heading: 'How construction measures its environmental impact.',
+  heading: 'How environmental impact is measured.',
 
   /** The method, its inventory, and what is missing at early design. */
   claims: [
-    'Environmental impact is evaluated with LCA, joined by LCC and S-LCA as LCSA where the economic and social dimensions are counted too.',
-    'All of it runs on an inventory: what the product is, how much of it, how long it lasts.',
-    'At early design the candidate product and its quantity can be known. Transport, service life and end of life are still open, so the assessment either waits or runs on generic assumptions.',
+    'LCA, LCC and S-LCA together form LCSA.',
+    'All of them need a complete inventory.',
+    'At early design, most of the inventory is still open.',
   ],
 
   /**
@@ -21,7 +21,7 @@ export const ASSESSMENT = {
    */
   method_figure: {
     inputs: [
-      { label: 'Which product, and its composition', known: true },
+      { label: 'Product and composition', known: true },
       { label: 'Quantities', known: true },
       { label: 'Transport and installation' },
       { label: 'Service life and maintenance' },
@@ -33,6 +33,6 @@ export const ASSESSMENT = {
       { code: 'S-LCA', name: 'Social', rank: 'secondary' },
     ],
     sum: 'LCSA',
-    missing: 'Not yet decided at early design',
+    missing: 'Open at early design',
   } satisfies ImpactMethodSpec,
 } as const;

@@ -36,19 +36,17 @@ const CANDIDATES = [
 
 export const PRACTICE = {
   eyebrow: 'State of the art · 05',
-  heading: 'In current practice, selection past compliance is governed by cost and availability.',
+  heading: 'In practice, products are chosen on cost and availability.',
 
   /** Why compliance does not separate the candidates. */
-  criteria:
-    'All four are compliant. Compliance is a regulatory threshold any marketed product has met, so it establishes admissibility without distinguishing between candidates.',
+  criteria: 'Once regulatory compliance is met, cost and availability decide.',
 
   /**
    * The gap is integration: no mechanism combines the existing evidence for the
    * other dimensions into one comparison. The pipeline fills that gap.
    * The listed dimensions are this work's scope; a decision may need others.
    */
-  evidence:
-    'Cost and availability are reported directly by suppliers. No decision-support mechanism integrates the remaining dimensions, or any further ones the decision requires, into a comparison the specifier can act on, so practice defaults to the two that are.',
+  evidence: 'Suppliers report cost and availability directly.',
 
   /** Each label includes its column key so labels and columns pair up. */
   anchors: CANDIDATES.map(
@@ -69,11 +67,11 @@ export const PRACTICE = {
     criteria: [
       { label: 'Cost', values: ['€ 210 / m²', '€ 265 / m²', '€ 240 / m²', '€ 185 / m²'] },
       { label: 'Availability', values: ['6 weeks', '4 weeks', '10 weeks', '3 weeks'] },
-      { label: 'Environmental performance' },
+      { label: 'Environmental impact' },
       { label: 'Circularity' },
-      { label: 'Performance beyond compliance' },
-      { label: 'Fit to context and use' },
+      { label: 'Technical performance' },
+      { label: 'Fit to context' },
     ],
-    withheld: 'Not systematically integrated into product selection in current practice',
+    withheld: 'Not integrated in current practice',
   } satisfies CandidateSetSpec,
 } as const;
