@@ -78,7 +78,7 @@ export const CONTEXT_INPUTS: readonly ContextInput[] = [
 
 export const OUTPUT = {
   label: 'A preference score for each alternative',
-  note: 'Every score is formed against the others in the set',
+  note: 'Each score is relative to the set',
 } as const;
 
 /** Opening-beat labels over the upstream inputs and the context inputs. */
@@ -91,13 +91,12 @@ export const OPENING = {
 export const STAGE = {
   index: 'The remaining stage',
   name: 'Recommendation',
-  line: 'Turning the evidence into an ordering that fits the decision',
+  line: 'An ordering that fits the decision',
 } as const;
 
 /** The approach in brief. Detailed at the architecture beat. */
 export const APPROACH = {
-  claim:
-    'The model learns this relationship from labelled decisions, so it adapts to each context without being re-specified for it.',
+  claim: 'Learned from labelled decisions, so it adapts to each context.',
   moves: [
     'Learned from labelled decisions',
     'Attention across the candidate set',
@@ -109,11 +108,11 @@ export const APPROACH = {
 
 /** Supervision beat heading, read by `act2.ts`. */
 export const LEARNED_CLAIM =
-  'No benchmark data set exists for this task, and the deep model applied to it is trained on labelled decisions.';
+  'No benchmark exists, so the model learns from labelled decisions.';
 
 /** Opening line of the supervision beat. */
 export const CORPUS_CLAIM =
-  'The corpus was built from three sources, each labelled by a different method.';
+  'Three label sources.';
 
 /* ---- Supervision ----------------------------------------------------------- */
 
@@ -138,8 +137,7 @@ export const SOURCES: readonly LabelSource[] = [
     count: 24000,
     weight: 0.4,
     produced: 'Established analytically',
-    contributes:
-      'Deterministic anchor points, and a diagnostic against degenerate preference patterns.',
+    contributes: 'Deterministic anchor points.',
   },
   {
     key: 'generated',
@@ -147,8 +145,8 @@ export const SOURCES: readonly LabelSource[] = [
     count: 18602,
     weight: 0.4,
     produced: 'Labelled by gpt-4.1',
-    fact: 'Prompt engineering proceeded iteratively against expert feedback. A random sample of 500 labels was then read back to confirm the preference patterns were coherent.',
-    contributes: 'The breadth of decision contexts, at a volume only automated labelling reaches.',
+    fact: 'Prompt refined with expert feedback. 500 labels checked by hand.',
+    contributes: 'Breadth of decision contexts.',
   },
   {
     key: 'expert',
@@ -156,8 +154,8 @@ export const SOURCES: readonly LabelSource[] = [
     count: 272,
     weight: 0.2,
     produced: 'Six practitioners, industry and academic',
-    fact: 'Every case was built by hand from real product declarations to hold a complex decision context.',
-    contributes: 'Tacit judgement, and the independent signal the generated labels are read against.',
+    fact: 'Built by hand from real declarations.',
+    contributes: 'Expert judgement.',
   },
 ];
 
@@ -190,7 +188,7 @@ export const SPLIT = {
     generated: { train: 13021, test: 5581 },
     expert: { train: 190, test: 82 },
   } as Readonly<Record<string, { readonly train: number; readonly test: number }>>,
-  note: 'Drawn inside each source, so control, generated and expert labels are all represented on both sides of it.',
+  note: 'Split inside each source.',
 } as const;
 
 /**
@@ -301,7 +299,7 @@ export const CASE_STUDY = {
 
 /** Architecture beat heading, read by `act2.ts`. Lists the forward pass in order. */
 export const ARCHITECTURE_CLAIM =
-  'The model encodes every alternative, compares them against each other, and scores each one against the whole set.';
+  'The model scores each alternative against the whole set.';
 
 export interface Layer {
   readonly key: string;
@@ -393,7 +391,7 @@ export const AGREEMENT = {
     {
       key: 'clear',
       figure: '100%',
-      label: 'Agreement where experts clearly preferred or clearly rejected',
+      label: 'Agreement on clear expert preferences',
       note: 'Preference ≥ 0.75 or ≤ 0.25',
     },
     {
@@ -404,7 +402,7 @@ export const AGREEMENT = {
     },
   ] as readonly { readonly key: string; readonly figure: string; readonly label: string; readonly note: string }[],
   residual:
-    'What distance remains is concentrated in the mid-ranked alternatives, where the experts also parted from each other.',
+    'Remaining differences sit in the mid-ranked alternatives, where experts also disagreed.',
 } as const;
 
 /** Section labels of the validation beat. */
@@ -433,7 +431,7 @@ export const BEHAVIOUR_STUDIES = {
 export const BEHAVIOUR_TAKEAWAY = 'Indicator weighting changes dynamically with context.';
 
 export const VALIDATION_CLAIM =
-  'The model is validated against expert judgement, and its behaviour analysed under changing priorities and applications.';
+  'Validated against experts and tested under changing context.';
 
 /* ---- Who is deciding -------------------------------------------------------- */
 
@@ -462,14 +460,14 @@ export const ARCHETYPES: readonly Archetype[] = [
     code: 'S3',
     label: 'Occupant comfort focused',
     gap: 'closed',
-    reading: 'B reaches A on the strength of its performance attributes',
+    reading: 'B catches A on performance',
   },
   {
     key: 'circular',
     code: 'S5',
     label: 'Circular economy advocate',
     gap: 'open',
-    reading: 'A pulls clear on the strength of its end-of-life profile',
+    reading: 'A pulls ahead on end of life',
   },
 ];
 
@@ -498,7 +496,7 @@ export const STAKEHOLDER_SCENARIOS: readonly StakeholderScenario[] = [
 export const STAKEHOLDER_MARKED = ['S3', 'S5'] as const;
 
 export const STAKEHOLDER_CLAIM =
-  'Stakeholder priority decides the margin between candidates that are already close.';
+  'Priority decides between close candidates.';
 
 /* ---- What it is for ---------------------------------------------------------- */
 
@@ -540,12 +538,12 @@ export const CROSSING = {
   from: 'standard',
   to: 'thermal',
   pair: ['A', 'C'] as const,
-  reading: 'Low density is the attribute the context asks for, and A carries it.',
+  reading: 'The context favours low density, which A has.',
   held: 'D keeps the lead in all four.',
 } as const;
 
 export const APPLICATION_CLAIM =
-  'Application context decides which attributes are the ones that count.';
+  'Application decides which attributes count.';
 
 /* ---- What the model reads ------------------------------------------------------ */
 
@@ -685,7 +683,7 @@ export const SALIENCE_MAX = 0.015;
 export const SHOWN_RANKS = 5;
 
 export const SALIENCE_CLAIM =
-  'These orderings came out of the labelled data, and they agree with what the experts said they do.';
+  'These weightings were learned and match expert views.';
 
 /* ---- Robustness to missing data ---------------------------------------------- */
 
@@ -716,7 +714,7 @@ export const MASKING: readonly Masking[] = [
     topChanged: 0,
     maxDelta: 0.11,
     meanDelta: 0.055,
-    reading: 'Cost is what separates alternatives whose profiles are otherwise close.',
+    reading: 'Cost separates otherwise close alternatives.',
   },
   {
     key: 'epd',
@@ -727,7 +725,7 @@ export const MASKING: readonly Masking[] = [
     topChanged: 0,
     maxDelta: 0.181,
     meanDelta: 0.098,
-    reading: 'The largest movement falls on the stakeholders who priced sustainability highest.',
+    reading: 'Largest shifts for sustainability-focused stakeholders.',
   },
   {
     key: 'performance',
@@ -738,7 +736,7 @@ export const MASKING: readonly Masking[] = [
     topChanged: 0,
     maxDelta: 0.203,
     meanDelta: 0.087,
-    reading: 'Performance moves every alternative together, so the order survives it best.',
+    reading: 'Performance shifts every alternative together, so the order holds.',
   },
 ];
 
@@ -747,7 +745,7 @@ export const ROBUSTNESS = {
   invariant: 'D' as ProductId,
   label: 'tests with a whole category of evidence removed',
   held: 'The leading recommendation held in every one.',
-  encoding: 'An absent indicator is encoded as absent rather than filled in.',
+  encoding: 'Missing indicators are flagged as missing.',
 } as const;
 
 /* ---- What the contribution enables --------------------------------------------- */
@@ -769,25 +767,22 @@ export const ENABLES: readonly Enablement[] = [
     key: 'profile',
     index: '01',
     title: 'Beyond cost and availability',
-    caption:
-      'The recommendation is formed on the full environmental, circular, economic and performance profile of every alternative.',
-    body: 'The full declared profile of every alternative. Environmental, circular, economic, health and performance, weighed together.',
+    caption: 'Formed on the full profile of every alternative.',
+    body: 'Environmental, circular, economic, health and performance, weighed together.',
   },
   {
     key: 'context',
     index: '02',
     title: 'Shaped by the context',
-    caption:
-      'Stakeholder priority and application context enter the model as inputs, so the recommendation is specific to the context it is made in.',
-    body: 'Who is deciding, and what the product is for. The same candidates, ordered for the context in front of you.',
+    caption: 'Priority and application are model inputs.',
+    body: 'The same candidates, ordered for who decides and what for.',
   },
   {
     key: 'incomplete',
     index: '03',
     title: 'Designed for uncertainty',
-    caption:
-      'Uncertainty is managed rather than avoided: the model is trained with whole categories of evidence removed.',
-    body: 'Early-stage information is partial and inconsistent. Training removes whole categories of evidence, so the recommendation holds on what a project actually has.',
+    caption: 'Trained with whole categories of evidence removed.',
+    body: 'It works on the partial data a project actually has.',
   },
 ];
 

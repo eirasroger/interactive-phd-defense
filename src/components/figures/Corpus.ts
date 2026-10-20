@@ -143,10 +143,10 @@ export function createCorpus(): Corpus {
 
   const total = readout('products extracted and structured', 'total');
   const checked = readout(
-    'products manually verified against the source declaration, the sample size required for 95% confidence (Cochran, 1963)',
+    'products verified by hand (95% confidence)',
     'checked',
   );
-  const errors = readout('discrepancies between extracted and declared values', 'clean');
+  const errors = readout('discrepancies found', 'clean');
 
   const ledger = el('div', {
     className: 'cp-ledger',

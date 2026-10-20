@@ -72,7 +72,7 @@ export function createBurden(): Burden {
       el('div', { className: 'bd-headline', children: [headline, headlineTail] }),
       el('p', {
         className: 'bd-callout-note',
-        text: 'of total lifecycle impact occurs at the product stage (A1 to A3), across every indicator measured. Manufacturing process and material composition therefore determine most of a product\u2019s environmental profile.',
+        text: 'of lifecycle impact occurs at the product stage (A1 to A3).',
       }),
     ],
   });

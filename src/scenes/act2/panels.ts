@@ -56,8 +56,8 @@ const WORTH = {
 const c1Takeaway: readonly TakeawayCard[] = [
   {
     tint: FAMILY.circularity,
-    name: 'It overturns a cost-led default',
-    body: 'Plaster is cheaper on the day it is bought and clears every threshold, so conventional selection stops there. Counting disassembly, reuse and end of life reverses the answer.',
+    name: 'The full profile changes the winner',
+    body: 'Plaster wins on cost alone. Timber wins on the full profile.',
     figure: [
       verdict('Cost and compliance', 'Plaster partition', false),
       verdict('Full profile', 'Timber partition', true),
@@ -65,8 +65,8 @@ const c1Takeaway: readonly TakeawayCard[] = [
   },
   {
     tint: FAMILY.environmental,
-    name: 'It reports a close call as a close call',
-    body: 'Wood and wool sit within a few points of each other, trading water against embodied carbon. The framework hands over an evidence base and leaves budget, context and availability to decide.',
+    name: 'Close calls stay visible',
+    body: 'Wood and wool score within a few points of each other.',
     figure: [
       pair([
         ['Wood flooring', 100],
@@ -76,12 +76,12 @@ const c1Takeaway: readonly TakeawayCard[] = [
   },
   {
     tint: FAMILY.performance,
-    name: 'It leaves the weighting open on purpose',
-    body: 'Fixed weights would impose one project’s priorities on every other. Eliciting priorities in a repeatable, auditable way is a design problem in its own right.',
+    name: 'Weighting depends on the project',
+    body: 'Priorities differ between projects, so C5 learns them.',
     figure: [
       handoff(
         'C5',
-        'The indicator set becomes the feature space the recommender learns preferences over.',
+        'The indicators become the recommender’s features.',
       ),
     ],
   },
@@ -91,26 +91,26 @@ const c1Takeaway: readonly TakeawayCard[] = [
 const c2Takeaway: readonly TakeawayCard[] = [
   {
     tint: WORTH.recovery,
-    name: 'Declared terminology requires normalisation',
-    body: 'Manufacturers use “recycled” for production offcuts returned to the line, for components removed and refitted, and for reprocessing into new feedstock. Extraction labels are therefore defined by the material outcome, not by the declared wording.',
+    name: 'Terminology needs normalisation',
+    body: '“Recycled” means different things to different manufacturers.',
     figure: [aggregate([...WORDINGS])],
   },
   {
     tint: WORTH.origin,
-    name: 'Material composition predicts impact better than product category',
-    body: 'Median and mean product-stage GWP differ by up to an order of magnitude within a single category, with timber-based products at the lower end. Product category alone is insufficient as a feature for downstream models.',
+    name: 'Composition predicts impact better than category',
+    body: 'GWP varies up to tenfold within one category.',
     figure: [spread([...GWP_BY_CATEGORY], 5)],
   },
   {
     tint: WORTH.loss,
-    name: 'Circular origin and end-of-life recovery are separate targets',
-    body: 'The two vary independently, and the degree of divergence depends on product category. Any model predicting circularity has to predict both, and cannot derive one from the other.',
+    name: 'Origin and recovery are separate targets',
+    body: 'They vary independently, so both must be predicted.',
     figure: [fork('Product record', ['Circular origin', 'End-of-life recovery'])],
   },
   {
     tint: WORTH.inference,
-    name: 'The structured corpus is a training basis for supporting models',
-    body: 'Material composition correlates strongly with both impact and end-of-life outcome across the corpus. Where a declaration is incomplete, that relationship can be used to estimate the missing quantity and hold the comparison on the full indicator set.',
+    name: 'The corpus trains the later models',
+    body: 'Composition correlates with impact and end of life, so missing values can be estimated.',
     figure: [
       stack(['End-of-life pathway prediction', 'GWP estimation', 'Disassembly potential']),
     ],

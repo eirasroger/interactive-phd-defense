@@ -485,7 +485,7 @@ export function createSupervision(): Supervision {
       }),
       el('p', {
         className: 'sv-split-note',
-        text: `${SPLIT.note} The same proportions hold across ${SPLIT.folds} cross-validation folds.`,
+        text: `${SPLIT.note} Same proportions across ${SPLIT.folds} folds.`,
       }),
     ],
   });

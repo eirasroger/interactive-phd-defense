@@ -125,7 +125,7 @@ export function createParadox(): Paradox {
     children: [
       el('p', {
         className: 'pd-index',
-        text: 'Why circular input does not carry through to recovery',
+        text: 'Why recycled input is rarely recovered',
       }),
       ...blockerNodes,
     ],

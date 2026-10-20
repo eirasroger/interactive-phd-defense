@@ -16,10 +16,10 @@ const SOURCES = [
 ];
 
 const LEDE: Readonly<Record<string, string>> = {
-  circularity: 'Where the material came from, how it comes apart, and where it goes after use.',
-  environmental: 'Carbon over the whole life, freshwater, and pressure on ecosystems.',
-  economic: 'Product, construction, maintenance and end of life, across the expected lifespan.',
-  performance: 'Material health and composition. Technical classes as declared in the DoP.',
+  circularity: 'Origin, disassembly and end of life.',
+  environmental: 'Carbon, water and ecosystems.',
+  economic: 'Lifecycle cost over the expected lifespan.',
+  performance: 'Material health, composition and technical performance.',
 };
 
 const OUTCOME = [
@@ -114,19 +114,19 @@ export function createFramework(): Framework {
     card(
       'What the market already publishes',
       'Declared documents',
-      'Every product on the market arrives with published data, and enough of it is consistent across competing products to carry a comparison.',
+      'Published product data, consistent enough to compare.',
       chips,
     ),
     card(
       'What C1 defines',
       'One indicator set',
-      'Four dimensions, each carrying the metrics that stay informative while the evidence is still partial.',
+      'Four dimensions that work with partial data.',
       keys,
     ),
     card(
       'What it produces',
       'A comparable profile',
-      'Each alternative resolves to a profile that can be placed against the others competing for the same slot, while that slot is still open.',
+      'One profile per alternative, side by side.',
       bars,
     ),
   ];

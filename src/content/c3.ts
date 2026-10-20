@@ -251,22 +251,22 @@ export const FUNNEL = [
   {
     key: 'portfolio',
     label: 'Supplier portfolio',
-    note: 'Hundreds of candidate mixes, each declared in its own document',
+    note: 'Hundreds of mixes, one document each',
   },
   {
     key: 'screening',
     label: 'Regulatory screening',
-    note: 'Deterministic pass or fail against the governing constraint',
+    note: 'Pass or fail per constraint',
   },
   {
     key: 'candidates',
     label: 'Admissible candidates',
-    note: 'Every survivor satisfies every applicable clause',
+    note: 'Every survivor is compliant',
   },
   {
     key: 'recommendation',
     label: 'Recommendation',
-    note: 'Preference is applied to a set that is already valid',
+    note: 'Ranks only compliant products',
   },
 ] as const;
 
@@ -282,16 +282,14 @@ export const APPROACHES: readonly Approach[] = [
   {
     key: 'manual',
     label: 'Manual review',
-    description:
-      'Each product is cross-checked against each applicable clause, across documents that share no common format.',
-    limitation: 'Time-consuming and error-prone at portfolio scale',
+    description: 'Each product checked by hand against each clause.',
+    limitation: 'Slow and error-prone at scale',
   },
   {
     key: 'automated',
     label: 'Full automation',
-    description:
-      'A general-purpose model receives the documents and returns the compliance verdict directly.',
-    limitation: 'Hallucination and opacity leave the verdict unaccountable',
+    description: 'A general-purpose model returns the verdict directly.',
+    limitation: 'Prone to hallucination and opaque',
   },
 ] as const;
 
@@ -299,9 +297,9 @@ export const APPROACHES: readonly Approach[] = [
 export const ARCHITECTURE = {
   label: 'Human-in-the-loop screening',
   parts: [
-    { key: 'extract', agent: 'Language model', act: 'Extracts and normalises declared attributes' },
-    { key: 'verify', agent: 'Operator', act: 'Validates every extracted value against its source' },
-    { key: 'decide', agent: 'Rule engine', act: 'Executes the formalised clauses deterministically' },
+    { key: 'extract', agent: 'Language model', act: 'Extracts the attributes' },
+    { key: 'verify', agent: 'Operator', act: 'Verifies each value' },
+    { key: 'decide', agent: 'Rule engine', act: 'Applies the rules' },
   ],
 } as const;
 
@@ -314,7 +312,7 @@ export const DOCUMENTS = [
   {
     key: 'schema',
     label: 'Regulatory schema',
-    detail: 'The governing standard, selected from a closed list',
+    detail: 'Selected from a closed list',
     glyph: 'schema',
     source: 'regulation',
     path: 'direct',
@@ -322,7 +320,7 @@ export const DOCUMENTS = [
   {
     key: 'custom',
     label: 'Custom information',
-    detail: 'Project scenario and operator constraints, free text',
+    detail: 'Project scenario, free text',
     glyph: 'text',
     source: 'user',
     path: 'extracted',
@@ -330,7 +328,7 @@ export const DOCUMENTS = [
   {
     key: 'epd',
     label: 'Product declarations',
-    detail: 'One document per candidate product',
+    detail: 'One per product',
     glyph: 'stack',
     source: 'epd',
     path: 'extracted',
@@ -338,7 +336,7 @@ export const DOCUMENTS = [
   {
     key: 'drawing',
     label: 'Drawings and specifications',
-    detail: 'Project documentation, optional',
+    detail: 'Optional',
     glyph: 'drawing',
     source: 'drawing',
     path: 'extracted',
@@ -362,12 +360,12 @@ export const RECORDS = [
 /** Section 2.4: the only step where a human intervenes. */
 export const CHECKPOINT = {
   label: 'Operator verification',
-  detail: 'Every extracted value is checked against its source before a rule executes',
+  detail: 'Each value checked against its source',
 } as const;
 
 export const ENGINE = {
   label: 'Performance screening engine',
-  detail: 'One indicator at a time, against the strictest bound the sources agree on',
+  detail: 'Strictest bound per indicator',
 } as const;
 
 /** Fig. 1's two end states and the compliance branch leading to each. */
@@ -496,17 +494,17 @@ export const HANDOVER: readonly Handover[] = [
   {
     key: 'candidates',
     label: 'Candidate set',
-    body: 'Every product carried forward satisfies every clause applicable to the declared scenario.',
+    body: 'Every product meets every applicable clause.',
   },
   {
     key: 'log',
     label: 'Decision log',
-    body: 'Every check records the constraint, the source that set it, and the outcome.',
+    body: 'Each check records constraint, source and outcome.',
   },
   {
     key: 'ruleset',
     label: 'Rule set',
-    body: 'A jurisdiction is a structured file of thresholds. Encoding another leaves the workflow unchanged.',
+    body: 'A new jurisdiction is a new threshold file.',
   },
 ];
 

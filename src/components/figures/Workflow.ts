@@ -128,7 +128,7 @@ export function createWorkflow(): Workflow {
     ],
   });
 
-  const index = el('p', { className: 'c3-index', text: 'One workflow, one point of control' });
+  const index = el('p', { className: 'c3-index', text: 'Workflow' });
   const element = el('div', { className: 'c3 wf', children: [index, grid] });
 
   const gutters = [...grid.children].filter((node) =>

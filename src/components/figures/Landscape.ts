@@ -2,7 +2,6 @@ import gsap from 'gsap';
 import { DURATION, EASE, STAGGER, seconds } from '@/animations/timing';
 import {
   BEYOND_RECYCLING,
-  CORPUS,
   ORIGIN,
   PATHWAYS,
   RECOVERED,
@@ -88,11 +87,11 @@ export function createLandscape(): Landscape {
 
   const originHead = head(
     'Origin',
-    `Share of the product from already-cycled sources. Declared by ${formatCount(ORIGIN.n, { grouped: true })} of ${formatCount(CORPUS.products, { grouped: true })} products`,
+    `Recycled share of the product. Declared by ${formatCount(ORIGIN.n, { grouped: true })} products`,
   );
   const futureHead = head(
     'Future use',
-    'Declared end-of-life pathways, as a share of the product. A product may declare more than one',
+    'Declared end-of-life pathways, share of product',
   );
 
   /** Axis on the row grid, so it lines up with the row tracks. */
@@ -128,12 +127,12 @@ export function createLandscape(): Landscape {
     children: [
       reading(
         formatCount(RECOVERED, { decimals: 1, suffix: '%' }),
-        'recovered: recycling, valorisation, reuse, reconditioning and composting combined',
+        'recovered in total',
         'recovery',
       ),
       reading(
         formatCount(BEYOND_RECYCLING, { decimals: 1, suffix: '%' }),
-        'recovered by pathways other than recycling',
+        'recovered other than by recycling',
         'beyond',
       ),
     ],

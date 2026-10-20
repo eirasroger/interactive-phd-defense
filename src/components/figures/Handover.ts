@@ -188,7 +188,7 @@ export function createHandover(): Handover {
   const log = logCard();
   const rules = ruleSetCard();
 
-  const index = el('p', { className: 'c3-index', text: 'What the screening produces' });
+  const index = el('p', { className: 'c3-index', text: 'Outputs' });
   const element = el('div', {
     className: 'c3 hv',
     children: [

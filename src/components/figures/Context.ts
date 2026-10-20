@@ -60,7 +60,7 @@ export function createContext(): Context {
   const funnel = el('div', {
     className: 'cx-state',
     attrs: { 'data-state': 'funnel' },
-    children: [el('p', { className: 'c3-index', text: 'Where the stage sits' }), track],
+    children: [el('p', { className: 'c3-index', text: 'Position in the pipeline' }), track],
   });
 
   const approaches = APPROACHES.map((approach) =>
@@ -100,7 +100,7 @@ export function createContext(): Context {
     className: 'cx-state',
     attrs: { 'data-state': 'dilemma' },
     children: [
-      el('p', { className: 'c3-index', text: 'Why the gate cannot close by itself' }),
+      el('p', { className: 'c3-index', text: 'Existing approaches' }),
       el('div', { className: 'cx-approaches', children: approaches }),
       el('div', { className: 'cx-joins', children: joins }),
       resolution,

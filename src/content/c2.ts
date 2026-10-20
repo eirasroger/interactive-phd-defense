@@ -210,12 +210,12 @@ export const BLOCKERS = [
   {
     key: 'degradation',
     label: 'Material degradation',
-    body: 'Gypsum and several polymer-based products lose recoverability over repeated cycles. Recycled content at the input does not imply recoverability at the output.',
+    body: 'Gypsum and some polymers degrade over repeated cycles.',
   },
   {
     key: 'infrastructure',
-    label: 'Absent transformation capacity',
-    body: 'Pre-treatment, requalification and reprocessing require specialised transformation companies. Where these are absent, recovery defaults to landfilling.',
+    label: 'Missing processing capacity',
+    body: 'Without specialised processors, recovery defaults to landfill.',
   },
 ] as const;
 
@@ -246,13 +246,13 @@ export const OFFSETS = [
     key: 'environmental',
     label: 'Environmental burden',
     value: 15,
-    note: 'Module D offsets 10% to 15% of environmental impact.',
+    note: 'Module D offsets 10 to 15%.',
   },
   {
     key: 'biodiversity',
     label: 'Biodiversity burden',
     value: 1,
-    note: 'Module D offsets approximately 1% of biodiversity impact.',
+    note: 'Module D offsets about 1%.',
   },
 ] as const;
 
@@ -341,7 +341,7 @@ export const HIGHLIGHTS: readonly Highlight[] = [
 
 export const EXTRACTOR = {
   model: 'gpt-4o-2024-08-06',
-  guardrail: 'Indicators absent from the source are returned as null. The model is instructed not to infer values.',
+  guardrail: 'Missing indicators are returned as null.',
   steps: ['Acquire · Selenium', 'Flatten · PyMuPDF', 'Structure · LLM'],
 } as const;
 

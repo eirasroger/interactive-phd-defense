@@ -80,7 +80,7 @@ export function createOpening(): Opening {
       el('p', { className: 'op-card-index', text: 'Data required for product selection' }),
       el('p', {
         className: 'op-card-lede',
-        text: 'The evaluation framework requires the same indicators of every candidate under consideration.',
+        text: 'The same indicators for every candidate.',
       }),
       el('div', { className: 'op-chips', children: demandChips }),
     ],
@@ -92,14 +92,14 @@ export function createOpening(): Opening {
     className: 'op-card',
     attrs: { 'data-tone': 'resource' },
     children: [
-      el('p', { className: 'op-card-index', text: 'Available today' }),
+      el('p', { className: 'op-card-index', text: 'Collected in 2025' }),
       el('div', {
         className: 'op-supply',
         children: [
           supply,
           el('p', {
             className: 'op-supply-label',
-            text: 'Type III Environmental Product Declarations, third-party verified and publicly available, alongside Declarations of Performance for technical characteristics.',
+            text: 'Verified EPDs and Declarations of Performance.',
           }),
         ],
       }),
@@ -114,7 +114,7 @@ export function createOpening(): Opening {
       el('p', { className: 'op-card-index', text: 'Limitation' }),
       el('p', {
         className: 'op-card-lede',
-        text: 'Each declaration is a PDF written for human reading. Indicators sit in tables, footnotes and narrative text, with terminology and notation varying between manufacturers.',
+        text: 'PDFs written for human reading, with varying layout and terminology.',
       }),
     ],
   });

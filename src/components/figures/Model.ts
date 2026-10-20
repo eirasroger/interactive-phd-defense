@@ -472,7 +472,7 @@ export function createModel(): Model {
 
   const foot = el('div', { className: 'md-foot', children: [embedFoot, graphFoot] });
 
-  const embedHead = el('p', { className: 'c4-index', text: 'A composition, made readable' });
+  const embedHead = el('p', { className: 'c4-index', text: 'Composition embedding' });
 
   const graphHead = el('div', {
     className: 'md-head-block',

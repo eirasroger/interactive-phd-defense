@@ -295,10 +295,10 @@ export const RECALL: readonly Recall[] = [
  * `share` is how often declared reuse is predicted as recycling.
  */
 export const FLOOR = {
-  label: 'Reuse, reconditioning, valorisation and composting are reported inconsistently',
+  label: 'Four pathways are reported inconsistently',
   share: 0.625,
   measure: 'Reuse read as recycling',
-  body: 'Their individual results are not conclusive, and the declarations support reading them together with recycling as one recovery class.',
+  body: 'They are best read together with recycling.',
 } as const;
 
 /* ---- What the embedding generalises over ---------------------------------- */
@@ -347,8 +347,8 @@ export const TRANSFER_STEPS = [
 
 /** Claim shown above the transfer table. */
 export const TRANSFER_CLAIM = {
-  label: 'A material the model has never seen is predicted like the materials it resembles.',
-  body: 'Declarations name materials in whatever words their author chose, and new products keep arriving.',
+  label: 'Unseen materials are predicted from similar ones.',
+  body: 'Declarations use free wording, and new products keep arriving.',
 } as const;
 
 /* ---- What the contribution settles ---------------------------------------- */
@@ -374,10 +374,10 @@ export interface Attribute {
  * that correlates with composition.
  */
 export const SETTLES = {
-  headline: 'The recommendation keeps its quality when the evidence on a product is incomplete.',
-  body: 'Construction products reach a decision with partial information, and inference completes the picture that decision is made on.',
+  headline: 'Recommendations stay reliable with incomplete data.',
+  body: 'Inference completes the missing evidence.',
   reach: {
-    label: 'One operation, any attribute that correlates with composition',
+    label: 'Works for any attribute linked to composition',
     source: 'Material composition',
     attributes: [
       { key: 'circularity', label: 'End-of-life circularity', measured: true },
@@ -389,14 +389,14 @@ export const SETTLES = {
     {
       key: 'ground',
       glyph: 'ring',
-      claim: 'Material composition is declared for every product, and it predicts what is missing',
+      claim: 'Composition is always declared and predicts what is missing',
       figure: 'R² 0.82',
     },
     {
       key: 'architecture',
       glyph: 'funnel',
-      claim: 'The autoencoder is trained with the predictor, so the compression keeps what the prediction needs',
-      figure: 'Over twenty times lower loss than PCA',
+      claim: 'Joint training keeps what the prediction needs',
+      figure: 'Over 20× lower loss than PCA',
     },
   ] as readonly Settlement[],
 } as const;
