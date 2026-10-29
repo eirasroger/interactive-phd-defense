@@ -23,13 +23,13 @@ image is resampled.
 
 ## The talk
 
-Twenty-two scenes in three acts, walked as one route through two built zones.
+Twenty-one scenes in three acts, walked as one route through two built zones.
 
 | Act | Zone | Scenes |
 | --- | --- | --- |
-| I: Exterior | The site: lake, river, park, building under construction | `overview` `lake` `leverage` `river` `park` `construction` `scaffold` `alternatives` `gaps` `objectives` `contributions` |
+| I: Exterior | The site: lake, river, park, building under construction | `opening` `contents` `lake` `leverage` `river` `park` `construction` `alternatives` `gaps` `objectives` `contributions` |
 | II: The Corridor | Inside the building, five stations, one per paper | `c1` `c2` `c3` `c4` `c5` |
-| III: The Overlook | The corridor read from above, as a plan | `whole` `ai` `conditions` `discussion` `conclusions` `close` |
+| III: The Overlook | The corridor read from above, as a plan | `whole` `ai` `discussion` `conclusions` `close` |
 
 Act boundaries are designed camera moves. Act II opens with a nine-second
 crossing that carries the camera down the avenue and through the doors as they
