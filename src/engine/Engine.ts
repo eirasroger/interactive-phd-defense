@@ -110,6 +110,7 @@ export class Engine {
       this.atmosphere,
       this.assets,
       this.cameraDirector,
+      this.pipeline,
     );
     this.zoneProgress = zoneProgressByIndex(options.scenes);
 
@@ -243,9 +244,10 @@ export class Engine {
   }
 
   /**
-   * Builds every zone during the loading screen, so shader compiles (1.7 s for
-   * the corridor) never land mid-presentation. Assets load per zone, so later
-   * `ensureAssets` calls are no-ops and scene changes never hit the network.
+   * Prepares every zone during the loading screen, the one the opening already
+   * mounted included, so shader compiles (1.7 s for the corridor) and uploads
+   * never land mid-presentation. Assets load per zone, so later `ensureAssets`
+   * calls are no-ops and scene changes never hit the network.
    */
   private async prepareZones(): Promise<void> {
     try {

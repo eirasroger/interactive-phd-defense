@@ -3,7 +3,6 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
-  WebGLRenderTarget,
   type Texture,
   type WebGLRenderer,
 } from 'three';
@@ -13,6 +12,7 @@ import type { AssetLoader } from '@/engine/assets/AssetLoader';
 import type { CameraDirector } from '@/engine/camera/CameraDirector';
 import type { AtmosphereDirector } from '@/engine/render/AtmosphereDirector';
 import { recessed, type Atmosphere } from '@/engine/render/atmosphere';
+import type { RenderPipeline } from '@/engine/render/RenderPipeline';
 import type { World } from '@/engine/render/World';
 import type { RenderMode } from '@/engine/scene/types';
 import type { ZoneCrossing, ZoneDefinition, ZoneInstance } from './types';
@@ -38,6 +38,13 @@ interface Departing {
 export class ZoneDirector {
   private active: ActiveZone | null = null;
   private readonly built = new Map<string, ActiveZone>();
+  /**
+   * Zones whose textures, buffers and programs are on the GPU. Separate from
+   * `built`, because the opening zone is built by mounting it.
+   */
+  private readonly prepared = new Set<string>();
+  /** Primes queued by `prepare`, run at the start of the next frame. */
+  private readonly primes: Array<() => void> = [];
   private departing: Departing | null = null;
   /** Next zone, mounted behind the current one before it is entered. */
   private warmed: ActiveZone | null = null;
@@ -55,6 +62,7 @@ export class ZoneDirector {
      * a bare camera cannot report.
      */
     private readonly camera: CameraDirector,
+    private readonly pipeline: RenderPipeline,
   ) {}
 
   enter(
@@ -109,6 +117,9 @@ export class ZoneDirector {
   }
 
   update(dt: number): void {
+    // Before the frame renders, so a canvas prime is drawn over and never shown.
+    for (const prime of this.primes.splice(0)) prime();
+
     this.active?.instance?.update?.(dt);
 
     const departing = this.departing;
@@ -130,11 +141,13 @@ export class ZoneDirector {
     this.active = null;
     for (const zone of this.built.values()) zone.instance?.dispose();
     this.built.clear();
+    this.prepared.clear();
+    this.primes.length = 0;
   }
 
   /** Whether a zone has already been built, uploaded and compiled. */
   isPrepared(id: string): boolean {
-    return this.built.has(id);
+    return this.prepared.has(id);
   }
 
   /** Whether this zone is already standing behind the current one. */
@@ -143,62 +156,67 @@ export class ZoneDirector {
   }
 
   /**
-   * Builds a zone, uploads its textures and buffers, and compiles its shaders
-   * during load. On the corridor this avoids a 1.7 s compile mid-talk.
-   * The group must be visible here because `compile` uses `traverseVisible`.
+   * Uploads a zone's textures and buffers and compiles its shaders during
+   * load, including the zone already mounted by the opening scene. On the
+   * corridor this avoids a 1.7 s compile mid-talk. See `learnings.md` §77.
    */
   async prepare(definition: ZoneDefinition): Promise<void> {
-    if (this.built.has(definition.id)) return;
+    if (this.prepared.has(definition.id)) return;
 
-    const zone = this.build(definition);
-    this.world.zones.add(zone.group);
+    const zone = this.built.get(definition.id) ?? this.build(definition);
+    if (zone.group.parent !== this.world.zones) this.world.zones.add(zone.group);
     this.upload(zone.group);
 
-    await this.renderer
-      .compileAsync(this.world.scene, this.camera.camera)
-      .catch(() => {
-        // A failed precompile only costs a hitch later.
+    await this.pipeline.compile().catch(() => {
+      // A failed precompile only costs a hitch later.
+    });
+    await new Promise<void>((resolve) => {
+      this.primes.push(() => {
+        this.prime(zone.group);
+        resolve();
       });
+    });
 
-    this.paint(zone.group);
-    this.park(zone);
+    this.prepared.add(definition.id);
+    if (!this.isStanding(zone)) this.park(zone);
   }
 
   /**
-   * Renders only this zone into a 1x1 target so its vertex and index buffers
-   * upload now (they upload on first draw). Frustum culling is off because the
-   * camera is in another zone. Shadows stay on so depth programs compile too.
+   * Draws only this zone, with every object in it shown and frustum culling
+   * off, so buffers and shadow programs exist for things the camera has not
+   * seen yet: the far side of the zone and anything a later beat reveals.
    */
-  private paint(group: Group): void {
-    const target = new WebGLRenderTarget(1, 1);
-    const previous = this.renderer.getRenderTarget();
-    const restored: Object3D[] = [];
+  private prime(group: Group): void {
+    const hidden: Object3D[] = [];
+    const revealed: Object3D[] = [];
     const culled: Mesh[] = [];
 
-    for (const child of this.world.zones.children) {
+    for (const child of [...this.world.zones.children, this.world.stage]) {
       if (child === group || !child.visible) continue;
       child.visible = false;
-      restored.push(child);
-    }
-    if (this.world.stage.visible) {
-      this.world.stage.visible = false;
-      restored.push(this.world.stage);
+      hidden.push(child);
     }
 
     group.traverse((child) => {
+      if (!child.visible) {
+        child.visible = true;
+        revealed.push(child);
+      }
       const mesh = child as Mesh;
       if (!mesh.isMesh || !mesh.frustumCulled) return;
       mesh.frustumCulled = false;
       culled.push(mesh);
     });
 
-    this.renderer.setRenderTarget(target);
-    this.renderer.render(this.world.scene, this.camera.camera);
-    this.renderer.setRenderTarget(previous);
+    this.pipeline.prime();
 
     for (const mesh of culled) mesh.frustumCulled = true;
-    for (const object of restored) object.visible = true;
-    target.dispose();
+    for (const object of revealed) object.visible = false;
+    for (const object of hidden) object.visible = true;
+  }
+
+  private isStanding(zone: ActiveZone): boolean {
+    return this.active === zone || this.warmed === zone || this.departing?.zone === zone;
   }
 
   /**

@@ -240,7 +240,9 @@ void main() {
       accumulated += transmittance * alpha * lit;
       transmittance *= 1.0 - alpha;
 
-      if (transmittance < 0.012) break;
+      // What is left of the ray can add at most transmittance * uCover, so a
+      // clearing cloud stops marching sooner for the same error.
+      if (transmittance * uCover < 0.012) break;
     }
 
     t += stepSize;

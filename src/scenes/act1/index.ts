@@ -96,9 +96,9 @@ const ENTRANCE_FACE = ENTRANCE.position[2] + ENTRANCE.oversail;
  * motivation has no object to look at yet.
  */
 export const act1Scenes: readonly SceneDefinition[] = [
-  // Title card inside cloud. `clouded` limits visibility to 26 m, so only the
-  // `CloudShell` panorama is drawn. This hides the initial asset and shader
-  // load and turns the descent into a reveal.
+  // Title card inside cloud. `CloudShell` covers the world and the descent out
+  // of it is the reveal. The cloud hides nothing from the GPU: the world draws
+  // underneath it, and `Engine.prepareZones` warms it under the loading screen.
   //
   // Aimed steeply down so the empty grey band below the horizon (see `sky.ts`)
   // stays above the top of the frame. The 900 m ground plane ends well short of

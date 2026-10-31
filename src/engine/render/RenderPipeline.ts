@@ -1,6 +1,7 @@
 import {
   HalfFloatType,
   Vector2,
+  Vector4,
   WebGLRenderTarget,
   type Camera,
   type Scene,
@@ -20,6 +21,8 @@ export class RenderPipeline {
   private composer: EffectComposer | null = null;
   private bloom: UnrealBloomPass | null = null;
   private samples: number;
+  /** Stands in for the composer's target in `compile` and `prime`. */
+  private readonly probe = new WebGLRenderTarget(1, 1);
 
   constructor(
     private readonly renderer: WebGLRenderer,
@@ -127,6 +130,48 @@ export class RenderPipeline {
     if (this.bloom) this.bloom.strength = quality.bloomStrength;
   }
 
+  /**
+   * Starts compiling every program the scene needs, in the variant the frame
+   * will use. Resolves once they are ready.
+   */
+  compile(): Promise<unknown> {
+    return this.bound(() => this.renderer.compileAsync(this.scene, this.camera));
+  }
+
+  /**
+   * Draws the scene once at one pixel, into the same kind of target the frame
+   * uses. This uploads vertex buffers and compiles shadow programs, which
+   * `compile` does not. On the canvas path it must run inside a frame that
+   * renders afterwards, or the browser presents a cleared canvas.
+   */
+  prime(): void {
+    this.bound(() => {
+      const scissor = this.renderer.getScissor(new Vector4());
+      const scissorTest = this.renderer.getScissorTest();
+      this.renderer.setScissor(0, 0, 1, 1);
+      this.renderer.setScissorTest(true);
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.setScissor(scissor);
+      this.renderer.setScissorTest(scissorTest);
+    });
+  }
+
+  /**
+   * three.js picks a shader variant by whether a render target is bound. Into
+   * a target it compiles without tone mapping and in linear colour, because
+   * the composer's `OutputPass` does both. Onto the canvas it compiles with
+   * them. Warming against the wrong one compiles programs the frame never uses.
+   */
+  private bound<T>(draw: () => T): T {
+    const previous = this.renderer.getRenderTarget();
+    this.renderer.setRenderTarget(this.composer ? this.probe : null);
+    try {
+      return draw();
+    } finally {
+      this.renderer.setRenderTarget(previous);
+    }
+  }
+
   render(): void {
     if (this.composer) {
       this.composer.render();
@@ -136,6 +181,7 @@ export class RenderPipeline {
   }
 
   dispose(): void {
+    this.probe.dispose();
     this.composer?.dispose();
     this.composer = null;
     this.bloom = null;
