@@ -251,10 +251,13 @@ export class Engine {
    */
   private async prepareZones(): Promise<void> {
     try {
-      for (const [zone, assets] of assetsByZone(this.options.scenes)) {
-        if (this.zones.isPrepared(zone)) continue;
+      const zones = [...assetsByZone(this.options.scenes)];
+      for (const [zone, assets] of zones) {
         await this.assets.load([...assets]);
-        await this.zones.prepare(zoneFor(zone));
+        this.zones.preload(zoneFor(zone));
+      }
+      for (const [zone] of zones) {
+        if (!this.zones.isPrepared(zone)) await this.zones.prepare(zoneFor(zone));
       }
     } catch (error) {
       // Failed zones are built on demand by `warm`. Logged so the cause of any

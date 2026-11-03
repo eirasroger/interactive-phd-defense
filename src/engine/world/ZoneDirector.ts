@@ -1,5 +1,7 @@
 import {
+  Color,
   Group,
+  type Light,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -17,11 +19,21 @@ import type { World } from '@/engine/render/World';
 import type { RenderMode } from '@/engine/scene/types';
 import type { ZoneCrossing, ZoneDefinition, ZoneInstance } from './types';
 
+interface ZoneLight {
+  readonly light: Light;
+  /** The colour the zone gave it. Zones never write colour, only intensity. */
+  readonly color: Color;
+}
+
 interface ActiveZone {
   readonly definition: ZoneDefinition;
   readonly instance: ZoneInstance | null;
   readonly group: Group;
+  /** Moved to `World.zoneLights` on build. Blacked out while the zone is parked. */
+  readonly lights: readonly ZoneLight[];
 }
+
+const UNLIT = new Color(0x000000);
 
 /** An outgoing zone kept alive until the camera is past the threshold. */
 interface Departing {
@@ -139,10 +151,24 @@ export class ZoneDirector {
     this.releaseDeparting();
     if (this.active) this.park(this.active);
     this.active = null;
-    for (const zone of this.built.values()) zone.instance?.dispose();
+    for (const zone of this.built.values()) {
+      for (const { light } of zone.lights) this.world.zoneLights.remove(light);
+      zone.instance?.dispose();
+    }
     this.built.clear();
     this.prepared.clear();
     this.primes.length = 0;
+  }
+
+  /**
+   * Builds a zone without showing it. Every zone is built before any is
+   * compiled, because each zone's lights change the program every lit
+   * material needs.
+   */
+  preload(definition: ZoneDefinition): void {
+    if (this.built.has(definition.id)) return;
+    const zone = this.build(definition);
+    if (!this.isStanding(zone)) this.setLit(zone, false);
   }
 
   /** Whether a zone has already been built, uploaded and compiled. */
@@ -232,6 +258,7 @@ export class ZoneDirector {
     const zone = this.built.get(definition.id) ?? this.build(definition);
     this.warmed = zone;
     this.world.zones.add(zone.group);
+    this.setLit(zone, true);
     this.active?.instance?.setBeyond?.(true);
   }
 
@@ -272,6 +299,7 @@ export class ZoneDirector {
     if (!warmed) return;
     this.warmed = null;
     this.world.zones.remove(warmed.group);
+    this.setLit(warmed, false);
     this.active?.instance?.setBeyond?.(false);
   }
 
@@ -281,6 +309,7 @@ export class ZoneDirector {
 
     const zone = this.built.get(definition.id) ?? this.build(definition);
     this.world.zones.add(zone.group);
+    this.setLit(zone, true);
     // During a crossing the old zone keeps the shadow rig until release.
     if (!this.departing) this.aim(zone);
     return zone;
@@ -301,9 +330,25 @@ export class ZoneDirector {
         assets: this.assets,
       }) ?? null;
 
-    const zone = { definition, instance, group };
+    const zone = { definition, instance, group, lights: this.adoptLights(group) };
     this.built.set(definition.id, zone);
     return zone;
+  }
+
+  /** Moves a zone's lights into `World.zoneLights`, keeping their world transforms. */
+  private adoptLights(group: Group): readonly ZoneLight[] {
+    const lights: Light[] = [];
+    group.traverse((child) => {
+      if ((child as Light).isLight) lights.push(child as Light);
+    });
+    return lights.map((light) => {
+      this.world.zoneLights.attach(light);
+      return { light, color: light.color.clone() };
+    });
+  }
+
+  private setLit(zone: ActiveZone, lit: boolean): void {
+    for (const { light, color } of zone.lights) light.color.copy(lit ? color : UNLIT);
   }
 
   /** Points the key light, shadow frustum and sky at this zone. */
@@ -326,6 +371,7 @@ export class ZoneDirector {
   private park(zone: ActiveZone): void {
     zone.instance?.suspend?.();
     this.world.zones.remove(zone.group);
+    this.setLit(zone, false);
   }
 }
 

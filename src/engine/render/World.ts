@@ -26,6 +26,11 @@ export class World {
   readonly stage = new Group();
   /** Persistent zone content. Outlives scenes. */
   readonly zones = new Group();
+  /**
+   * Every zone's lights, kept in the graph whether or not their zone is. The
+   * light count is part of every lit shader, so it must never change mid-talk.
+   */
+  readonly zoneLights = new Group();
 
   private readonly fog = new Fog(0x000000, 1, 100);
   private readonly ambient = new HemisphereLight(0xffffff, 0x000000, 0);
@@ -39,7 +44,7 @@ export class World {
   constructor(renderer: WebGLRenderer, quality: QualitySettings) {
     this.scene.fog = this.fog;
     this.scene.background = this.backgroundColor;
-    this.scene.add(this.stage, this.zones, this.ambient);
+    this.scene.add(this.stage, this.zones, this.zoneLights, this.ambient);
 
     this.keyLight.target = this.lightTarget;
     this.keyLight.shadow.bias = -0.0006;

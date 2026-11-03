@@ -18,7 +18,12 @@ const KEPT = 40;
 
 export class FrameLog {
   private readonly frames: LongFrame[] = [];
-  private previous = { programs: 0, geometries: 0, textures: 0 };
+  private previous = { geometries: 0, textures: 0 };
+  /**
+   * Compiled programs by id. Compared by identity because a variant swap
+   * compiles one program and releases another, which leaves the count unchanged.
+   */
+  private known = new Set<number>();
 
   constructor(
     private readonly renderer: WebGLRenderer,
@@ -28,13 +33,14 @@ export class FrameLog {
 
   update(dt: number): void {
     const { info } = this.renderer;
-    const current = {
-      programs: info.programs?.length ?? 0,
-      geometries: info.memory.geometries,
-      textures: info.memory.textures,
-    };
+    const current = { geometries: info.memory.geometries, textures: info.memory.textures };
     const previous = this.previous;
     this.previous = current;
+
+    const programs = new Set((info.programs ?? []).map((program) => program.id));
+    let compiled = 0;
+    for (const id of programs) if (!this.known.has(id)) compiled += 1;
+    this.known = programs;
 
     const ms = dt * 1000;
     if (ms < this.thresholdMs) return;
@@ -43,7 +49,7 @@ export class FrameLog {
       at: Math.round(performance.now()),
       ms: Math.round(ms),
       scene: this.sceneId(),
-      programs: current.programs - previous.programs,
+      programs: compiled,
       geometries: current.geometries - previous.geometries,
       textures: current.textures - previous.textures,
     };
