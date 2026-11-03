@@ -219,43 +219,6 @@ export const BLOCKERS = [
   },
 ] as const;
 
-export interface Stage {
-  readonly key: string;
-  readonly label: string;
-  /** Share of total lifecycle burden (%). Section 3.4 puts A1-A3 at 80-98%. */
-  readonly share: number;
-  readonly group: 'product' | 'construction' | 'endoflife';
-}
-
-export const STAGES: readonly Stage[] = [
-  { key: 'A1–A3', label: 'Product', share: 89, group: 'product' },
-  { key: 'A4', label: 'Transport', share: 3.4, group: 'construction' },
-  { key: 'A5', label: 'Construction', share: 3.1, group: 'construction' },
-  { key: 'C1', label: 'Demolition', share: 0.6, group: 'endoflife' },
-  { key: 'C2', label: 'Transport', share: 1.2, group: 'endoflife' },
-  { key: 'C3', label: 'Processing', share: 1.6, group: 'endoflife' },
-  { key: 'C4', label: 'Disposal', share: 1.1, group: 'endoflife' },
-];
-
-/** Published product stage range (%). */
-export const PRODUCT_BAND = { low: 80, high: 98 } as const;
-
-/** Module D offsets (%) for environmental and biodiversity burden. */
-export const OFFSETS = [
-  {
-    key: 'environmental',
-    label: 'Environmental burden',
-    value: 15,
-    note: 'Module D offsets 10 to 15%.',
-  },
-  {
-    key: 'biodiversity',
-    label: 'Biodiversity burden',
-    value: 1,
-    note: 'Module D offsets about 1%.',
-  },
-] as const;
-
 /**
  * Table 3, product stage GWP in kg CO2e per kg. The mean-median gap shows the
  * spread within each category.

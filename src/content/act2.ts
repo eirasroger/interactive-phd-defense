@@ -31,35 +31,32 @@ export const c1Captions: readonly CaptionContent[] = [
   c1('Key findings'),
 ];
 
-/** C2 beats: context, method, corpus findings, burden, and implications. */
+/** C2 beats: context, method, corpus findings, and implications. */
 export const c2Captions: readonly CaptionContent[] = [
   c2('Decision support needs product data at early design.'),
   c2('EPDs hold this data in semi-structured form.'),
   c2('An LLM extracts the data, verified against ground truth.'),
   c2('Landfill dominates end of life. Recovery is mostly recycling.'),
   c2('Circular origin and end-of-life recovery vary independently.'),
-  c2('Most impact occurs at the product stage.'),
   c2('Key findings'),
 ];
 
-/** C3 beats: motivation, workflow, reconciliation rule, case study, and output. */
+/** C3 beats: motivation, workflow, case study, and output. */
 export const c3Captions: readonly CaptionContent[] = [
   c3('Only compliant products should be recommended.'),
   c3('Screening must be automated and accountable.'),
   c3('An LLM reads the documents. A rule engine decides.'),
-  c3('The strictest bound across sources governs.'),
   c3('Six products, screened from the operator’s description.'),
   c3('The same six products, with the structural drawing added.'),
   c3('Output: a compliant candidate set with its reasoning.'),
 ];
 
-/** C4 beats: motivation, model, results, generalisation, and output. */
+/** C4 beats: motivation, model, results, and output. */
 export const c4Captions: readonly CaptionContent[] = [
   c4('Product data is often incomplete. Inference fills the gaps.'),
   c4('Material composition is embedded as a vector.'),
   c4('Autoencoder and predictor are trained together.'),
   c4('Consistently declared pathways are predicted well.'),
-  c4('Unseen materials are predicted from similar ones.'),
   c4('Key findings'),
 ];
 

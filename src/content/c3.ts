@@ -93,9 +93,6 @@ export function governingFrom(sources: SourceBounds): BoundSet {
   return governing;
 }
 
-/** Authority order. A later source can only tighten a bound. */
-export const AUTHORITY: readonly Source[] = ['regulation', 'drawing', 'user'];
-
 export const AUTHORITY_LABEL: Readonly<Record<Source, string>> = {
   regulation: 'Regulation',
   drawing: 'Drawing',
@@ -374,36 +371,6 @@ export const OUTCOMES = [
   { key: 'discarded', label: 'Product discarded', branch: 'No' },
 ] as const;
 
-/**
- * EN 206, exposure class XC2. Cement and strength are the paper's scenario 1
- * constraints. The 0.60 w/c ceiling is the standard's own limit.
- */
-export const EN206_XC2: BoundSet = {
-  w_c_ratio: bound('max', 0.6, 'regulation'),
-  cement_content: bound('min', 280, 'regulation'),
-  strength: bound('min', 25, 'regulation'),
-};
-
-/**
- * Scenario 1, EN 206, no drawing (Table 2). The engine keeps the regulatory
- * cement floor and adopts the user's tighter w/c ceiling.
- */
-export const HIERARCHY_CASE = {
-  input:
-    'This concrete is specified for a structural foundation. The mix design must adhere to a maximum water-to-cement ratio of 0.53 and a minimum cement content of 200 kg/m³.',
-  jurisdiction: 'EN 206',
-  exposureClass: 'XC2',
-  sources: {
-    regulation: EN206_XC2,
-    user: {
-      cement_content: bound('min', 200, 'user'),
-      w_c_ratio: bound('max', 0.53, 'user'),
-    },
-  } satisfies SourceBounds,
-} as const;
-
-export const HIERARCHY_GOVERNING = governingFrom(HIERARCHY_CASE.sources);
-
 /** EN 206, exposure class XC1. Regulatory baseline from Table 2, scenario 2. */
 export const EN206_XC1: BoundSet = {
   w_c_ratio: bound('max', 0.65, 'regulation'),
@@ -528,24 +495,6 @@ function assertPublished(): void {
       throw new Error(
         `C3: ${condition.key} computes [${got.join(', ')}], and Table 5's case 2 column ` +
           `publishes [${want.join(', ')}].`,
-      );
-    }
-  }
-
-  const wantGoverning: BoundSet = {
-    w_c_ratio: bound('max', 0.53, 'user'),
-    cement_content: bound('min', 280, 'regulation'),
-    strength: bound('min', 25, 'regulation'),
-  };
-  for (const requirement of REQUIREMENTS) {
-    const want = wantGoverning[requirement.key];
-    if (!want) continue;
-    const got = HIERARCHY_GOVERNING[requirement.key];
-    if (!got || got.value !== want.value || got.source !== want.source) {
-      throw new Error(
-        `C3: the governing ${requirement.key} computes ` +
-          `${got ? `${got.value} from ${got.source}` : 'nothing'}, and Table 2's scenario 1 ` +
-          `publishes ${want.value} from ${want.source}.`,
       );
     }
   }

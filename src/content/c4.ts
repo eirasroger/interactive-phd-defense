@@ -289,56 +289,6 @@ export const FLOOR = {
   measure: 'Reuse read as recycling',
 } as const;
 
-/* ---- What the embedding generalises over ---------------------------------- */
-
-export interface Transfer {
-  readonly key: string;
-  /** The input term. `note` says why it has no exact match. */
-  readonly declared: string;
-  readonly note: string;
-  /** Nearest terms named in the paper. */
-  readonly neighbours: readonly string[];
-  readonly pathway: string;
-  readonly tone: 'energy' | 'recovery';
-}
-
-/**
- * Unseen inputs predicted through their nearest known terms (Section 4.1).
- * Fig. 3 has five neighbours per probe but the text names only some, so each
- * row draws a trailing mark for the rest.
- */
-export const TRANSFERS: readonly Transfer[] = [
-  {
-    key: 'unseen',
-    declared: 'oak',
-    note: 'A wood the model was never trained on',
-    neighbours: ['wood', 'pine', 'birch'],
-    pathway: 'Incineration with energy recovery',
-    tone: 'energy',
-  },
-  {
-    key: 'unnamed',
-    declared: '20% cement, 60% aggregates, 20% water',
-    note: 'A composition that never names its product',
-    neighbours: ['ready-mix concrete'],
-    pathway: 'Recycling',
-    tone: 'recovery',
-  },
-] as const;
-
-/** Column headings for the transfer table. */
-export const TRANSFER_STEPS = [
-  'What is declared',
-  'What it resolves to',
-  'What is predicted',
-] as const;
-
-/** Claim shown above the transfer table. */
-export const TRANSFER_CLAIM = {
-  label: 'Unseen materials are predicted from similar ones.',
-  body: 'Declarations use free wording, and new products keep arriving.',
-} as const;
-
 /* ---- What the contribution settles ---------------------------------------- */
 
 export interface Settlement {

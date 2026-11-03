@@ -1,6 +1,5 @@
 import { createAttention } from '@/components/figures/Attention';
 import { createBudget } from '@/components/figures/Budget';
-import { createBurden } from '@/components/figures/Burden';
 import { createConverge } from '@/components/figures/Converge';
 import { createEnables } from '@/components/figures/Enables';
 import { createCorpus } from '@/components/figures/Corpus';
@@ -13,10 +12,8 @@ import { createContext } from '@/components/figures/Context';
 import { createHandover } from '@/components/figures/Handover';
 import { createReach } from '@/components/figures/Reach';
 import { createSalience } from '@/components/figures/Salience';
-import { createSemantic } from '@/components/figures/Semantic';
 import { createSupervision } from '@/components/figures/Supervision';
 import { createValidation } from '@/components/figures/Validation';
-import { createReconcile } from '@/components/figures/Reconcile';
 import { createProfile } from '@/components/figures/Profile';
 import { createSort } from '@/components/figures/Sort';
 import {
@@ -125,13 +122,11 @@ const PANELS: Readonly<Record<string, () => readonly SlidePanel[]>> = {
     createCorpus(),
     createLandscape(),
     createParadox(),
-    createBurden(),
     createTakeaway(c2Takeaway),
   ],
   c3: () => [
     createContext(),
     createWorkflow(),
-    createReconcile(),
     createSort(),
     createHandover(),
   ],
@@ -139,7 +134,6 @@ const PANELS: Readonly<Record<string, () => readonly SlidePanel[]>> = {
     createProfile(),
     createModel(),
     createBudget(),
-    createSemantic(),
     createReach(),
   ],
   c5: () => [
