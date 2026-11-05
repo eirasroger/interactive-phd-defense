@@ -18,7 +18,8 @@ if (process.platform !== 'win32') throw new Error('The offline kit can only be b
 if (!existsSync(csc)) throw new Error(`C# compiler not found at ${csc}`);
 if (!existsSync('dist/index.html')) throw new Error('dist/ is missing. Run npm run build first.');
 
-rmSync(RELEASE_DIR, { recursive: true, force: true });
+rmSync(kitDir, { recursive: true, force: true });
+rmSync(join(RELEASE_DIR, ZIP_NAME), { force: true });
 mkdirSync(join(kitDir, 'launcher'), { recursive: true });
 
 cpSync('dist', join(kitDir, 'app'), { recursive: true });

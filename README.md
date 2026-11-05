@@ -118,6 +118,17 @@ the C# compiler that ships with Windows.
 | `Start safe mode.bat` | Same, with `?safe=1` |
 | `Start fallback.bat` | Compiles the launcher in memory through PowerShell, for machines that block unsigned executables |
 
+### Slides as PDF
+
+```bash
+npm run pdf        # -> release/PhD-Defense-slides.pdf
+```
+
+A static fallback with one page per beat. Headless Chrome steps through the
+deck like a clicker, waits for each animation to settle and captures it at
+1920×1080. Takes about 10 minutes. `SCENE_WAIT_MS` and `BEAT_WAIT_MS` lengthen
+the waits if a page is captured mid-animation.
+
 ## Structure
 
 ```
