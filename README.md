@@ -100,6 +100,23 @@ npm run preview
 Serve `dist/` over HTTP with any static file server. The build uses ES modules,
 which browsers block over `file://`. All requests stay local to the directory.
 
+### Offline kit (Windows)
+
+```bash
+npm run package    # -> release/PhD Defense/ and release/PhD-Defense.zip
+```
+
+A self-contained folder for presenting on any Windows machine with no Node and
+no network. `PhD Defense.exe` serves the build on `127.0.0.1` and opens it in a
+Chrome or Edge app window. It is compiled from `tools/launcher/Launcher.cs` with
+the C# compiler that ships with Windows.
+
+| File | Use |
+| --- | --- |
+| `PhD Defense.exe` | Start the deck. Keep its window open while presenting. |
+| `Start safe mode.bat` | Same, with `?safe=1` |
+| `Start fallback.bat` | Compiles the launcher in memory through PowerShell, for machines that block unsigned executables |
+
 ## Structure
 
 ```
