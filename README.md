@@ -79,9 +79,10 @@ the same place. Navigation clamps at both ends of the deck.
 
 The deck composes onto a fixed 1920×1080 stage that is scaled to fit whatever it
 is projected on. At startup it probes the machine and selects a quality tier
-(`safe`, `standard`, `high`). A runtime ladder then releases bloom, shadow
-resolution and render resolution in that order if frame times slip, so a
-struggling machine holds a steady frame rate at a softer image.
+(`safe`, `standard`, `high`); a machine with no working GPU driver always gets
+`safe`. A runtime ladder then turns off bloom and lowers the render resolution,
+in that order, if frame times slip, so a struggling machine holds a steady frame
+rate at a softer image.
 
 Query flags override the probe:
 
