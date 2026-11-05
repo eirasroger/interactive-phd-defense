@@ -108,7 +108,8 @@ public static class DefenseLauncher
         string arguments =
             "--app=\"" + url + "\"" +
             " --user-data-dir=\"" + profile + "\"" +
-            " --no-first-run --no-default-browser-check --start-maximized";
+            " --no-first-run --no-default-browser-check --start-maximized" +
+            " --force_high_performance_gpu";
         Process.Start(browser, arguments);
     }
 

@@ -22,22 +22,39 @@ function requestedTier(): QualityTier | null {
   return value === 'safe' || value === 'standard' || value === 'high' ? value : null;
 }
 
-function detectWebGL(): boolean {
+function createProbeContext(): WebGL2RenderingContext | null {
   try {
-    const canvas = document.createElement('canvas');
-    return Boolean(canvas.getContext('webgl2'));
+    return document.createElement('canvas').getContext('webgl2');
+  } catch {
+    return null;
+  }
+}
+
+/** CPU renderers Chrome falls back to when the GPU driver is missing or blocked. */
+const SOFTWARE_RENDERER = /swiftshader|basic render|llvmpipe|softpipe/i;
+
+function detectSoftwareRendering(gl: WebGL2RenderingContext | null): boolean {
+  if (!gl) return false;
+  try {
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    if (!info) return false;
+    return SOFTWARE_RENDERER.test(String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)));
   } catch {
     return false;
   }
 }
 
-export const supportsWebGL = detectWebGL();
+const probeContext = createProbeContext();
+
+export const supportsWebGL = probeContext !== null;
+
+export const softwareRendering = detectSoftwareRendering(probeContext);
 
 export function detectQualityTier(): QualityTier {
   const requested = requestedTier();
   if (requested) return requested;
 
-  if (isSafeMode() || prefersReducedMotion() || !supportsWebGL) return 'safe';
+  if (isSafeMode() || prefersReducedMotion() || !supportsWebGL || softwareRendering) return 'safe';
 
   /*
    * Phones and tablets always get `safe`. An 8-core phone passes the core and
